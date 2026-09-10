@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useToast } from '@/components/ui/toast'
 import { useAutosave, useUndoableMutation } from '@/lib/db'
+import { useReorder } from '@/lib/reorder'
 
 const AUTOSAVE_KEY = 'film-study-buddy:scratch:autosave'
 
@@ -77,6 +78,49 @@ function UndoDemo(): ReactNode {
       <Button id="scratch-undo-trigger" onClick={() => void remove(undefined)}>Delete scratch item</Button>
       <p id="scratch-undo-count" className="text-sm">Undo count: {undoCount}</p>
       <Checkbox id="scratch-undo-reject" label="Reject undo" checked={rejectUndo} onChange={(event) => setRejectUndo(event.target.checked)} />
+    </div>
+  )
+}
+
+const INITIAL_REORDER_ITEMS = [
+  { id: 'run-game', name: 'Run Game' },
+  { id: 'pass-game', name: 'Pass Game' },
+  { id: 'formations', name: 'Formations' },
+  { id: 'motions', name: 'Motions' },
+  { id: 'situations', name: 'Situations' },
+] as const
+
+function ReorderDemo(): ReactNode {
+  const [items, setItems] = useState<readonly { readonly id: string; readonly name: string }[]>(INITIAL_REORDER_ITEMS)
+  const reorder = useReorder({
+    itemCount: items.length,
+    label: (index) => items[index]?.name ?? 'Item',
+    onReorder: (fromIndex, toIndex) => setItems((current) => {
+      const next = [...current]
+      const [moved] = next.splice(fromIndex, 1)
+      if (moved) next.splice(toIndex, 0, moved)
+      return next
+    }),
+  })
+
+  return (
+    <div className="space-y-2">
+      <ol id="scratch-reorder-list" className="space-y-1">
+        {items.map((item, index) => (
+          <li
+            key={item.id}
+            id={`scratch-reorder-item-${item.id}`}
+            data-reorder-item={item.name}
+            className={`flex items-center gap-2 rounded-md border border-border p-2 ${reorder.dragOverIndex === index ? 'border-t-4 border-t-primary' : ''}`}
+            {...reorder.getItemProps(index)}
+          >
+            <span className="mr-auto cursor-grab text-sm">{item.name}</span>
+            <Button type="button" size="sm" variant="outline" aria-label={`Move ${item.name} up`} disabled={!reorder.canMoveUp(index)} onClick={() => reorder.moveUp(index)}>↑</Button>
+            <Button type="button" size="sm" variant="outline" aria-label={`Move ${item.name} down`} disabled={!reorder.canMoveDown(index)} onClick={() => reorder.moveDown(index)}>↓</Button>
+          </li>
+        ))}
+      </ol>
+      <p id="scratch-reorder-announcement" aria-live="polite" className="text-sm text-muted-foreground">{reorder.announcement}</p>
     </div>
   )
 }
@@ -168,6 +212,11 @@ export function ScratchPage(): ReactNode {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Tooltip</h2>
         <Tooltip content="Native tooltip text"><Button variant="outline">Hover for title</Button></Tooltip>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Reorder</h2>
+        <ReorderDemo />
       </section>
 
       <section className="space-y-3">
