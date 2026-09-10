@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https: wss: ws://localhost:*"
+    />
+    <title>Film Study Buddy</title>
+    <script>
+      // Applies the stored theme before first paint so the shell never renders in the wrong
+      // appearance. Key and logic mirror src/features/theme-settings/theme.ts.
+      // ponytail: duplicated on purpose; a shared module cannot run before the bundle loads.
+      (function () {
+        var stored = null
+        try {
+          stored = localStorage.getItem('film-study-buddy.theme')
+        } catch (error) {
+          stored = null
+        }
+        var preference =
+          stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'
+        var effective =
+          preference === 'system'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : preference
+        document.documentElement.classList.toggle('dark', effective === 'dark')
+        document.documentElement.style.colorScheme = effective
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

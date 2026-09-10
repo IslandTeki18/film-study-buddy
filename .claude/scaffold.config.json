@@ -1,0 +1,15 @@
+{
+  "projectName": "film-study-buddy",
+  "outputDirectory": "/Users/lmckell/Documents/Projects/Personal/Film Study Buddy",
+  "turborepo": false,
+  "apps": [
+    {
+      "name": "desktop",
+      "platform": "desktop",
+      "layout": "desktop-sidebar",
+      "features": [
+        "theme-settings"
+      ]
+    }
+  ]
+}
