@@ -4,6 +4,7 @@ import { isConvexConfigured } from '@/convex-client'
 import { DEFAULT_ROUTE, type RouteId } from '@/routes/routes'
 import { HomePage } from '@/routes/home-page'
 import { SettingsPage } from '@/routes/settings-page'
+import { ScratchPage } from '@/routes/scratch-page'
 
 // ponytail: two screens, so view state replaces a router. Swap in a router when routes grow
 // deep links or history.
@@ -20,7 +21,13 @@ export function App(): ReactNode {
             restart. Theme settings work locally in the meantime.
           </p>
         )}
-        {route === 'settings' ? <SettingsPage /> : <HomePage />}
+        {window.location.hash === '#/scratch' ? (
+          <ScratchPage />
+        ) : route === 'settings' ? (
+          <SettingsPage />
+        ) : (
+          <HomePage />
+        )}
       </main>
     </div>
   )

@@ -5,6 +5,7 @@ import { App } from './app'
 import { ErrorBoundary } from './components/error-boundary'
 import { convexClient } from './convex-client'
 import { ThemeProvider } from './features/theme-settings/theme-provider'
+import { ToastProvider } from './components/ui/toast'
 import './index.css'
 
 const container = document.getElementById('root')
@@ -27,7 +28,9 @@ createRoot(container).render(
     <ErrorBoundary>
       {withConvex(
         <ThemeProvider>
-          <App />
+          <ToastProvider>
+            <App />
+          </ToastProvider>
         </ThemeProvider>,
       )}
     </ErrorBoundary>
