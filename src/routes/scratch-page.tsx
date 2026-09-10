@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { CORE_FIELDS } from '@convex/domain/coreFields.ts'
 import { FIELD_ZONES } from '@convex/domain/fieldZone.ts'
@@ -15,10 +15,76 @@ import { Tabs } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useToast } from '@/components/ui/toast'
+import { useAutosave, useUndoableMutation } from '@/lib/db'
+
+const AUTOSAVE_KEY = 'film-study-buddy:scratch:autosave'
+
+function AutosaveDemo(): ReactNode {
+  const [rejectSave, setRejectSave] = useState(false)
+  const [slowSave, setSlowSave] = useState(false)
+  const [saveLog, setSaveLog] = useState<readonly string[]>([])
+  const [storedValue, setStoredValue] = useState(() => localStorage.getItem(AUTOSAVE_KEY) ?? '')
+  const saveCount = useRef(0)
+  const { draft, setDraft, flush, status } = useAutosave(storedValue, async (next) => {
+    const saveNumber = ++saveCount.current
+    setSaveLog((entries) => [...entries, `start ${saveNumber}: ${next}`])
+    if (slowSave) await new Promise((resolve) => window.setTimeout(resolve, 600))
+    if (rejectSave) {
+      setSaveLog((entries) => [...entries, `error ${saveNumber}: ${next}`])
+      throw new Error('Scratch autosave rejection')
+    }
+    localStorage.setItem(AUTOSAVE_KEY, next)
+    setStoredValue(next)
+    setSaveLog((entries) => [...entries, `finish ${saveNumber}: ${next}`])
+  })
+  function commitKey(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === 'Enter' || event.key === 'Tab') flush()
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="block space-y-1">
+        <span className="text-sm">Autosave text</span>
+        <Input id="scratch-autosave-input" value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={flush} onKeyDown={commitKey} />
+      </label>
+      <p id="scratch-autosave-status" role="status" className="text-sm">Autosave status: {status}</p>
+      <Button id="scratch-autosave-external" type="button" variant="outline" onClick={() => setStoredValue(`External ${Date.now()}`)}>
+        Set external value
+      </Button>
+      <Checkbox id="scratch-autosave-reject" label="Reject autosave" checked={rejectSave} onChange={(event) => setRejectSave(event.target.checked)} />
+      <Checkbox id="scratch-autosave-slow" label="Delay saves 600ms" checked={slowSave} onChange={(event) => setSlowSave(event.target.checked)} />
+      <p id="scratch-autosave-save-count" className="text-sm">Save count: {saveCount.current}</p>
+      <ol id="scratch-autosave-save-log" className="list-decimal pl-5 text-sm">
+        {saveLog.map((entry, index) => <li key={`${index}-${entry}`}>{entry}</li>)}
+      </ol>
+    </div>
+  )
+}
+
+function UndoDemo(): ReactNode {
+  const [undoCount, setUndoCount] = useState(0)
+  const [rejectUndo, setRejectUndo] = useState(false)
+  const remove = useUndoableMutation(
+    async () => 'scratch-batch',
+    async () => {
+      if (rejectUndo) throw new Error('Scratch undo rejection')
+      setUndoCount((count) => count + 1)
+    },
+    () => 'Scratch item deleted',
+  )
+  return (
+    <div className="space-y-2">
+      <Button id="scratch-undo-trigger" onClick={() => void remove(undefined)}>Delete scratch item</Button>
+      <p id="scratch-undo-count" className="text-sm">Undo count: {undoCount}</p>
+      <Checkbox id="scratch-undo-reject" label="Reject undo" checked={rejectUndo} onChange={(event) => setRejectUndo(event.target.checked)} />
+    </div>
+  )
+}
 
 export function ScratchPage(): ReactNode {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [tab, setTab] = useState('formations')
+  const [autosaveMounted, setAutosaveMounted] = useState(true)
   const { show } = useToast()
 
   return (
@@ -88,6 +154,15 @@ export function ScratchPage(): ReactNode {
         <Button id="scratch-toast-trigger" onClick={() => show({ message: 'Snap deleted', action: { label: 'Undo', onAction: () => undefined } })}>
           Show toast
         </Button>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Autosave and undo</h2>
+        <Button id="scratch-autosave-mount-toggle" variant="outline" onClick={() => setAutosaveMounted((mounted) => !mounted)}>
+          {autosaveMounted ? 'Unmount autosave field' : 'Mount autosave field'}
+        </Button>
+        {autosaveMounted && <AutosaveDemo />}
+        <UndoDemo />
       </section>
 
       <section className="space-y-3">
