@@ -1,11 +1,12 @@
 import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ConvexProvider } from 'convex/react'
-import { App } from './app'
+import { RouterProvider } from 'react-router'
 import { ErrorBoundary } from './components/error-boundary'
 import { convexClient } from './convex-client'
 import { ThemeProvider } from './features/theme-settings/theme-provider'
 import { ToastProvider } from './components/ui/toast'
+import { router } from './routes/routes'
 import './index.css'
 
 const container = document.getElementById('root')
@@ -29,7 +30,7 @@ createRoot(container).render(
       {withConvex(
         <ThemeProvider>
           <ToastProvider>
-            <App />
+            <RouterProvider router={router} />
           </ToastProvider>
         </ThemeProvider>,
       )}

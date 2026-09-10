@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { CORE_FIELDS } from '@convex/domain/coreFields.ts'
 import { FIELD_ZONES } from '@convex/domain/fieldZone.ts'
 import { FORMATIONS, MOTIONS, PLAY_CONCEPTS } from '@convex/domain/terminology.ts'
@@ -23,6 +24,27 @@ export function ScratchPage(): ReactNode {
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-8">
       <h1 className="text-2xl font-semibold">UI primitives</h1>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Route checklist</h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([
+            ['First Launch Setup', '/welcome'], ['Home', '/'], ['Season View', '/seasons/x'],
+            ['Create Opponent', '/seasons/x/new'], ['Weekly Opponent Overview', '/w/x'],
+            ['Source Games List', '/w/x/games'], ['Add Source Game', '/w/x/games/new'],
+            ['Hudl CSV Import / Mapping', '/w/x/games/y/import'],
+            ['Hudl Import Preview', '/w/x/games/y/import?step=preview'],
+            ['Play Log', '/w/x/games/y'], ['Play Detail', '/w/x/games/y/snap/z'],
+            ['Quick Notes', '/w/x/games/y/notes'], ['Must Review Queue', '/w/x/games/y/review'],
+            ['Play Diagram Gallery', '/w/x/games/y/diagrams'],
+            ['Play Designer', '/w/x/games/y/diagrams/z'], ['Opponent Data', '/w/x/data'],
+            ['Tendencies / Alerts', '/w/x/tendencies'], ['Report List', '/w/x/reports'],
+            ['Report Builder', '/w/x/reports/z'], ['Report Preview', '/w/x/reports/z/preview'],
+            ['Coaching Templates', '/templates'], ['Template Builder', '/templates/z'],
+            ['Settings', '/settings'], ['Archived Opponents', '/archive'],
+          ] as const).map(([label, path]) => <Link key={label} className="text-sm underline" to={path}>{label}</Link>)}
+        </div>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Input, select, checkbox, and textarea</h2>

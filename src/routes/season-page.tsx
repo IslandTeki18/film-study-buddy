@@ -1,4 +1,3 @@
 import type { ReactNode } from 'react'
 import { RoutePlaceholder } from './route-placeholder'
-
-export function HomePage(): ReactNode { return <RoutePlaceholder title="Home" /> }
+export function SeasonPage(): ReactNode { return <RoutePlaceholder title="Season View" /> }
