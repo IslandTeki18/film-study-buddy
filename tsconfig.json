@@ -19,7 +19,7 @@
     "noEmit": true,
     "types": ["vite/client"],
     "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": { "@/*": ["src/*"], "@convex/*": ["convex/*"] }
   },
   "include": ["src", "electron", "convex", "electron.vite.config.ts"]
 }

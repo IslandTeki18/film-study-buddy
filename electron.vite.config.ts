@@ -12,7 +12,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src'),
-    resolve: { alias: { '@': resolve(__dirname, 'src') } },
+    resolve: { alias: { '@': resolve(__dirname, 'src'), '@convex': resolve(__dirname, 'convex') } },
     plugins: [react(), tailwindcss()],
     build: {
       rollupOptions: { input: resolve(__dirname, 'src/index.html') },
