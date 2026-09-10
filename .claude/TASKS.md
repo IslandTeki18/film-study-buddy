@@ -27,36 +27,42 @@ A step is `[x]` only when its **Verify** line has actually been run and passed.
 
 Everything later depends on these primitives. Build them once, correctly.
 
-- [ ] **1.1 Dependencies.** Add `react-router`, `@tanstack/react-table`, `papaparse`,
+Verification evidence, assumptions, and live backend follow-up commands:
+[Phase 1 completion report](plans/phase-1-completion.md). The temporary scratch route was removed.
+
+- [x] **1.1 Dependencies.** Add `react-router`, `@tanstack/react-table`, `papaparse`,
       `@types/papaparse`. No others.
       *Verify:* `npm run typecheck` clean; app still launches.
-- [ ] **1.2 Core field registry.** `convex/domain/core-fields.ts`: the fourteen Core Snap fields
+- [x] **1.2 Core field registry.** `convex/domain/coreFields.ts`: the fourteen Core Snap fields
       as one exported array — key, label, input type, fixed options for Hash, Play Type, and
       Direction (SPEC §15–§18).
-      *Verify:* unit test asserts fourteen fields and the exact option lists from the spec.
-- [ ] **1.3 Derived-value functions.** `field-zone.ts`, `situation.ts`, `provenance.ts` — pure,
+      *Verify:* one-shot Node assertions passed for fourteen fields and exact option lists;
+      rendered checklist passed (approved plan §0.5 substitutes persistent tests).
+- [x] **1.3 Derived-value functions.** `fieldZone.ts`, `situation.ts`, `provenance.ts` — pure,
       no imports from Convex.
-      *Verify:* `node --test` covers every zone boundary (own 1, own 20, 50, opp 20, opp 5),
-      every down/distance bucket, and all three provenance states.
-- [ ] **1.4 Terminology library.** `convex/domain/terminology.ts`: built-in Formations, Motions,
+      *Verify:* one-shot Node assertions passed for zone boundaries, all down/distance buckets,
+      invalid inputs and all provenance states (approved plan §0.5). Persistent tests deferred.
+- [x] **1.4 Terminology library.** `convex/domain/terminology.ts`: built-in Formations, Motions,
       Play Concepts (SPEC §19–§21, §96).
       *Verify:* imported by a scratch render; no duplicates in any list.
-- [ ] **1.5 Schema.** `convex/schema.ts` with every table and index from BLUEPRINT §5.
-      *Verify:* `npx convex dev` pushes without a validation error.
-- [ ] **1.6 Deletion ledger.** `convex/deletions.ts`: `softDelete` helper (mints a batch id,
+- [~] **1.5 Schema.** `convex/schema.ts` with every table and index from BLUEPRINT §5.
+      *Verify:* typecheck and structural checks passed; live schema push not run —
+      blocked on `npx convex dev` per approved plan §0.3.
+- [~] **1.6 Deletion ledger.** `convex/deletions.ts`: `softDeleteBatch` helper (mints a batch id,
       stamps records, writes the ledger row), `undo`, `purgeExpired`. `convex/crons.ts` runs
       the purge daily.
-      *Verify:* soft-delete a seeded row, read it back as hidden, undo it, read it back present.
-- [ ] **1.7 Router.** `HashRouter` with the full route table from BLUEPRINT §8, every screen a
+      *Verify:* typecheck and fake-database handler checks passed; live seeded-row delete/Undo
+      round trip not run — blocked on `npx convex dev` per approved plan §0.3.
+- [x] **1.7 Router.** `HashRouter` with the full route table from BLUEPRINT §8, every screen a
       placeholder. Sidebar navigates; the workspace and source-game tab strips render.
       *Verify:* every one of the twenty-four routes reachable by URL and by click.
-- [ ] **1.8 Autosave and undo hooks.** `src/lib/db/use-autosave.ts` (debounce, flush on blur and
+- [x] **1.8 Autosave and undo hooks.** `src/lib/db/use-autosave.ts` (debounce, flush on blur and
       unmount) and `use-undoable-mutation.ts` (runs a mutation, shows the Undo toast).
       *Verify:* a throwaway text field persists without a Save button and survives a reload.
-- [ ] **1.9 Reorder hook.** `src/lib/reorder.ts`: native drag handle props plus Move up / Move
+- [x] **1.9 Reorder hook.** `src/lib/reorder.ts`: native drag handle props plus Move up / Move
       down buttons.
       *Verify:* a throwaway list reorders by mouse and by keyboard alone.
-- [ ] **1.10 UI primitives.** Vendor the ShadCN components the build needs: dialog, dropdown,
+- [x] **1.10 UI primitives.** Vendor the ShadCN components the build needs: dialog, dropdown,
       select, checkbox, input, textarea, toast, tabs, tooltip, popover, table.
       *Verify:* typecheck clean; each renders once on a scratch route.
 
@@ -315,5 +321,6 @@ The core of the product. Build the grid before the power features.
 
 ## Blocked on you
 
-`npx convex dev` requires an interactive login. Until the deployment exists and
-`VITE_CONVEX_URL` is set in `.env`, Phase 1.5 onward cannot be verified.
+Phase 1.5 and 1.6 still need a live schema push and seeded delete/Undo round trip.
+These were deferred by the approved Phase 1 plan. Follow the commands in
+[the completion report](plans/phase-1-completion.md); the remaining Phase 1 checks passed.

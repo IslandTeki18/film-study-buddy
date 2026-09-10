@@ -8,4 +8,3 @@ export interface TooltipProps extends HTMLAttributes<HTMLSpanElement> {
 export function Tooltip({ content, children, ...props }: TooltipProps): ReactNode {
   return <span title={content} {...props}>{children}</span>
 }
-

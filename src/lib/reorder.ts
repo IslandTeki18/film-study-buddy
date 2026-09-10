@@ -75,4 +75,3 @@ export function useReorder({ itemCount, onReorder, label }: ReorderOptions): {
 
   return { getItemProps, moveUp, moveDown, canMoveUp, canMoveDown, dragOverIndex, announcement }
 }
-

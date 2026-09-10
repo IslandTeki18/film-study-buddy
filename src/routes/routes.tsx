@@ -26,7 +26,6 @@ import { QuickNotesPage } from './quick-notes-page'
 import { ReportBuilderPage } from './report-builder-page'
 import { ReportListPage } from './report-list-page'
 import { ReportPreviewPage } from './report-preview-page'
-import { ScratchPage } from './scratch-page'
 import { SeasonPage } from './season-page'
 import { SettingsPage } from './settings-page'
 import { SourceGamesPage } from './source-games-page'
@@ -178,7 +177,6 @@ export const router = createHashRouter([
       },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'archive', element: <ArchivePage /> },
-      { path: 'scratch', element: <ScratchPage /> },
     ],
   },
 ])

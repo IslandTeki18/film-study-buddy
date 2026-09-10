@@ -14,4 +14,3 @@ export function Select({ className, ...props }: SelectProps): ReactNode {
     />
   )
 }
-

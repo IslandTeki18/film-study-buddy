@@ -34,4 +34,3 @@ export type TableCellProps = TdHTMLAttributes<HTMLTableCellElement>
 export function TableCell({ className, ...props }: TableCellProps): ReactNode {
   return <td className={cn('px-2 py-1.5', className)} {...props} />
 }
-

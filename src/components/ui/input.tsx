@@ -16,4 +16,3 @@ export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> &
 export function Input({ className, size, ...props }: InputProps): ReactNode {
   return <input className={cn(inputVariants({ size }), className)} {...props} />
 }
-

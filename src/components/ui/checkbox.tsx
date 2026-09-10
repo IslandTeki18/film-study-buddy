@@ -17,4 +17,3 @@ export function Checkbox({ className, label, ...props }: CheckboxProps): ReactNo
     </label>
   )
 }
-
