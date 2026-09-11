@@ -45,14 +45,12 @@ Verification evidence, assumptions, and live backend follow-up commands:
 - [x] **1.4 Terminology library.** `convex/domain/terminology.ts`: built-in Formations, Motions,
       Play Concepts (SPEC §19–§21, §96).
       *Verify:* imported by a scratch render; no duplicates in any list.
-- [~] **1.5 Schema.** `convex/schema.ts` with every table and index from BLUEPRINT §5.
-      *Verify:* typecheck and structural checks passed; live schema push not run —
-      blocked on `npx convex dev` per approved plan §0.3.
-- [~] **1.6 Deletion ledger.** `convex/deletions.ts`: `softDeleteBatch` helper (mints a batch id,
+- [x] **1.5 Schema.** `convex/schema.ts` with every table and index from BLUEPRINT §5.
+      *Verify:* typecheck and structural checks passed; live push and round trip passed.
+- [x] **1.6 Deletion ledger.** `convex/deletions.ts`: `softDeleteBatch` helper (mints a batch id,
       stamps records, writes the ledger row), `undo`, `purgeExpired`. `convex/crons.ts` runs
       the purge daily.
-      *Verify:* typecheck and fake-database handler checks passed; live seeded-row delete/Undo
-      round trip not run — blocked on `npx convex dev` per approved plan §0.3.
+      *Verify:* live push and round trip passed: hidden, restored, repeated Undo; fixtures removed.
 - [x] **1.7 Router.** `HashRouter` with the full route table from BLUEPRINT §8, every screen a
       placeholder. Sidebar navigates; the workspace and source-game tab strips render.
       *Verify:* every one of the twenty-four routes reachable by URL and by click.
@@ -318,9 +316,3 @@ The core of the product. Build the grid before the power features.
       and the offline limitation stated plainly.
 
 ---
-
-## Blocked on you
-
-Phase 1.5 and 1.6 still need a live schema push and seeded delete/Undo round trip.
-These were deferred by the approved Phase 1 plan. Follow the commands in
-[the completion report](plans/phase-1-completion.md); the remaining Phase 1 checks passed.
