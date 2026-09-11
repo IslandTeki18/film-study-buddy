@@ -4,7 +4,9 @@ import type { Id } from './_generated/dataModel'
 import schema from './schema'
 import { softDeleteBatch } from './deletions'
 import { getStarterTemplate, isCoachingArea, type StarterSection } from './domain/starterTemplates.ts'
-import { NAME_MAX_LENGTH, normalizeName } from './domain/templateFields.ts'
+import {
+  NAME_MAX_LENGTH, normalizeName, normalizeOptions, hasOptions, hasAnalysisValue,
+} from './domain/templateFields.ts'
 
 type ReadCtx = QueryCtx | MutationCtx
 
@@ -12,6 +14,37 @@ async function requireLiveTemplate(ctx: ReadCtx, id: Id<'templates'>) {
   const template = await ctx.db.get(id)
   if (!template || template.deletedAt !== undefined) throw new Error('Coaching Template not found')
   return template
+}
+
+async function requireLiveSection(ctx: ReadCtx, id: Id<'templateSections'>) {
+  const section = await ctx.db.get(id)
+  if (!section || section.deletedAt !== undefined) throw new Error('Section not found')
+  await requireLiveTemplate(ctx, section.templateId)
+  return section
+}
+
+async function requireLiveField(ctx: ReadCtx, id: Id<'templateFields'>) {
+  const field = await ctx.db.get(id)
+  if (!field || field.deletedAt !== undefined) throw new Error('Template Field not found')
+  await requireLiveSection(ctx, field.sectionId)
+  await requireLiveTemplate(ctx, field.templateId)
+  return field
+}
+
+async function countFieldUsage(ctx: ReadCtx, templateId: Id<'templates'>, fieldIds: ReadonlySet<string>) {
+  if (fieldIds.size === 0) return 0
+  // ponytail: scans Source Games and their Snaps at V1 volume; index template usage if scans become slow.
+  const games = await ctx.db.query('sourceGames').filter((q) => q.and(
+    q.eq(q.field('templateId'), templateId), q.eq(q.field('deletedAt'), undefined),
+  )).collect()
+  let count = 0
+  for (const game of games) {
+    const snaps = await ctx.db.query('snaps')
+      .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect()
+    count += snaps.filter((snap) => snap.deletedAt === undefined && [...fieldIds]
+      .some((id) => hasAnalysisValue(snap.analysis[id]))).length
+  }
+  return count
 }
 
 function requireName(value: string): string {
@@ -179,6 +212,167 @@ export const remove = mutation({
         ...fields.filter((field) => field.deletedAt === undefined)
           .map(({ _id }) => ({ table: 'templateFields' as const, id: _id })),
       ],
+    })
+  },
+})
+
+/** Appends after live sections without changing existing order. */
+export const addSection = mutation({
+  args: { templateId: v.id('templates'), name: v.string() }, returns: v.id('templateSections'),
+  handler: async (ctx, args) => {
+    await requireLiveTemplate(ctx, args.templateId)
+    const sections = await templateTree(ctx, args.templateId)
+    return ctx.db.insert('templateSections', {
+      templateId: args.templateId, name: requireName(args.name),
+      order: Math.max(-1, ...sections.map((section) => section.order)) + 1,
+    })
+  },
+})
+
+/** Renaming never changes field identities. */
+export const renameSection = mutation({
+  args: { sectionId: v.id('templateSections'), name: v.string() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireLiveSection(ctx, args.sectionId)
+    await ctx.db.patch(args.sectionId, { name: requireName(args.name) })
+    return null
+  },
+})
+
+function requireExactOrder(ids: readonly string[], rows: readonly { _id: string }[], kind: string) {
+  const unique = new Set(ids)
+  if (unique.size !== ids.length || ids.length !== rows.length ||
+      rows.some((row) => !unique.has(row._id))) throw new Error(`${kind} list is out of date`)
+}
+
+/** Stale or partial reorder requests change nothing. */
+export const reorderSections = mutation({
+  args: { templateId: v.id('templates'), sectionIds: v.array(v.id('templateSections')) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireLiveTemplate(ctx, args.templateId)
+    const rows = await templateTree(ctx, args.templateId)
+    requireExactOrder(args.sectionIds, rows, 'Section')
+    const orders = new Map(rows.map((row) => [row._id, row.order]))
+    for (const [order, id] of args.sectionIds.entries()) {
+      if (orders.get(id) !== order) await ctx.db.patch(id, { order })
+    }
+    return null
+  },
+})
+
+/** Section and live fields share one Undo batch. */
+export const removeSection = mutation({
+  args: { sectionId: v.id('templateSections') }, returns: v.string(),
+  handler: async (ctx, args) => {
+    const section = await requireLiveSection(ctx, args.sectionId)
+    const fields = await ctx.db.query('templateFields')
+      .withIndex('by_section', (q) => q.eq('sectionId', args.sectionId)).collect()
+    return softDeleteBatch(ctx, {
+      kind: 'templateSection', label: section.name,
+      records: [
+        { table: 'templateSections', id: section._id },
+        ...fields.filter((field) => field.deletedAt === undefined)
+          .map(({ _id }) => ({ table: 'templateFields' as const, id: _id })),
+      ],
+    })
+  },
+})
+
+/** New fields are optional and do not carry forward. */
+export const addField = mutation({
+  args: {
+    sectionId: v.id('templateSections'), name: v.string(),
+    type: schema.tables.templateFields.validator.fields.type,
+  },
+  returns: v.id('templateFields'),
+  handler: async (ctx, args) => {
+    const section = await requireLiveSection(ctx, args.sectionId)
+    const fields = await ctx.db.query('templateFields')
+      .withIndex('by_section', (q) => q.eq('sectionId', args.sectionId)).collect()
+    return ctx.db.insert('templateFields', {
+      templateId: section.templateId, sectionId: section._id,
+      name: requireName(args.name), type: args.type, options: [], required: false,
+      carryForward: false,
+      order: Math.max(-1, ...fields.filter((field) => field.deletedAt === undefined)
+        .map((field) => field.order)) + 1,
+    })
+  },
+})
+
+/** Recorded values forbid a type change; removing options preserves those values. */
+export const updateField = mutation({
+  args: {
+    fieldId: v.id('templateFields'), name: v.optional(v.string()),
+    type: v.optional(schema.tables.templateFields.validator.fields.type),
+    options: v.optional(v.array(v.string())), required: v.optional(v.boolean()),
+    carryForward: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const field = await requireLiveField(ctx, args.fieldId)
+    const type = args.type ?? field.type
+    if (type !== field.type && await countFieldUsage(ctx, field.templateId, new Set([field._id]))) {
+      throw new Error('This field holds data; its type cannot change')
+    }
+    const patch: Partial<Pick<typeof field, 'name' | 'type' | 'options' | 'required' | 'carryForward'>> = {}
+    if (args.name !== undefined) patch.name = requireName(args.name)
+    if (args.type !== undefined) patch.type = type
+    if (!hasOptions(type)) patch.options = []
+    if (args.options !== undefined) {
+      if (!hasOptions(type)) throw new Error('This field type does not have options')
+      const options = normalizeOptions(args.options)
+      if (options === null) throw new Error('Options must be unique')
+      patch.options = options
+    }
+    if (args.required !== undefined) patch.required = args.required
+    if (args.carryForward !== undefined) patch.carryForward = args.carryForward
+    await ctx.db.patch(field._id, patch)
+    return null
+  },
+})
+
+/** Exact option strings are idempotent; no aliasing or case folding. */
+export const addFieldOption = mutation({
+  args: { fieldId: v.id('templateFields'), option: v.string() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const field = await requireLiveField(ctx, args.fieldId)
+    if (!hasOptions(field.type)) throw new Error('This field type does not have options')
+    const option = args.option.trim()
+    if (!option) throw new Error('Option must not be empty')
+    if (!field.options.includes(option)) {
+      await ctx.db.patch(field._id, { options: [...field.options, option] })
+    }
+    return null
+  },
+})
+
+/** Fields reorder only within their live Section. */
+export const reorderFields = mutation({
+  args: { sectionId: v.id('templateSections'), fieldIds: v.array(v.id('templateFields')) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireLiveSection(ctx, args.sectionId)
+    const fields = (await ctx.db.query('templateFields')
+      .withIndex('by_section', (q) => q.eq('sectionId', args.sectionId)).collect())
+      .filter((field) => field.deletedAt === undefined)
+    requireExactOrder(args.fieldIds, fields, 'Field')
+    const orders = new Map(fields.map((field) => [field._id, field.order]))
+    for (const [order, id] of args.fieldIds.entries()) {
+      if (orders.get(id) !== order) await ctx.db.patch(id, { order })
+    }
+    return null
+  },
+})
+
+/** Analysis stays on Snaps so Undo restores the field's existing values. */
+export const removeField = mutation({
+  args: { fieldId: v.id('templateFields') }, returns: v.string(),
+  handler: async (ctx, args) => {
+    const field = await requireLiveField(ctx, args.fieldId)
+    return softDeleteBatch(ctx, {
+      kind: 'templateField', label: field.name,
+      records: [{ table: 'templateFields', id: field._id }],
     })
   },
 })
