@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
 import { useReorder } from '@/lib/reorder'
 import { cn } from '@/lib/utils'
+import { DeleteConfirmDialog } from './delete-confirm-dialog'
 import { InlineName } from './inline-name'
 
 export type TemplateTree = NonNullable<FunctionReturnType<typeof api.templates.getFull>>
@@ -26,6 +27,7 @@ export function SectionList({ tree, selectedFieldId, onSelectField }: {
   readonly selectedFieldId: Id<'templateFields'> | null
   readonly onSelectField: (id: Id<'templateFields'>) => void
 }): ReactNode {
+  const [deleteTarget, setDeleteTarget] = useState<Section | null>(null)
   const templateId = tree.template._id
   const [focusId, setFocusId] = useState<string | null>(null)
   const add = useMutation(api.templates.addSection)
@@ -57,6 +59,9 @@ export function SectionList({ tree, selectedFieldId, onSelectField }: {
     }).catch(report) },
   })
   return <div className="space-y-4">
+    {deleteTarget && <DeleteConfirmDialog open kind="section" name={deleteTarget.name}
+      args={{ templateId, sectionId: deleteTarget._id }} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+      onConfirm={() => deleteSection(deleteTarget)} />}
     {tree.sections.length === 0 && <p className="text-muted-foreground">This template has no sections yet</p>}
     {tree.sections.map((section, index) => <section key={section._id} aria-label={section.name}
       className={cn('space-y-3 rounded-md border border-border p-3', drag.dragOverIndex === index && 'border-primary')}>
@@ -68,7 +73,7 @@ export function SectionList({ tree, selectedFieldId, onSelectField }: {
           disabled={!drag.canMoveUp(index)} onClick={() => drag.moveUp(index)}>Move up</Button>
         <Button variant="ghost" size="sm" aria-label={`Move section ${section.name} down`}
           disabled={!drag.canMoveDown(index)} onClick={() => drag.moveDown(index)}>Move down</Button>
-        <Button variant="ghost" size="sm" onClick={() => { void deleteSection(section).catch(report) }}>Remove section</Button>
+        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(section)}>Remove section</Button>
       </div>
       <FieldList section={section} selectedFieldId={selectedFieldId} onSelectField={onSelectField} />
     </section>)}
@@ -84,6 +89,7 @@ function FieldList({ section, selectedFieldId, onSelectField }: {
   readonly onSelectField: (id: Id<'templateFields'>) => void
 }): ReactNode {
   const [focusId, setFocusId] = useState<Id<'templateFields'> | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Section['fields'][number] | null>(null)
   const add = useMutation(api.templates.addField)
   const update = useMutation(api.templates.updateField)
   const remove = useMutation(api.templates.removeField)
@@ -117,6 +123,9 @@ function FieldList({ section, selectedFieldId, onSelectField }: {
     }).catch(report) },
   })
   return <div className="space-y-2">
+    {deleteTarget && <DeleteConfirmDialog open kind="field" name={deleteTarget.name}
+      args={{ templateId: section.templateId, fieldId: deleteTarget._id }} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+      onConfirm={() => deleteField(deleteTarget)} />}
     {section.fields.map((field, index) => <div key={field._id} onClick={(event) => {
       if (!(event.target instanceof Element) || !event.target.closest('button, input')) onSelectField(field._id)
     }}
@@ -133,7 +142,7 @@ function FieldList({ section, selectedFieldId, onSelectField }: {
         disabled={!drag.canMoveUp(index)} onClick={() => drag.moveUp(index)}>Move up</Button>
       <Button variant="ghost" size="sm" aria-label={`Move field ${field.name} down`}
         disabled={!drag.canMoveDown(index)} onClick={() => drag.moveDown(index)}>Move down</Button>
-      <Button variant="ghost" size="sm" onClick={() => { void deleteField(field).catch(report) }}>Remove field</Button>
+      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(field)}>Remove field</Button>
     </div>)}
     <p className="sr-only" aria-live="polite">{drag.announcement}</p>
     <Button variant="outline" size="sm" onClick={() => { void add({ sectionId: section._id, name: 'New field', type: 'shortText' })

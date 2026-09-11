@@ -376,3 +376,32 @@ export const removeField = mutation({
     })
   },
 })
+
+/** Counts each live Snap once; disappearing targets remain safe for reactive subscribers. */
+export const getUsage = query({
+  args: {
+    templateId: v.id('templates'), sectionId: v.optional(v.id('templateSections')),
+    fieldId: v.optional(v.id('templateFields')),
+  },
+  returns: v.object({ snapCount: v.number(), fieldCount: v.number() }),
+  handler: async (ctx, args) => {
+    const template = await ctx.db.get(args.templateId)
+    if (!template || template.deletedAt !== undefined) return { snapCount: 0, fieldCount: 0 }
+    if (args.sectionId) {
+      const section = await ctx.db.get(args.sectionId)
+      if (section && section.templateId !== args.templateId) throw new Error('Section belongs to another template')
+    }
+    if (args.fieldId) {
+      const field = await ctx.db.get(args.fieldId)
+      if (field && (field.templateId !== args.templateId ||
+          (args.sectionId && field.sectionId !== args.sectionId))) {
+        throw new Error('Field does not belong to this template and Section')
+      }
+    }
+    const sections = await templateTree(ctx, args.templateId)
+    const fields = sections.flatMap((section) => section.fields).filter((field) =>
+      args.fieldId ? field._id === args.fieldId : !args.sectionId || field.sectionId === args.sectionId)
+    const fieldIds = new Set(fields.map((field) => field._id))
+    return { snapCount: await countFieldUsage(ctx, args.templateId, fieldIds), fieldCount: fieldIds.size }
+  },
+})

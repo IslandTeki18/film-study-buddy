@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
+import { DeleteConfirmDialog } from './delete-confirm-dialog'
 import { NameDialog } from './name-dialog'
 
 type TemplateTarget = { readonly templateId: Id<'templates'>; readonly name: string }
@@ -21,6 +22,7 @@ export function TemplateList(): ReactNode {
   const { show } = useToast()
   const navigate = useNavigate()
   const [dialog, setDialog] = useState<'create' | TemplateTarget | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<TemplateTarget | null>(null)
   const deleteTemplate = useUndoableMutation(
     (target: TemplateTarget) => remove({ templateId: target.templateId }),
     async (args) => { await undo(args) },
@@ -48,11 +50,13 @@ export function TemplateList(): ReactNode {
             { label: 'Rename', onSelect: () => setDialog({ templateId: template._id, name: template.name }) },
             { label: 'Duplicate', onSelect: () => { void duplicate({ templateId: template._id })
               .then(() => show({ message: `Duplicated ${template.name}` })).catch((error: unknown) => report('duplicate', error)) } },
-            { label: 'Delete', onSelect: () => { void deleteTemplate({ templateId: template._id, name: template.name })
-              .catch((error: unknown) => report('delete', error)) } },
+            { label: 'Delete', onSelect: () => setDeleteTarget({ templateId: template._id, name: template.name }) },
           ]} />
         </li>)}
       </ul>}
+    {deleteTarget && <DeleteConfirmDialog open kind="template" name={deleteTarget.name}
+      args={{ templateId: deleteTarget.templateId }} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+      onConfirm={() => deleteTemplate(deleteTarget).catch((error: unknown) => { report('delete', error); throw error })} />}
     <NameDialog open={dialog !== null} title={dialog === 'create' ? 'New Coaching Template' : 'Rename Coaching Template'}
       label="Template name" initialValue={typeof dialog === 'object' && dialog ? dialog.name : ''}
       confirmLabel={dialog === 'create' ? 'Create' : 'Rename'} onOpenChange={(open) => { if (!open) setDialog(null) }}

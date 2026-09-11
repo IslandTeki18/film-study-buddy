@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import type { FunctionArgs } from 'convex/server'
 import { api } from '@convex/_generated/api'
 import type { Doc } from '@convex/_generated/dataModel'
@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/toast'
 import { InlineName } from './inline-name'
 
 export function FieldEditor({ field }: { readonly field: Doc<'templateFields'> }): ReactNode {
+  const usage = useQuery(api.templates.getUsage, { templateId: field.templateId, fieldId: field._id })
   const update = useMutation(api.templates.updateField)
   const addOption = useMutation(api.templates.addFieldOption)
   const { show } = useToast()
@@ -35,12 +36,16 @@ export function FieldEditor({ field }: { readonly field: Doc<'templateFields'> }
     <fieldset disabled={pending} className="space-y-4">
       <label className="block space-y-1">
         <span className="text-sm">Type</span>
-        <Select value={field.type} onChange={(event) => {
+        <Select value={field.type} disabled={usage === undefined || usage.snapCount > 0}
+          aria-describedby={usage && usage.snapCount > 0 ? 'field-type-usage' : undefined} onChange={(event) => {
           if (isTemplateFieldType(event.target.value)) change({ type: event.target.value })
         }}>
           {TEMPLATE_FIELD_TYPES.map((type) => <option key={type} value={type}>{TEMPLATE_FIELD_TYPE_LABELS[type]}</option>)}
         </Select>
       </label>
+      {usage && usage.snapCount > 0 && <p id="field-type-usage" className="text-sm text-muted-foreground">
+        This field holds data on {usage.snapCount} Snaps; its type cannot change
+      </p>}
       {hasOptions(field.type) && <div className="space-y-2">
         <h3 className="text-sm font-medium">Options</h3>
         <ul className="space-y-1">
