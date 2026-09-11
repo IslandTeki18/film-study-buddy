@@ -70,7 +70,7 @@ Verification evidence, assumptions, and live backend follow-up commands:
 
 Templates gate first launch and Source Games, so they come first.
 
-Progress, verification, and current access blocker: [Phase 2 report](plans/phase-2-completion.md).
+Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/phase-2-completion.md).
 
 - [x] **2.1 Starter template data.** `convex/domain/starterTemplates.ts`: all eleven Starter
       Coaching Templates with sections and fields (SPEC §24).
@@ -84,19 +84,22 @@ Progress, verification, and current access blocker: [Phase 2 report](plans/phase
       *Verify:* reorder persists; removing a field soft-deletes it and returns a batch id.
 - [x] **2.4 Coaching Templates screen.** List, create, duplicate, rename, delete with Undo.
       *Verify:* each action round-trips against a live deployment.
-- [~] **2.5 Template Builder — structure.** Sections and fields with drag and keyboard
+- [x] **2.5 Template Builder — structure.** Sections and fields with drag and keyboard
       reordering, inline rename, add and remove.
-      *Verify:* typecheck and production build passed; Electron verification interrupted by
-      Convex project-access denial. Mouse/keyboard reorder and reload checks remain pending.
-- [ ] **2.6 Template Builder — field editor.** All eight field types, select option management,
+      *Verify:* native mouse drag and keyboard moves persist across reload; inline rename,
+      Escape, failed-save draft retention, add focus, field/section Undo, and optimistic order passed.
+- [x] **2.6 Template Builder — field editor.** All eight field types, select option management,
       the fixed 1–5 rating, the Required toggle, and the Carry-Forward toggle (SPEC §25–§28, §40).
-      *Verify:* one field of every type created and reloaded intact.
-- [ ] **2.7 Deletion protection.** Deleting a field or a template that holds data warns, states
+      *Verify:* all eight types created in Electron and reloaded intact; options, Required,
+      Carry-Forward, and option clearing on a type change passed against the live backend.
+- [x] **2.7 Deletion protection.** Deleting a field or a template that holds data warns, states
       the affected Snap count, requires confirmation, soft-deletes, and offers Undo (SPEC §31).
-      *Verify:* delete a populated field, undo, confirm the values returned.
-- [ ] **2.8 Play Log Views.** Create, rename, delete named views on a template; a view stores
+      *Verify:* field/section/template counts 2/3/3, confirmations, Cancel focus, type locks,
+      and Undo preserving values passed. Temporary hierarchy fixtures and module removed.
+- [x] **2.8 Play Log Views.** Create, rename, delete named views on a template; a view stores
       visible columns and column order only (SPEC §38).
-      *Verify:* two views on one template persist independently.
+      *Verify:* two views persist independently; mouse/keyboard ordering, visibility, field
+      reconciliation, duplication/remapping, validation errors, and confirmed hard delete passed.
 
 ---
 
