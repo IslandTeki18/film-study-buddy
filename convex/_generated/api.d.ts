@@ -17,6 +17,7 @@ import type * as domain_situation from "../domain/situation.js";
 import type * as domain_starterTemplates from "../domain/starterTemplates.js";
 import type * as domain_templateFields from "../domain/templateFields.js";
 import type * as domain_terminology from "../domain/terminology.js";
+import type * as templates from "../templates.js";
 import type * as theme_settings_preferences from "../theme_settings/preferences.js";
 
 import type {
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   "domain/starterTemplates": typeof domain_starterTemplates;
   "domain/templateFields": typeof domain_templateFields;
   "domain/terminology": typeof domain_terminology;
+  templates: typeof templates;
   "theme_settings/preferences": typeof theme_settings_preferences;
 }>;
 
