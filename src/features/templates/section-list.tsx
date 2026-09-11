@@ -21,7 +21,11 @@ export function moved<T>(items: readonly T[], from: number, to: number): T[] {
   return next
 }
 
-export function SectionList({ tree }: { readonly tree: TemplateTree }): ReactNode {
+export function SectionList({ tree, selectedFieldId, onSelectField }: {
+  readonly tree: TemplateTree
+  readonly selectedFieldId: Id<'templateFields'> | null
+  readonly onSelectField: (id: Id<'templateFields'>) => void
+}): ReactNode {
   const templateId = tree.template._id
   const [focusId, setFocusId] = useState<string | null>(null)
   const add = useMutation(api.templates.addSection)
@@ -66,7 +70,7 @@ export function SectionList({ tree }: { readonly tree: TemplateTree }): ReactNod
           disabled={!drag.canMoveDown(index)} onClick={() => drag.moveDown(index)}>Move down</Button>
         <Button variant="ghost" size="sm" onClick={() => { void deleteSection(section).catch(report) }}>Remove section</Button>
       </div>
-      <FieldList section={section} />
+      <FieldList section={section} selectedFieldId={selectedFieldId} onSelectField={onSelectField} />
     </section>)}
     <p className="sr-only" aria-live="polite">{drag.announcement}</p>
     <Button variant="outline" onClick={() => { void add({ templateId, name: 'New section' })
@@ -74,7 +78,11 @@ export function SectionList({ tree }: { readonly tree: TemplateTree }): ReactNod
   </div>
 }
 
-function FieldList({ section }: { readonly section: Section }): ReactNode {
+function FieldList({ section, selectedFieldId, onSelectField }: {
+  readonly section: Section
+  readonly selectedFieldId: Id<'templateFields'> | null
+  readonly onSelectField: (id: Id<'templateFields'>) => void
+}): ReactNode {
   const [focusId, setFocusId] = useState<Id<'templateFields'> | null>(null)
   const add = useMutation(api.templates.addField)
   const update = useMutation(api.templates.updateField)
@@ -109,12 +117,16 @@ function FieldList({ section }: { readonly section: Section }): ReactNode {
     }).catch(report) },
   })
   return <div className="space-y-2">
-    {section.fields.map((field, index) => <div key={field._id}
-      className={cn('flex flex-wrap items-center gap-2 rounded border border-border p-2', drag.dragOverIndex === index && 'border-primary')}>
+    {section.fields.map((field, index) => <div key={field._id} onClick={(event) => {
+      if (!(event.target instanceof Element) || !event.target.closest('button, input')) onSelectField(field._id)
+    }}
+      className={cn('flex flex-wrap items-center gap-2 rounded border border-border p-2', drag.dragOverIndex === index && 'border-primary', selectedFieldId === field._id && 'bg-accent')}>
       <Button variant="ghost" size="sm" aria-label={`Drag field ${field.name}`} {...drag.getItemProps(index)}>⠿</Button>
       <InlineName label={`Field name: ${field.name}`} value={field.name} focus={focusId === field._id}
         save={async (name) => { await update({ fieldId: field._id, name }) }} />
       <span className="text-xs text-muted-foreground">{TEMPLATE_FIELD_TYPE_LABELS[field.type]}</span>
+      <Button size="sm" variant="ghost" aria-label={`Edit field ${field.name}`}
+        aria-pressed={selectedFieldId === field._id} onClick={() => onSelectField(field._id)}>Edit</Button>
       {field.required && <span className="rounded bg-muted px-1 text-xs">Required</span>}
       {field.carryForward && <span className="rounded bg-muted px-1 text-xs">Carry-Forward</span>}
       <Button variant="ghost" size="sm" aria-label={`Move field ${field.name} up`}
