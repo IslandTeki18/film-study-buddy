@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import schema from './schema'
+import { isCoreFieldKey } from './domain/coreFields.ts'
 import { softDeleteBatch } from './deletions'
 import { getStarterTemplate, isCoachingArea, type StarterSection } from './domain/starterTemplates.ts'
 import {
@@ -403,5 +404,72 @@ export const getUsage = query({
       args.fieldId ? field._id === args.fieldId : !args.sectionId || field.sectionId === args.sectionId)
     const fieldIds = new Set(fields.map((field) => field._id))
     return { snapCount: await countFieldUsage(ctx, args.templateId, fieldIds), fieldCount: fieldIds.size }
+  },
+})
+
+const viewValidator = v.object({
+  ...schema.tables.templateViews.validator.fields,
+  _id: v.id('templateViews'), _creationTime: v.number(),
+})
+
+/** Views stay hidden with their template and return unchanged on Undo. */
+export const listViews = query({
+  args: { templateId: v.id('templates') }, returns: v.array(viewValidator),
+  handler: async (ctx, args) => {
+    const template = await ctx.db.get(args.templateId)
+    if (!template || template.deletedAt !== undefined) return []
+    return (await ctx.db.query('templateViews')
+      .withIndex('by_template', (q) => q.eq('templateId', args.templateId)).collect())
+      .sort((a, b) => a.name.localeCompare(b.name))
+  },
+})
+
+/** Views contain only a name, visibility, and order of this template's valid columns. */
+export const saveView = mutation({
+  args: {
+    templateId: v.id('templates'), viewId: v.optional(v.id('templateViews')), name: v.string(),
+    visibleColumns: v.array(v.string()), columnOrder: v.array(v.string()),
+  },
+  returns: v.id('templateViews'),
+  handler: async (ctx, args) => {
+    await requireLiveTemplate(ctx, args.templateId)
+    const name = requireName(args.name)
+    if (args.viewId) {
+      const view = await ctx.db.get(args.viewId)
+      if (!view || view.templateId !== args.templateId) throw new Error('Play Log View not found in this template')
+    }
+    const order = new Set(args.columnOrder)
+    if (order.size !== args.columnOrder.length) throw new Error('Column order must not contain duplicates')
+    const fieldIds = new Set<string>((await templateTree(ctx, args.templateId))
+      .flatMap((section) => section.fields.map((field) => field._id)))
+    for (const key of order) {
+      if (key.startsWith('core:') && isCoreFieldKey(key.slice(5))) continue
+      if (key.startsWith('field:') && fieldIds.has(key.slice(6))) continue
+      throw new Error(`Unknown column: ${key}`)
+    }
+    if (new Set(args.visibleColumns).size !== args.visibleColumns.length) {
+      throw new Error('Visible columns must not contain duplicates')
+    }
+    if (args.visibleColumns.some((key) => !order.has(key))) {
+      throw new Error('Visible columns must be a subset of column order')
+    }
+    const value = { name, visibleColumns: args.visibleColumns, columnOrder: args.columnOrder }
+    if (args.viewId) {
+      await ctx.db.patch(args.viewId, value)
+      return args.viewId
+    }
+    return ctx.db.insert('templateViews', { templateId: args.templateId, ...value })
+  },
+})
+
+/** Play Log Views use confirmed hard deletion, without an Undo ledger entry. */
+export const removeView = mutation({
+  args: { viewId: v.id('templateViews') }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const view = await ctx.db.get(args.viewId)
+    if (!view) return null
+    await requireLiveTemplate(ctx, view.templateId)
+    await ctx.db.delete(view._id)
+    return null
   },
 })

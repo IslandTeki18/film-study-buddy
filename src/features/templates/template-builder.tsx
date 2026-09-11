@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
+import { ViewEditor } from './view-editor'
 import { FieldEditor } from './field-editor'
 import { InlineName } from './inline-name'
 import { SectionList } from './section-list'
@@ -29,7 +30,10 @@ export function TemplateBuilder({ templateId }: { readonly templateId: string })
         save={async (name) => { await rename({ templateId: tree.template._id, name }) }} />
     </header>
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-      <SectionList key={tree.template._id} tree={tree} selectedFieldId={selectedFieldId} onSelectField={setSelectedFieldId} />
+      <div className="space-y-6">
+        <SectionList key={tree.template._id} tree={tree} selectedFieldId={selectedFieldId} onSelectField={setSelectedFieldId} />
+        <ViewEditor key={tree.template._id} tree={tree} />
+      </div>
       {selectedField ? <FieldEditor key={selectedField._id} field={selectedField} /> :
         <p className="text-sm text-muted-foreground">Select a field to edit it</p>}
     </div>
