@@ -24,7 +24,8 @@ any code.
 | --- | --- | --- |
 | No new dependencies beyond the four in 1.1 | BLUEPRINT §3 | **No Radix.** See §1.3 — this changes how step 1.10 is built. |
 | TypeScript strict, plus `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` | `tsconfig.json` | Array indexing yields `T | undefined`; optional props must be omitted, not set to `undefined`. |
-| kebab-case files and directories | CLAUDE.md | `core-fields.ts`, `use-autosave.ts`, `field-zone.ts`. |
+| kebab-case files and directories in `src/` and `electron/` | CLAUDE.md | `use-autosave.ts`, `app-sidebar.tsx`. |
+| **camelCase files and directories under `convex/`** | CLAUDE.md naming exception | Convex rejects the push if any bundled path contains a hyphen: `coreFields.ts`, `fieldZone.ts`, `starterTemplates.ts`, `csvMapping.ts`, `sourceGames.ts`, `opponentData.ts`, `themeSettings/`. It is the file's **presence** that fails, not any import of it, so no import style avoids it. `convex/_generated/` is exempt. |
 | `convex/domain/` is pure TypeScript | BLUEPRINT §4, D10 | Zero imports from `convex/`, `convex/_generated/`, `react`, or the DOM. |
 | No Save button, anywhere | SPEC §89, Invariant 10 | 1.8 is the only persistence path built here. |
 | No test files in this phase | User instruction for this plan | See §0.5. Several TASKS.md *Verify* lines are substituted. |
@@ -63,7 +64,7 @@ Read these three files before writing anything; they define the house style.
   `@/lib/utils`, an exported `Props` type that extends the native element's HTML attributes,
   named function export, explicit `: ReactNode` return type. **Every primitive in 1.10 follows
   this shape.**
-- `convex/theme-settings/preferences.ts` — Convex function style: an exported validator constant,
+- `convex/theme_settings/preferences.ts` — Convex function style: an exported validator constant,
   `args:` and `returns:` on every function, JSDoc stating the invariant.
 
 Also observed and to be preserved:
@@ -90,7 +91,7 @@ that call for unit tests are substituted:
 project's stated primary verification strategy, and the pure modules built in 1.2–1.4 are exactly
 the ones it names. Those tests are deferred debt, not cancelled work. Record them:
 
-- Add a `ponytail:` comment at the top of `field-zone.ts`, `situation.ts`, and `provenance.ts`
+- Add a `ponytail:` comment at the top of `fieldZone.ts`, `situation.ts`, and `provenance.ts`
   naming the deferred test and the upgrade path, e.g.
   `// ponytail: boundary table verified by hand at build time; add node --test coverage per BLUEPRINT §11 before Phase 6 depends on it.`
 
@@ -179,7 +180,7 @@ Notes for the executing agent:
 
 ---
 
-### 1.2 Core field registry — `convex/domain/core-fields.ts`
+### 1.2 Core field registry — `convex/domain/coreFields.ts`
 
 **Build.** The single authoritative registry of the fourteen Core Snap fields (SPEC §15). This
 module is imported by the Play Log column model (4.3), every cell editor (4.5), CSV mapping
@@ -259,7 +260,7 @@ Decisions the executing agent must apply, not re-litigate:
   §20–§21 require inline creation (built in 4.9). Encoding this in the registry now is what
   makes 4.9 a rendering change rather than a data-model change.
 - `formatCoreValue` for `yardLine` produces `OWN 35`, `50`, `OPP 22` (SPEC §22). Import the
-  formatter from `field-zone.ts` (1.3) rather than duplicating the logic. For `undefined` or
+  formatter from `fieldZone.ts` (1.3) rather than duplicating the logic. For `undefined` or
   `null` it returns `''`, never `'undefined'` and never `'—'` (the em-dash placeholder is a
   presentation choice, not a data one).
 
@@ -273,7 +274,7 @@ Decisions the executing agent must apply, not re-litigate:
 
 Both must change together or the renderer build resolves what `tsc` accepts, or vice versa.
 
-**Files changed:** `convex/domain/core-fields.ts` (new), `tsconfig.json`, `electron.vite.config.ts`.
+**Files changed:** `convex/domain/coreFields.ts` (new), `tsconfig.json`, `electron.vite.config.ts`.
 
 **AC**
 1. `CORE_FIELDS.length === 14`.
@@ -289,7 +290,7 @@ Both must change together or the renderer build resolves what `tsc` accepts, or 
 3. One-shot assertion, nothing committed:
    ```bash
    node --experimental-strip-types -e "
-   import('./convex/domain/core-fields.ts').then(m => {
+   import('./convex/domain/coreFields.ts').then(m => {
      const assert = require('node:assert/strict')
      assert.equal(m.CORE_FIELDS.length, 14)
      assert.deepEqual(m.HASHES, ['Left','Middle','Right'])
@@ -302,13 +303,13 @@ Both must change together or the renderer build resolves what `tsc` accepts, or 
 
 ---
 
-### 1.3 Derived-value functions — `field-zone.ts`, `situation.ts`, `provenance.ts`
+### 1.3 Derived-value functions — `fieldZone.ts`, `situation.ts`, `provenance.ts`
 
 **Build.** Three pure modules in `convex/domain/`. BLUEPRINT D10: derived values are **never
 stored**. One implementation serves both server aggregation and client display, which is the
 whole point — do not let a second copy of any of this logic appear in `src/`.
 
-#### `convex/domain/field-zone.ts`
+#### `convex/domain/fieldZone.ts`
 
 ```ts
 export interface YardLine { readonly side: 'own' | 'mid' | 'opp'; readonly yard: number }
@@ -396,9 +397,9 @@ the stored `imported[key]`. This is an assumption (§3, A3) and needs the module
 Hudl gives strings, the Snap holds typed values, and comparing `"35"` to `35` structurally would
 mark every imported numeric cell `Coach Edited` on load. Trim both sides before comparing;
 whitespace is not a coach edit. This is the only place `provenance.ts` imports from
-`core-fields.ts` — acceptable, both are pure and in the same directory.
+`coreFields.ts` — acceptable, both are pure and in the same directory.
 
-**Files changed:** `convex/domain/field-zone.ts`, `convex/domain/situation.ts`,
+**Files changed:** `convex/domain/fieldZone.ts`, `convex/domain/situation.ts`,
 `convex/domain/provenance.ts` (all new).
 
 **AC**
@@ -413,7 +414,7 @@ whitespace is not a coach edit. This is the only place `provenance.ts` imports f
 2. One-shot boundary table, nothing committed. Print and check against §1.3's tables by eye:
    ```bash
    node --experimental-strip-types -e "
-   Promise.all([import('./convex/domain/field-zone.ts'), import('./convex/domain/situation.ts')])
+   Promise.all([import('./convex/domain/fieldZone.ts'), import('./convex/domain/situation.ts')])
      .then(([fz, s]) => {
        for (const l of [{side:'own',yard:1},{side:'own',yard:10},{side:'own',yard:11},{side:'own',yard:20},{side:'own',yard:39},{side:'own',yard:40},{side:'mid',yard:50},{side:'opp',yard:40},{side:'opp',yard:39},{side:'opp',yard:21},{side:'opp',yard:20},{side:'opp',yard:6},{side:'opp',yard:5},{side:'opp',yard:1}])
          console.log(fz.formatYardLine(l).padEnd(8), fz.fieldZoneOf(l))
@@ -457,8 +458,8 @@ Content guidance:
   strings are two different values. If the instinct arises to map `Trips Rt` → `Trips Right`,
   that instinct is a spec violation.
 - Do **not** re-declare `DIRECTIONS` or `PLAY_TYPES` here even though SPEC §96 lists them as
-  terminology areas — they are closed lists owned by `core-fields.ts` (1.2). Re-export from
-  `core-fields.ts` if a single import site is wanted; never copy the values.
+  terminology areas — they are closed lists owned by `coreFields.ts` (1.2). Re-export from
+  `coreFields.ts` if a single import site is wanted; never copy the values.
 - This module holds built-ins only. Coach-created Custom Terminology is discovered from existing
   Snap values at query time in Phase 4; nothing here is written to at runtime.
 
@@ -471,7 +472,7 @@ different ordering, defer only this rendering).
 2. No list contains a duplicate.
 3. Each list is alphabetically sorted (so a human can scan for gaps).
 4. No alias, synonym, or normalization function exists in the module.
-5. `DIRECTIONS` / `PLAY_TYPES` values are not duplicated from `core-fields.ts`.
+5. `DIRECTIONS` / `PLAY_TYPES` values are not duplicated from `coreFields.ts`.
 
 **V**
 1. `npm run typecheck` — clean.
@@ -533,7 +534,7 @@ Implementation notes:
   const hashValidator = v.union(...HASHES.map(h => v.literal(h)))
   ```
   If the spread-union typing fights `v.union`'s tuple signature, fall back to writing the
-  literals explicitly **and** add a comment pointing at `core-fields.ts` as the source of truth.
+  literals explicitly **and** add a comment pointing at `coreFields.ts` as the source of truth.
   Do not silently let the two lists diverge.
 - `snaps.core` is a `v.object` of fourteen-plus-one optional fields, per BLUEPRINT §5.4 verbatim —
   including `playNumber` (see 1.2), which is stored but not a registry entry.
@@ -544,7 +545,7 @@ Implementation notes:
   `v.array(v.union(...))` with `type` as the discriminant literal. Transcribe all seven; a
   partial union here becomes a Phase 10 rewrite.
 - `settings.themePreference` is declared now per BLUEPRINT §5.1. **Do not touch
-  `convex/theme-settings/preferences.ts` and do not migrate the renderer's local-storage theme.**
+  `convex/theme_settings/preferences.ts` and do not migrate the renderer's local-storage theme.**
   TASKS.md 3.1 owns that migration. The field sits unused for now; delete the stale "Theme
   settings need no standalone table" comment from `schema.ts` since it is now false, and replace
   it with a one-line pointer to task 3.1.
@@ -560,7 +561,7 @@ Implementation notes:
 4. Every index in the table above exists, named exactly as listed, with the field order the blueprint gives.
 5. Closed-list validators derive from, or are commented as mirroring, the 1.2 constants.
 6. `reports.blocks` carries all seven block variants.
-7. `convex/theme-settings/preferences.ts` is unmodified.
+7. `convex/theme_settings/preferences.ts` is unmodified.
 
 **V**
 1. `npm run typecheck` — clean. **This is a real check, not a formality:** `_generated/dataModel.d.ts` types `DataModel` off `../schema.js`, so a malformed table definition surfaces here.
@@ -1018,14 +1019,14 @@ header comment as well as here, and each is a one-constant change to revise.
 
 | # | Assumption | Where | Why it is needed | Risk if wrong |
 | --- | --- | --- | --- | --- |
-| A1 | Field Zone boundaries are Backed Up `own 1–10`, Own Territory `own 11–39`, Midfield `own 40 – opp 40`, Plus Territory `opp 39–21`, Red Zone `opp 20–6`, Goal Line `opp 5–1` | `field-zone.ts` | SPEC §22 fixes the six names and forbids coach configuration, but states no numbers | Low. One exported table; every consumer is derived, nothing is stored (D10), so a revision is instantly global with no migration |
+| A1 | Field Zone boundaries are Backed Up `own 1–10`, Own Territory `own 11–39`, Midfield `own 40 – opp 40`, Plus Territory `opp 39–21`, Red Zone `opp 20–6`, Goal Line `opp 5–1` | `fieldZone.ts` | SPEC §22 fixes the six names and forbids coach configuration, but states no numbers | Low. One exported table; every consumer is derived, nothing is stored (D10), so a revision is instantly global with no migration |
 | A2 | Distance buckets are Short `≤ 3`, Medium `4–6`, Long `≥ 7`, on downs 2–4; down 1 is always `1st Down` | `situation.ts` | SPEC §60 names ten groups, no thresholds | Low. Same reasoning as A1 |
 | A3 | Provenance equality compares the canonical display string, trimmed, not the typed value | `provenance.ts` | Hudl exports strings, Snaps hold typed values; a structural compare would mark every imported numeric cell `Coach Edited` on load | Medium. A formatting change in `formatCoreValue` silently reclassifies provenance. Mitigated by keeping one formatter (1.2) |
-| A4 | `playNumber` is on `snaps.core` but not in `CORE_FIELDS` | `core-fields.ts`, `schema.ts` | SPEC §15 lists fourteen fields without it; SPEC §95 makes it a Hudl Reference; TASKS.md 4.3's 24-column count requires exactly fourteen core columns | Low. If the owner wants it as a Play Log column, add one registry entry |
+| A4 | `playNumber` is on `snaps.core` but not in `CORE_FIELDS` | `coreFields.ts`, `schema.ts` | SPEC §15 lists fourteen fields without it; SPEC §95 makes it a Hudl Reference; TASKS.md 4.3's 24-column count requires exactly fourteen core columns | Low. If the owner wants it as a Play Log column, add one registry entry |
 | A5 | Down 1 has no Short/Medium/Long split | `situation.ts` | SPEC §60's list has one `1st Down` entry and nine split entries | Low |
 | A6 | `distance === 0` classifies as `Short` | `situation.ts` | Goal-to-go on the goal line has to land somewhere | Low |
-| A7 | `clock` and `personnel` are unvalidated short text | `core-fields.ts` | SPEC §95 wants clock only as a Hudl lookup; SPEC §97 forbids personnel package management | Low |
-| A8 | `quarter` and `down` carry no upper bound in the registry | `core-fields.ts` | Overtime exists; the spec sets no ceiling. Range guards, if wanted, belong to the Phase 4 cell editor | Low |
+| A7 | `clock` and `personnel` are unvalidated short text | `coreFields.ts` | SPEC §95 wants clock only as a Hudl lookup; SPEC §97 forbids personnel package management | Low |
+| A8 | `quarter` and `down` carry no upper bound in the registry | `coreFields.ts` | Overtime exists; the spec sets no ceiling. Range guards, if wanted, belong to the Phase 4 cell editor | Low |
 | A9 | The daily purge cron runs at 08:00 UTC | `crons.ts` | D13 says daily; no hour is specified. Chosen to fall outside typical US evening film-study hours | Low |
 | A10 | Screens #4 and #7 ship as placeholder routes now, becoming dialogs in Phases 3.6 / 4.2 | `routes.tsx` | BLUEPRINT §8 marks them `(dialog)` but §8's verification wants twenty-four reachable routes | Low |
 | A11 | Built-in `FORMATIONS` and `MOTIONS` hold 15–30 common high-school entries each | `terminology.ts` | SPEC §19–§20 say "common terminology" and enumerate nothing | Medium. Content judgment, not architecture. Coaches extend inline (4.9), and there are no aliases (§96), so a thin list is safe and a wrong entry is only clutter. Worth an owner review of the final lists |
@@ -1054,8 +1055,8 @@ header comment as well as here, and each is a one-constant change to revise.
 **New — `convex/` (7)**
 
 ```
-convex/domain/core-fields.ts        1.2
-convex/domain/field-zone.ts         1.3
+convex/domain/coreFields.ts        1.2
+convex/domain/fieldZone.ts         1.3
 convex/domain/situation.ts          1.3
 convex/domain/provenance.ts         1.3
 convex/domain/terminology.ts        1.4
@@ -1097,7 +1098,7 @@ src/routes/settings-page.tsx        1.7   placeholder body
 
 ```
 electron/main.ts                              no IPC until Phase 10.7 (printToPDF)
-convex/theme-settings/preferences.ts          TASKS.md 3.1 owns the settings migration
+convex/theme_settings/preferences.ts          TASKS.md 3.1 owns the settings migration
 src/features/theme-settings/*                 Phase 0, complete and verified
 src/components/error-boundary.tsx             wrapped in a second place, not edited
 src/components/ui/button.tsx                  the style precedent — read it, don't change it
@@ -1108,9 +1109,9 @@ src/lib/utils.ts, src/index.css, src/index.html
 **Never created in this phase**
 
 ```
-convex/domain/starter-templates.ts   2.1
+convex/domain/starterTemplates.ts   2.1
 convex/domain/aggregate.ts           9.1
-convex/domain/csv-mapping.ts         6.1
+convex/domain/csvMapping.ts         6.1
 src/lib/shortcuts.ts                 11.1
 src/features/*                       Phase 2+
 electron/preload.ts                  10.7

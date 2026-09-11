@@ -1,7 +1,7 @@
 /** Fourteen charting fields; Play # remains a Hudl Reference outside this registry.
  * Clock/personnel stay plain text; number ranges belong to the cell editor.
  */
-import { formatYardLine, isValidYardLine } from './field-zone.ts'
+import { formatYardLine, isValidYardLine } from './fieldZone.ts'
 import type { TerminologyList } from './terminology.ts'
 
 export const HASHES = ['Left', 'Middle', 'Right'] as const

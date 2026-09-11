@@ -1,7 +1,7 @@
 /** Compare trimmed canonical display strings: Hudl strings and typed Snap values share meaning. */
 // ponytail: shell provenance checks only; add node --test coverage before Phase 6.
-import { formatCoreValue } from './core-fields.ts'
-import type { CoreFieldKey } from './core-fields.ts'
+import { formatCoreValue } from './coreFields.ts'
+import type { CoreFieldKey } from './coreFields.ts'
 
 export const PROVENANCE_STATES = ['Imported', 'Coach Entered', 'Coach Edited'] as const
 export type Provenance = (typeof PROVENANCE_STATES)[number]

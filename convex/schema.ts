@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { DIRECTIONS, HASHES, PLAY_TYPES } from './domain/core-fields.ts'
+import { DIRECTIONS, HASHES, PLAY_TYPES } from './domain/coreFields.ts'
 
 const softDelete = {
   deletedAt: v.optional(v.number()),
