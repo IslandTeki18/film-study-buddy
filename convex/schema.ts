@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { TEMPLATE_FIELD_TYPES } from './domain/templateFields.ts'
 import { DIRECTIONS, HASHES, PLAY_TYPES } from './domain/coreFields.ts'
 
 const softDelete = {
@@ -109,11 +110,7 @@ export default defineSchema({
     templateId: v.id('templates'),
     sectionId: v.id('templateSections'),
     name: v.string(),
-    type: v.union(
-      v.literal('shortText'), v.literal('longText'), v.literal('number'),
-      v.literal('checkbox'), v.literal('select'), v.literal('multiSelect'),
-      v.literal('rating'), v.literal('tags'),
-    ),
+    type: v.union(...TEMPLATE_FIELD_TYPES.map((value) => v.literal(value))),
     options: v.array(v.string()),
     required: v.boolean(),
     carryForward: v.boolean(),
