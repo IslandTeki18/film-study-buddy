@@ -70,20 +70,24 @@ Verification evidence, assumptions, and live backend follow-up commands:
 
 Templates gate first launch and Source Games, so they come first.
 
-- [ ] **2.1 Starter template data.** `convex/domain/starter-templates.ts`: all eleven Starter
+Progress, verification, and current access blocker: [Phase 2 report](plans/phase-2-completion.md).
+
+- [x] **2.1 Starter template data.** `convex/domain/starterTemplates.ts`: all eleven Starter
       Coaching Templates with sections and fields (SPEC §24).
-      *Verify:* unit test asserts eleven templates, each with at least one section and field.
-- [ ] **2.2 Template queries and mutations.** `convex/templates.ts`: list, getFull, create,
+      *Verify:* approved one-shot assertions passed for eleven complete templates, options, names,
+      analysis values, and column reconciliation; typecheck and live push passed.
+- [x] **2.2 Template queries and mutations.** `convex/templates.ts`: list, getFull, create,
       duplicate, rename, remove, and the seeder that installs a starter template.
       *Verify:* seed a template from a scratch call; `getFull` returns nested sections and fields.
-- [ ] **2.3 Section and field mutations.** add / rename / reorder / remove for both, plus
+- [x] **2.3 Section and field mutations.** add / rename / reorder / remove for both, plus
       `updateField` and `addFieldOption`.
       *Verify:* reorder persists; removing a field soft-deletes it and returns a batch id.
-- [ ] **2.4 Coaching Templates screen.** List, create, duplicate, rename, delete with Undo.
+- [x] **2.4 Coaching Templates screen.** List, create, duplicate, rename, delete with Undo.
       *Verify:* each action round-trips against a live deployment.
-- [ ] **2.5 Template Builder — structure.** Sections and fields with drag and keyboard
+- [~] **2.5 Template Builder — structure.** Sections and fields with drag and keyboard
       reordering, inline rename, add and remove.
-      *Verify:* reorder by mouse and by keyboard; layout persists across a reload.
+      *Verify:* typecheck and production build passed; Electron verification interrupted by
+      Convex project-access denial. Mouse/keyboard reorder and reload checks remain pending.
 - [ ] **2.6 Template Builder — field editor.** All eight field types, select option management,
       the fixed 1–5 rating, the Required toggle, and the Carry-Forward toggle (SPEC §25–§28, §40).
       *Verify:* one field of every type created and reloaded intact.
