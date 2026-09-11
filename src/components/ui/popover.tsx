@@ -18,7 +18,11 @@ export function Popover({ trigger, triggerProps, contentRef, id: suppliedId, cla
         ref={contentRef}
         id={id}
         popover="auto"
-        className={cn('m-auto rounded-md border border-border bg-background p-4 text-sm text-foreground shadow-lg', className)}
+        className={cn(
+          'fixed inset-auto m-0 [position-area:bottom_span-left] [position-try-fallbacks:flip-block,flip-inline,flip-block_flip-inline]',
+          'rounded-md border border-border bg-background p-4 text-sm text-foreground shadow-lg',
+          className,
+        )}
         {...props}
       >
         {children}
