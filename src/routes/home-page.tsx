@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react'
-import { RoutePlaceholder } from './route-placeholder'
+import { isConvexConfigured } from '@/convex-client'
+import { HomeScreen } from '@/features/workspaces/home-screen'
 
-export function HomePage(): ReactNode { return <RoutePlaceholder title="Home" /> }
+export function HomePage(): ReactNode {
+  return isConvexConfigured ? <HomeScreen /> : <p className="p-6">Convex is not configured</p>
+}

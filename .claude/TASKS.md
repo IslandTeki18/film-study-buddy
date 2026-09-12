@@ -118,7 +118,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
 - [x] **3.4 Workspace CRUD.** `convex/workspaces.ts`: create with required Opponent Name and
       Week, optional date, team, notes; update; cascading soft delete.
       *Verify:* deleting a workspace hides its Source Games and Snaps; Undo restores all of them.
-- [ ] **3.5 Home screen.** Current season, current and recent opponents, New Opponent, and the
+- [x] **3.5 Home screen.** Current season, current and recent opponents, New Opponent, and the
       secondary links. Nothing else (SPEC §5).
       *Verify:* matches the spec's include and exclude lists exactly.
 - [ ] **3.6 Season View and Create Opponent.** Season listing plus the creation dialog.
