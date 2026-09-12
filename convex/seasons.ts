@@ -2,6 +2,8 @@ import { v } from 'convex/values'
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import schema from './schema'
+import { softDeleteBatch } from './deletions'
+import { collectWorkspaceCascade } from './workspaces'
 import { normalizeName } from './domain/names.ts'
 
 export async function requireLiveSeason(
@@ -45,5 +47,22 @@ export const rename = mutation({
     await requireLiveSeason(ctx, args.seasonId)
     await ctx.db.patch(args.seasonId, { name: requireName(args.name) })
     return null
+  },
+})
+
+/** Archive is not deletion: archived Workspaces join the same Season batch. */
+export const remove = mutation({
+  args: { seasonId: v.id('seasons') }, returns: v.string(),
+  handler: async (ctx, args) => {
+    const season = await requireLiveSeason(ctx, args.seasonId)
+    const records: Parameters<typeof softDeleteBatch>[1]['records'][number][] = [
+      { table: 'seasons', id: args.seasonId },
+    ]
+    const workspaces = await ctx.db.query('workspaces')
+      .withIndex('by_season', (q) => q.eq('seasonId', args.seasonId)).collect()
+    for (const workspace of workspaces) {
+      if (workspace.deletedAt === undefined) records.push(...await collectWorkspaceCascade(ctx, workspace._id))
+    }
+    return softDeleteBatch(ctx, { kind: 'season', label: season.name, records })
   },
 })

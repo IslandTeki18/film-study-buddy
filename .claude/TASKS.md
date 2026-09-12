@@ -115,7 +115,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
 - [x] **3.3 Seasons.** `convex/seasons.ts` plus the season picker in the shell. Name-only
       creation; the active season is the default destination (SPEC §6).
       *Verify:* create two seasons, switch, confirm the active one persists across a reload.
-- [ ] **3.4 Workspace CRUD.** `convex/workspaces.ts`: create with required Opponent Name and
+- [x] **3.4 Workspace CRUD.** `convex/workspaces.ts`: create with required Opponent Name and
       Week, optional date, team, notes; update; cascading soft delete.
       *Verify:* deleting a workspace hides its Source Games and Snaps; Undo restores all of them.
 - [ ] **3.5 Home screen.** Current season, current and recent opponents, New Opponent, and the

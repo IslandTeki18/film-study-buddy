@@ -21,6 +21,7 @@ import type * as domain_terminology from "../domain/terminology.js";
 import type * as seasons from "../seasons.js";
 import type * as settings from "../settings.js";
 import type * as templates from "../templates.js";
+import type * as workspaces from "../workspaces.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   seasons: typeof seasons;
   settings: typeof settings;
   templates: typeof templates;
+  workspaces: typeof workspaces;
 }>;
 
 /**
