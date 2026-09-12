@@ -11,7 +11,7 @@ export const TEMPLATE_FIELD_TYPE_LABELS: Readonly<Record<TemplateFieldType, stri
 }
 export const RATING_MIN = 1
 export const RATING_MAX = 5
-export const NAME_MAX_LENGTH = 80
+export { NAME_MAX_LENGTH, normalizeName } from './names.ts'
 
 export function isTemplateFieldType(value: unknown): value is TemplateFieldType {
   return TEMPLATE_FIELD_TYPES.some((type) => type === value)
@@ -19,11 +19,6 @@ export function isTemplateFieldType(value: unknown): value is TemplateFieldType 
 
 export function hasOptions(type: TemplateFieldType): boolean {
   return type === 'select' || type === 'multiSelect'
-}
-
-export function normalizeName(value: string): string | null {
-  const name = value.trim()
-  return name.length > 0 && name.length <= NAME_MAX_LENGTH ? name : null
 }
 
 export function normalizeOptions(values: readonly string[]): string[] | null {

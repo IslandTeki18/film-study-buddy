@@ -105,7 +105,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
 
 ## Phase 3 — Seasons, Workspaces, Home
 
-- [ ] **3.1 Settings singleton.** `convex/settings.ts`: get, completeFirstLaunch,
+- [x] **3.1 Settings singleton.** `convex/settings.ts`: get, completeFirstLaunch,
       setActiveSeason. Migrate the theme preference onto it.
       *Verify:* the document is created on first read and never duplicated.
 - [ ] **3.2 First Launch Setup.** Coaching-area picker (SPEC §4) that installs the matching

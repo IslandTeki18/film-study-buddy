@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from 'react'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { normalizeName } from '@convex/domain/templateFields'
+import { normalizeName } from '@convex/domain/names'
 
 interface NameDialogProps {
   readonly open: boolean

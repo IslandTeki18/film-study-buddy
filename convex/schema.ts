@@ -51,7 +51,6 @@ export default defineSchema({
     coachingArea: v.string(),
     firstLaunchCompletedAt: v.optional(v.number()),
     activeSeasonId: v.optional(v.id('seasons')),
-    // Task 3.1 connects this to the renderer preference.
     themePreference: v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
   }),
   importMappings: defineTable({

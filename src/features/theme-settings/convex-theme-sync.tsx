@@ -1,39 +1,22 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { makeFunctionReference } from 'convex/server'
+import { api } from '@convex/_generated/api'
 import type { ThemePreference } from './theme'
-
-// Referenced by path rather than through the generated `api` object so the renderer typechecks
-// before `npx convex dev` has produced convex/_generated. Keep in sync with
-// convex/theme_settings/preferences.ts.
-const getThemePreference = makeFunctionReference<
-  'query',
-  Record<string, never>,
-  ThemePreference | null
->('theme_settings/preferences:get')
-
-const setThemePreference = makeFunctionReference<
-  'mutation',
-  { themePreference: ThemePreference },
-  null
->('theme_settings/preferences:set')
 
 export interface ConvexThemeSyncProps {
   readonly preference: ThemePreference
-  /** Called once, with the stored preference, when the signed-in user has one. */
+  /** Called once, with the stored preference, when one exists. */
   readonly onAdoptStored: (preference: ThemePreference) => void
 }
 
 /**
  * Mirrors the theme preference to Convex. Rendered only when a Convex client is configured, so
  * its hooks always have a provider above them.
- *
- * Without Auth the query resolves to null and the mutation is a no-op, which is the documented
- * anonymous behavior.
  */
 export function ConvexThemeSync({ preference, onAdoptStored }: ConvexThemeSyncProps): ReactNode {
-  const storedPreference = useQuery(getThemePreference, {})
-  const savePreference = useMutation(setThemePreference)
+  const settings = useQuery(api.settings.get, {})
+  const storedPreference = settings === undefined ? undefined : (settings?.themePreference ?? null)
+  const savePreference = useMutation(api.settings.setThemePreference)
   const hasAdopted = useRef(false)
   const lastSynced = useRef<ThemePreference | null>(null)
 

@@ -8,7 +8,7 @@ import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
 import { DeleteConfirmDialog } from './delete-confirm-dialog'
-import { NameDialog } from './name-dialog'
+import { NameDialog } from '@/components/name-dialog'
 
 type TemplateTarget = { readonly templateId: Id<'templates'>; readonly name: string }
 
