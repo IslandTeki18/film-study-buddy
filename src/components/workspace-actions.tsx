@@ -1,0 +1,45 @@
+import { useState, type ReactNode } from 'react'
+import { useMutation } from 'convex/react'
+import { api } from '@convex/_generated/api'
+import type { Id } from '@convex/_generated/dataModel'
+import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
+import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
+
+interface WorkspaceActionsProps {
+  readonly workspaceId: Id<'workspaces'>
+  readonly label: string
+}
+
+export function WorkspaceActions({ workspaceId, label }: WorkspaceActionsProps): ReactNode {
+  const remove = useMutation(api.workspaces.remove)
+  const undo = useMutation(api.deletions.undo)
+  const [confirming, setConfirming] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+  const deleteWorkspace = useUndoableMutation(
+    () => remove({ workspaceId }), async (args) => { await undo(args) }, () => `Deleted ${label}`,
+  )
+  return <>
+    <DropdownMenu label="Actions" triggerProps={{ variant: 'outline', 'aria-label': `Actions for ${label}` }}
+      items={[{ label: 'Delete', onSelect: () => { setError(''); setConfirming(true) } }]} />
+    <Dialog open={confirming} onOpenChange={setConfirming} aria-label={`Delete ${label}`}>
+      {confirming && <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Delete {label}?</h2>
+        <p>This Weekly Opponent Workspace and all its Source Games, Snaps, notes, diagrams, Tendencies and Reports will be soft-deleted. Undo restores them together.</p>
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button autoFocus variant="outline" onClick={() => setConfirming(false)}>Cancel</Button>
+          <Button disabled={pending} onClick={() => {
+            if (pending) return
+            setPending(true)
+            void deleteWorkspace(undefined).then(() => setConfirming(false))
+              .catch((error: unknown) => setError(error instanceof Error ? error.message : String(error)))
+              .finally(() => setPending(false))
+          }}>Delete</Button>
+        </div>
+      </div>}
+    </Dialog>
+  </>
+}

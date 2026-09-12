@@ -121,7 +121,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
 - [x] **3.5 Home screen.** Current season, current and recent opponents, New Opponent, and the
       secondary links. Nothing else (SPEC §5).
       *Verify:* matches the spec's include and exclude lists exactly.
-- [ ] **3.6 Season View and Create Opponent.** Season listing plus the creation dialog.
+- [x] **3.6 Season View and Create Opponent.** Season listing plus the creation dialog.
       *Verify:* a workspace created here lands in the correct season.
 - [ ] **3.7 Weekly Opponent Overview.** The seven counts and Continue Film Study (SPEC §8),
       served by one `getOverview` query.
