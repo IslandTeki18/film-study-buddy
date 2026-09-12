@@ -126,7 +126,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
 - [x] **3.7 Weekly Opponent Overview.** The seven counts and Continue Film Study (SPEC §8),
       served by one `getOverview` query.
       *Verify:* counts match hand-checked data across two source games.
-- [ ] **3.8 Archive.** Archive and unarchive a workspace; the Archived Opponents screen grouped
+- [x] **3.8 Archive.** Archive and unarchive a workspace; the Archived Opponents screen grouped
       by season (SPEC §84–§85).
       *Verify:* archived workspaces leave Home, appear under their season, and reopen intact.
 

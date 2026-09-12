@@ -34,7 +34,7 @@ export function SeasonView({ seasonId }: SeasonViewProps): ReactNode {
               {workspace.yourTeam && <span className="ml-3">{workspace.yourTeam}</span>}
             </p>
           </div>
-          <WorkspaceActions workspaceId={workspace._id} label={`Week ${workspace.week} — ${workspace.opponentName}`} />
+          <WorkspaceActions archived={false} workspaceId={workspace._id} label={`Week ${workspace.week} — ${workspace.opponentName}`} />
         </li>)}
       </ul>}
   </main>

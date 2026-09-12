@@ -212,3 +212,43 @@ export const getOverview = query({
     }
   },
 })
+
+/** Archive preserves the full hierarchy and never writes a deletion ledger entry. */
+export const archive = mutation({
+  args: { workspaceId: v.id('workspaces') }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const workspace = await requireLiveWorkspace(ctx, args.workspaceId)
+    if (workspace.archivedAt !== undefined) throw new Error('Workspace is already archived')
+    await ctx.db.patch(args.workspaceId, { archivedAt: Date.now() })
+    return null
+  },
+})
+
+export const unarchive = mutation({
+  args: { workspaceId: v.id('workspaces') }, returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireLiveWorkspace(ctx, args.workspaceId)
+    await ctx.db.patch(args.workspaceId, { archivedAt: undefined })
+    return null
+  },
+})
+
+/** Archived Workspaces stay grouped by Season, newest Season first, then week ascending. */
+export const listArchived = query({
+  args: {},
+  returns: v.array(v.object({ ...workspaceValidator.fields, seasonName: v.string() })),
+  handler: async (ctx) => {
+    const seasons = (await ctx.db.query('seasons')
+      .withIndex('by_deletedAt', (q) => q.eq('deletedAt', undefined)).collect())
+      .sort((a, b) => b.createdAt - a.createdAt)
+    const archived = []
+    for (const season of seasons) {
+      const workspaces = await ctx.db.query('workspaces')
+        .withIndex('by_season_archived', (q) => q.eq('seasonId', season._id).gt('archivedAt', undefined)).collect()
+      archived.push(...workspaces.filter((workspace) => workspace.deletedAt === undefined)
+        .sort((a, b) => a.week - b.week || a.createdAt - b.createdAt)
+        .map((workspace) => ({ ...workspace, seasonName: season.name })))
+    }
+    return archived
+  },
+})

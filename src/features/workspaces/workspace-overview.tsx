@@ -5,6 +5,7 @@ import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { WorkspaceActions } from '@/components/workspace-actions'
 import { useAutosave } from '@/lib/db/use-autosave'
 
 export function WorkspaceOverview({ workspaceId }: { readonly workspaceId: string }): ReactNode {
@@ -15,11 +16,15 @@ export function WorkspaceOverview({ workspaceId }: { readonly workspaceId: strin
   }
   if (!overview || !workspace) return <main className="space-y-3 p-6"><h1>Workspace not found</h1><Link className="underline" to="/">Home</Link></main>
   return <main className="space-y-5 p-6">
-    <header>
-      <h1 className="text-2xl font-semibold">Week {overview.week} — {overview.opponentName}</h1>
-      <p className="text-sm text-muted-foreground">{overview.seasonName}
-        {overview.gameDate && <time className="ml-3" dateTime={overview.gameDate}>{overview.gameDate}</time>}
-      </p>
+    <header className="flex items-start justify-between gap-4">
+      <div>
+        <h1 className="text-2xl font-semibold">Week {overview.week} — {overview.opponentName}</h1>
+        <p className="text-sm text-muted-foreground">{overview.seasonName}
+          {overview.gameDate && <time className="ml-3" dateTime={overview.gameDate}>{overview.gameDate}</time>}
+        </p>
+      </div>
+      <WorkspaceActions workspaceId={workspace._id} archived={workspace.archivedAt !== undefined}
+        label={`Week ${workspace.week} — ${workspace.opponentName}`} />
     </header>
     <Link className={buttonVariants()} to={`/w/${workspace._id}/games${overview.continueGameId ? `/${overview.continueGameId}` : ''}`}>
       Continue Film Study
