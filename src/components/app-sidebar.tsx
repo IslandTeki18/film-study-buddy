@@ -3,6 +3,8 @@ import { NavLink } from 'react-router'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 import { ThemeToggle } from '@/features/theme-settings/theme-toggle'
+import { isConvexConfigured } from '@/convex-client'
+import { SeasonPicker } from '@/features/seasons/season-picker'
 import { ROUTES } from '@/routes/routes'
 
 export function AppSidebar(): ReactNode {
@@ -12,6 +14,8 @@ export function AppSidebar(): ReactNode {
       <div className="app-drag-region flex h-12 items-end px-4 pb-1">
         <span className="text-xs font-semibold tracking-wide uppercase">Film Study Buddy</span>
       </div>
+
+      {isConvexConfigured && <SeasonPicker />}
 
       <nav aria-label="Main" className="flex-1 space-y-1 p-2">
         {ROUTES.map(({ path, label, Icon }) => (

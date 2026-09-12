@@ -112,7 +112,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
       starter template and marks first launch complete. Shown only when incomplete.
       *Verify:* fresh deployment routes to `/welcome`; after choosing, the template exists and
       the screen never returns.
-- [ ] **3.3 Seasons.** `convex/seasons.ts` plus the season picker in the shell. Name-only
+- [x] **3.3 Seasons.** `convex/seasons.ts` plus the season picker in the shell. Name-only
       creation; the active season is the default destination (SPEC §6).
       *Verify:* create two seasons, switch, confirm the active one persists across a reload.
 - [ ] **3.4 Workspace CRUD.** `convex/workspaces.ts`: create with required Opponent Name and
