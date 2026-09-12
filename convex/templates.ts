@@ -151,14 +151,18 @@ export const create = mutation({
 })
 
 /** Each installation is an independent editable tree. */
+export async function installStarterTemplate(
+  ctx: MutationCtx, coachingArea: string,
+): Promise<Id<'templates'>> {
+  if (!isCoachingArea(coachingArea)) throw new Error('Unknown Coaching Area')
+  return (await insertTemplateTree(ctx, {
+    ...getStarterTemplate(coachingArea), isStarter: true,
+  })).templateId
+}
+
 export const installStarter = mutation({
   args: { coachingArea: v.string() }, returns: v.id('templates'),
-  handler: async (ctx, args) => {
-    if (!isCoachingArea(args.coachingArea)) throw new Error('Unknown Coaching Area')
-    return (await insertTemplateTree(ctx, {
-      ...getStarterTemplate(args.coachingArea), isStarter: true,
-    })).templateId
-  },
+  handler: (ctx, args) => installStarterTemplate(ctx, args.coachingArea),
 })
 
 /** Copies live fields and rewrites view references to their new identities. */
