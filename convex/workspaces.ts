@@ -165,3 +165,50 @@ export const remove = mutation({
     })
   },
 })
+
+/** Overview counts only live records; the coach decides when film study is complete. */
+export const getOverview = query({
+  args: { workspaceId: v.string() },
+  returns: v.union(v.null(), v.object({
+    opponentName: v.string(), week: v.number(), seasonName: v.string(), gameDate: v.optional(v.string()),
+    sourceGames: v.array(v.object({ _id: v.id('sourceGames'), label: v.string(), snapCount: v.number() })),
+    snapCount: v.number(), mustReviewCount: v.number(), tendencyCount: v.number(),
+    reports: v.array(v.object({ _id: v.id('reports'), name: v.string(), intent: schema.tables.reports.validator.fields.intent })),
+    continueGameId: v.union(v.id('sourceGames'), v.null()),
+  })),
+  handler: async (ctx, args) => {
+    const id = ctx.db.normalizeId('workspaces', args.workspaceId)
+    if (!id) return null
+    const workspace = await ctx.db.get(id)
+    if (!workspace || workspace.deletedAt !== undefined) return null
+    const season = await ctx.db.get(workspace.seasonId)
+    if (!season || season.deletedAt !== undefined) return null
+    const games = (await ctx.db.query('sourceGames')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', id)).collect())
+      .filter((game) => game.deletedAt === undefined).sort((a, b) => b.createdAt - a.createdAt)
+    let mustReviewCount = 0
+    // ponytail: per-game Snap scans fit V1 volume; use aggregate counters if query latency shows up.
+    const sourceGames = []
+    for (const game of games) {
+      const snaps = await ctx.db.query('snaps')
+        .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect()
+      const review = await ctx.db.query('snaps')
+        .withIndex('by_sourceGame_mustReview', (q) => q.eq('sourceGameId', game._id).eq('mustReview', true)).collect()
+      mustReviewCount += review.filter((snap) => snap.deletedAt === undefined).length
+      sourceGames.push({ _id: game._id, label: game.label, snapCount: snaps.filter((snap) => snap.deletedAt === undefined).length })
+    }
+    const tendencies = await ctx.db.query('tendencies')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', id)).collect()
+    const reports = await ctx.db.query('reports')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', id)).collect()
+    return {
+      opponentName: workspace.opponentName, week: workspace.week, seasonName: season.name,
+      ...(workspace.gameDate ? { gameDate: workspace.gameDate } : {}), sourceGames,
+      snapCount: sourceGames.reduce((sum, game) => sum + game.snapCount, 0), mustReviewCount,
+      tendencyCount: tendencies.filter((tendency) => tendency.deletedAt === undefined).length,
+      reports: reports.filter((report) => report.deletedAt === undefined)
+        .map(({ _id, name, intent }) => ({ _id, name, intent })),
+      continueGameId: games[0]?._id ?? null,
+    }
+  },
+})

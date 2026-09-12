@@ -123,7 +123,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
       *Verify:* matches the spec's include and exclude lists exactly.
 - [x] **3.6 Season View and Create Opponent.** Season listing plus the creation dialog.
       *Verify:* a workspace created here lands in the correct season.
-- [ ] **3.7 Weekly Opponent Overview.** The seven counts and Continue Film Study (SPEC §8),
+- [x] **3.7 Weekly Opponent Overview.** The seven counts and Continue Film Study (SPEC §8),
       served by one `getOverview` query.
       *Verify:* counts match hand-checked data across two source games.
 - [ ] **3.8 Archive.** Archive and unarchive a workspace; the Archived Opponents screen grouped
