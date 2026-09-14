@@ -139,7 +139,7 @@ The core of the product. Build the grid before the power features.
 - [x] **4.1 Source Game CRUD.** Create with a label and exactly one template; rename; cascading
       soft delete (SPEC §9, §99).
       *Verify:* a game cannot be created without a template.
-- [ ] **4.2 Source Games List and Add dialog.** Empty state leads with Import Hudl CSV, with
+- [x] **4.2 Source Games List and Add dialog.** Empty state leads with Import Hudl CSV, with
       Create Manually secondary (SPEC §11).
       *Verify:* both paths reach the right screen.
 - [ ] **4.3 Snap read model.** `snaps.listBySourceGame` plus the column model that merges Core
