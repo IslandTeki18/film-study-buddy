@@ -155,7 +155,7 @@ The core of the product. Build the grid before the power features.
 - [x] **4.6 Keyboard navigation.** Arrow-key cell cursor, Tab and Shift+Tab, home and end rows.
       Enter never creates a row (SPEC §98).
       *Verify:* a full row charted without touching the mouse.
-- [ ] **4.7 Structured field position.** The Yard Line editor produces `OWN 35`, `50`, `OPP 22`
+- [x] **4.7 Structured field position.** The Yard Line editor produces `OWN 35`, `50`, `OPP 22`
       and cannot express an invalid spot; Field Zone displays derived (SPEC §22).
       *Verify:* `OPP 0` and `OWN 60` are rejected at the input.
 - [ ] **4.8 Manual snap creation.** An explicit New Snap action that carries forward the fields
