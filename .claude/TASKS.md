@@ -134,6 +134,8 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
 
 ## Phase 4 — Source Games and the Play Log
 
+Implementation and verification: [Phase 4 completion report](plans/phase-4-completion.md).
+
 The core of the product. Build the grid before the power features.
 
 - [x] **4.1 Source Game CRUD.** Create with a label and exactly one template; rename; cascading
