@@ -39,6 +39,11 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
   const [groupIdx, setGroupIdx] = useState(0)
   const [adding, setAdding] = useState(false)
   const pending = useRef(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
   const section = useRef<HTMLElement>(null)
   const latest = useRef(draft)
   latest.current = draft
@@ -97,12 +102,13 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
           try {
             if (list) await onAddTerminology(list, value)
             else if (column.kind === 'template') await onAddFieldOption(column.field._id, value)
+            if (!mounted.current) return
             const previous = latest.current[column.key]
             const updated = { ...latest.current, [column.key]: column.kind === 'template' && column.field.type === 'multiSelect'
               ? [...new Set([...(Array.isArray(previous) ? previous : []), value])] : value }
             latest.current = updated; onDraftChange(updated); input.value = ''
           } catch { /* The parent callback displays the failure toast; keep the entered value. */ }
-          finally { pending.current = false; setAdding(false) }
+          finally { pending.current = false; if (mounted.current) setAdding(false) }
         })()
       }} />
   }
