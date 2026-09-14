@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { getCoreRowModel, useLegacyTable, type LegacyColumnDef } from '@tanstack/react-table/legacy'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
+import { builtInTerminology, type TerminologyList } from '@convex/domain/terminology'
 import { normalizeAnalysisValue } from '@convex/domain/templateFields'
 import { useToast } from '@/components/ui/toast'
 import type { Doc, Id } from '@convex/_generated/dataModel'
@@ -12,13 +13,16 @@ import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns, createdId }: {
+export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
+  readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly pendingCommit: RefObject<Promise<boolean>>
 }): ReactNode {
   const container = useRef<HTMLDivElement>(null)
   const { cursor: active, setCursor: setActive, next } = useCellCursor(snaps.length, columns.length)
   const [editing, setEditing] = useState<(CellCursor & { readonly draft?: string }) | null>(null)
   const focusedId = useRef<Id<'snaps'> | null>(null)
+  const pendingCells = useRef(new Map<string, Promise<boolean>>())
   useEffect(() => {
     if (!createdId || focusedId.current === createdId) return
     const row = snaps.findIndex((snap) => snap._id === createdId)
@@ -29,6 +33,8 @@ export function PlayLogTable({ snaps, columns, createdId }: {
     requestAnimationFrame(() => container.current?.querySelector<HTMLElement>(`[data-cell="${row}:0"]`)?.focus())
   }, [createdId, snaps, setActive])
   const { show } = useToast()
+  const addTerminology = useMutation(api.terminology.add)
+  const addFieldOption = useMutation(api.templates.addFieldOption)
   const updateCore = useMutation(api.snaps.updateCore).withOptimisticUpdate((store, args) => {
     const sourceGameId = snaps[0]?.sourceGameId
     if (!sourceGameId || !isCoreFieldKey(args.key)) return
@@ -77,20 +83,43 @@ export function PlayLogTable({ snaps, columns, createdId }: {
     setTimeout(() => { if (container.current) container.current.tabIndex = 0 }, 0)
     return false
   }
-  async function commit(snap: Doc<'snaps'>, column: PlayLogColumn, raw: unknown): Promise<void> {
+  async function persist(snap: Doc<'snaps'>, column: PlayLogColumn, raw: unknown, newOption: string | undefined, forceWrite: boolean): Promise<boolean> {
     try {
       if (column.kind === 'core') {
         const value = normalizeCoreValue(column.field.key, raw)
-        if (JSON.stringify(value) === JSON.stringify(snap.core[column.field.key])) return
+        if (!forceWrite && JSON.stringify(value) === JSON.stringify(snap.core[column.field.key])) return true
+        if (column.field.input.kind === 'terminology' && typeof value === 'string') {
+          const list = column.field.input.list
+          if (!builtInTerminology(list).includes(value) && !terminology.some((item) => item.list === list && item.value === value)) {
+            await addTerminology({ list, value })
+          }
+        }
         await updateCore({ snapId: snap._id, key: column.field.key, ...(value === undefined ? {} : { value }) })
       } else {
-        const value = normalizeAnalysisValue(column.field, raw)
-        if (JSON.stringify(value) === JSON.stringify(snap.analysis[column.field._id] ?? null)) return
+        const option = newOption?.trim()
+        const field = option ? { ...column.field, options: [...column.field.options, option] } : column.field
+        const value = normalizeAnalysisValue(field, raw)
+        if (option) await addFieldOption({ fieldId: column.field._id, option })
+        if (!forceWrite && JSON.stringify(value) === JSON.stringify(snap.analysis[column.field._id] ?? null)) return true
         await updateAnalysis({ snapId: snap._id, fieldId: column.field._id, value })
       }
+      return true
     } catch (error) {
       show({ message: `Could not save ${column.label}. ${error instanceof Error ? error.message : String(error)}` })
+      return false
     }
+  }
+  function commit(snap: Doc<'snaps'>, column: PlayLogColumn, raw: unknown, newOption?: string): Promise<boolean> {
+    const key = `${snap._id}:${column.key}`
+    const forceWrite = pendingCells.current.has(key)
+    const saving = pendingCommit.current.then(() => persist(snap, column, raw, newOption, forceWrite))
+    pendingCommit.current = saving
+    pendingCells.current.set(key, saving)
+    void saving.then(() => {
+      if (pendingCells.current.get(key) === saving) pendingCells.current.delete(key)
+      if (pendingCommit.current === saving) pendingCommit.current = Promise.resolve(true)
+    })
+    return saving
   }
   const definitions = useMemo<LegacyColumnDef<Doc<'snaps'>>[]>(() => columns.map((column) => ({
     id: column.key,
@@ -148,8 +177,8 @@ export function PlayLogTable({ snaps, columns, createdId }: {
             onClick={() => { if (!isEditing) { focus(rowIndex, index); if (checkbox) toggle() } }}
             onDoubleClick={() => { if (!checkbox) setEditing({ row: rowIndex, col: index }) }}
             className={`h-7 px-1.5 py-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${isEditing ? '' : 'truncate'} ${index === 0 ? 'sticky left-0 z-10 bg-background' : ''}`}>
-            {isEditing ? <CellEditor snap={row.original} column={column} initialDraft={editing.draft} canTab={canTab} onCancel={() => close()}
-              onCommit={(value, move) => { void commit(row.original, column, value); close(move) }} />
+            {isEditing ? <CellEditor snap={row.original} column={column} initialDraft={editing.draft} canTab={canTab} terminology={terminology} onCancel={() => close()}
+              onCommit={(value, move, option) => { void commit(row.original, column, value, option); close(move) }} />
               : <Cell snap={row.original} column={column} />}
           </TableCell>
         })}

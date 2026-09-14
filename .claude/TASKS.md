@@ -158,10 +158,10 @@ The core of the product. Build the grid before the power features.
 - [x] **4.7 Structured field position.** The Yard Line editor produces `OWN 35`, `50`, `OPP 22`
       and cannot express an invalid spot; Field Zone displays derived (SPEC §22).
       *Verify:* `OPP 0` and `OWN 60` are rejected at the input.
-- [ ] **4.8 Manual snap creation.** An explicit New Snap action that carries forward the fields
+- [x] **4.8 Manual snap creation.** An explicit New Snap action that carries forward the fields
       marked Carry-Forward (SPEC §40).
       *Verify:* Personnel and Formation carry; Clip # and Yards do not.
-- [ ] **4.9 Inline terminology creation.** Formation, Play Concept, and template select fields
+- [x] **4.9 Inline terminology creation.** Formation, Play Concept, and template select fields
       accept a new value inline, which becomes reusable (SPEC §20, §21, §27).
       *Verify:* a formation added while charting appears in the next snap's picker.
 - [ ] **4.10 Provenance display and restore.** Imported markers, the Coach Edited state, and

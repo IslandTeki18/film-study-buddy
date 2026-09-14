@@ -15,6 +15,8 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const tree = useQuery(api.templates.getFull, game ? { templateId: game.templateId } : 'skip')
   const snaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
+  const terminology = useQuery(api.terminology.list, {})
+  const pendingCommit = useRef<Promise<boolean>>(Promise.resolve(true))
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
   const creating = useRef(false)
   const [pending, setPending] = useState(false)
@@ -48,13 +50,17 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     setPending(true)
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     document.querySelector<HTMLElement>('[aria-label="Play Log"] [popover]:popover-open')?.hidePopover()
+    const edits = pendingCommit.current
     setTimeout(() => {
-      void create({ sourceGameId: game._id }).then(setCreatedId)
+      void edits.then(async (saved) => {
+        if (!saved) throw new Error('The previous cell edit could not be saved')
+        setCreatedId(await create({ sourceGameId: game._id }))
+      })
         .catch((error: unknown) => show({ message: `Could not create Snap. ${error instanceof Error ? error.message : String(error)}` }))
         .finally(() => { creating.current = false; setPending(false) })
     }, 0)
   }
-  if (game === undefined || (game && (tree === undefined || snaps === undefined))) {
+  if (game === undefined || (game && (tree === undefined || snaps === undefined || terminology === undefined))) {
     return <div role="status" aria-label="Loading Play Log" className="m-6 h-32 animate-pulse rounded bg-muted" />
   }
   if (!game || game.workspaceId !== workspaceId) return <main className="space-y-3 p-6">
@@ -79,6 +85,6 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     {!snaps?.length ? <section className="space-y-3">
       <h2 className="font-semibold">No Snaps yet</h2>
       <Link className="underline" to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>
-    </section> : <PlayLogTable snaps={snaps} columns={columns} createdId={createdId} />}
+    </section> : <PlayLogTable snaps={snaps} columns={columns} createdId={createdId} terminology={terminology ?? []} pendingCommit={pendingCommit} />}
   </main>
 }

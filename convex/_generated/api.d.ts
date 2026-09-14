@@ -24,6 +24,7 @@ import type * as settings from "../settings.js";
 import type * as snaps from "../snaps.js";
 import type * as sourceGames from "../sourceGames.js";
 import type * as templates from "../templates.js";
+import type * as terminology from "../terminology.js";
 import type * as workspaces from "../workspaces.js";
 
 import type {
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   snaps: typeof snaps;
   sourceGames: typeof sourceGames;
   templates: typeof templates;
+  terminology: typeof terminology;
   workspaces: typeof workspaces;
 }>;
 
