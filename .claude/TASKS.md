@@ -192,7 +192,7 @@ The core of the product. Build the grid before the power features.
       *Verify:* bulk-edit fifty rows over mixed prior values; Undo restores each original.
 - [~] **5.9 Row actions menu.** Open Play Detail, Add Quick Note, Mark/Resolve Must Review,
       Add/Edit Play Diagram, Duplicate Snap, Delete Snap; destructive actions confirm (SPEC §43).
-- [ ] **5.10 Duplicate Snap.** Copies Core Snap Data and Template Analysis Data and nothing else
+- [~] **5.10 Duplicate Snap.** Copies Core Snap Data and Template Analysis Data and nothing else
       (SPEC §44).
       *Verify:* the copy has no quick notes, cell notes, must-review flag, or diagram.
 - [ ] **5.11 Cell notes.** A note attached to one cell, editable from the cell and Play Detail

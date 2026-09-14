@@ -245,3 +245,17 @@ export const remove = mutation({
       records: await collectSnapCascade(ctx, snap) })
   },
 })
+
+export const duplicate = mutation({
+  args: { snapId: v.id('snaps') }, returns: v.id('snaps'),
+  handler: async (ctx, args) => {
+    const snap = await requireLiveSnap(ctx, args.snapId)
+    const next = await ctx.db.query('snaps').withIndex('by_sourceGame', (q) =>
+      q.eq('sourceGameId', snap.sourceGameId).gt('order', snap.order))
+      .filter((q) => q.eq(q.field('deletedAt'), undefined)).first()
+    // ponytail: midpoint orders; renumber if two duplicates of the same Snap ever tie.
+    return ctx.db.insert('snaps', { sourceGameId: snap.sourceGameId,
+      order: (snap.order + (next?.order ?? snap.order + 1)) / 2,
+      core: { ...snap.core }, analysis: { ...snap.analysis }, mustReview: false, createdAt: Date.now() })
+  },
+})

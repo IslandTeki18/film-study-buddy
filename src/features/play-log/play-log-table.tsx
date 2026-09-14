@@ -23,9 +23,10 @@ import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize, sort, onSort, base }: {
+export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize, sort, onSort, base, onDuplicated }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
   readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly onDuplicated: (id: Id<'snaps'>) => void
   readonly base: string
   readonly sort: SortState
   readonly onSort: (sort: SortState) => void
@@ -327,7 +328,7 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
           </TableCell>
         })}
         <TableCell className={`px-0 ${row.original.mustReview ? 'border-l-2 border-amber-500' : ''}`}>
-          <RowActions snap={row.original} base={base} />
+          <RowActions snap={row.original} base={base} onDuplicated={onDuplicated} />
         </TableCell>
       </TableRow>)}</TableBody>
     </Table>
