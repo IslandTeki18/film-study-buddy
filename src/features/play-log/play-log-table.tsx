@@ -263,7 +263,7 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
           if (!column) return null
           const width = header.getSize()
           return <TableHead key={header.id} scope="col" aria-sort={sort?.key === column.key ? sort.direction === 'asc' ? 'ascending' : 'descending' : 'none'} {...drag.getItemProps(index)}
-            className={`sticky top-0 bg-muted px-1.5 py-0 ${index === 0 ? 'left-[2rem] z-30' : 'z-20'} ${drag.dragOverIndex === index ? 'border-2 border-primary' : ''}`}>
+            className={`sticky top-0 bg-muted px-1.5 py-0 ${index === 0 ? 'left-[2rem] z-30' : 'z-20'} ${drag.dragOverIndex === index ? 'ring-2 ring-inset ring-primary' : ''}`}>
             <div className="flex items-center pr-2">
               <button className="min-w-0 flex-1 truncate text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => onSort(nextSort(sort, column.key))}>{column.label}{sort?.key === column.key ? sort.direction === 'asc' ? ' ↑' : ' ↓' : ''}</button>

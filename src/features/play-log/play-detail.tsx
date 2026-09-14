@@ -1,0 +1,133 @@
+import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
+import { useMutation, useQuery } from 'convex/react'
+import type { FunctionReturnType } from 'convex/server'
+import { api } from '@convex/_generated/api'
+import type { Doc } from '@convex/_generated/dataModel'
+import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
+import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
+import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
+import { useToast } from '@/components/ui/toast'
+import { buildColumns } from './columns'
+import { Cell } from './cell'
+import { displayValue } from './row-model'
+import { CellNoteEditor, useSaveCellNote } from './cell-editors'
+
+export function PlayDetail({ workspaceId, sourceGameId, snapId }: {
+  readonly workspaceId: string; readonly sourceGameId: string; readonly snapId: string
+}): ReactNode {
+  const game = useQuery(api.sourceGames.get, { sourceGameId })
+  const snap = useQuery(api.snaps.get, { snapId })
+  const tree = useQuery(api.templates.getFull, game ? { templateId: game.templateId } : 'skip')
+  const notes = useQuery(api.notes.listCellNotes, snap ? { snapId: snap._id } : 'skip')
+  const base = `/w/${workspaceId}/games/${sourceGameId}`
+  if (game === undefined || snap === undefined || (game && tree === undefined) || (snap && notes === undefined)) {
+    return <div role="status" aria-label="Loading Play Detail" className="m-6 h-32 animate-pulse rounded bg-muted" />
+  }
+  if (!game || !snap || game.workspaceId !== workspaceId || snap.sourceGameId !== game._id || !tree) {
+    return <main className="space-y-3 p-6"><h1>Snap not found</h1><Link className="underline" to={base}>Back to Play Log</Link></main>
+  }
+  return <DetailContent key={snap._id} snap={snap} tree={tree} notes={notes ?? []} base={base} />
+}
+
+function DetailContent({ snap, tree, notes, base }: {
+  readonly snap: Doc<'snaps'>; readonly tree: NonNullable<FunctionReturnType<typeof api.templates.getFull>>
+  readonly notes: readonly Doc<'cellNotes'>[]; readonly base: string
+}): ReactNode {
+  const columns = buildColumns(tree)
+  const saveNote = useSaveCellNote(snap.sourceGameId)
+  const [adding, setAdding] = useState('')
+  const [restoring, setRestoring] = useState<string | null>(null)
+  const [marking, setMarking] = useState(false)
+  const { show } = useToast()
+  const mark = useMutation(api.snaps.setMustReview).withOptimisticUpdate((store, args) => {
+    const detail = store.getQuery(api.snaps.get, { snapId: args.snapId })
+    if (detail) store.setQuery(api.snaps.get, { snapId: args.snapId }, { ...detail, mustReview: args.mustReview })
+    const query = { sourceGameId: snap.sourceGameId }
+    const current = store.getQuery(api.snaps.listBySourceGame, query)
+    if (current) store.setQuery(api.snaps.listBySourceGame, query, current.map((item) => item._id === args.snapId ? { ...item, mustReview: args.mustReview } : item))
+  })
+  const restore = useMutation(api.snaps.restoreImportedValue).withOptimisticUpdate((store, args) => {
+    if (!isCoreFieldKey(args.key)) return
+    const key = args.key
+    const original = restoredValueFor(snap.imported, key)
+    if (original === null) return
+    let value: ReturnType<typeof normalizeCoreValue>
+    try { value = normalizeCoreValue(key, original) } catch { return }
+    function update(item: Doc<'snaps'>): Doc<'snaps'> {
+      if (item._id !== args.snapId) return item
+      const core = { ...item.core }
+      if (value === undefined) delete core[key]
+      else Object.assign(core, { [key]: value })
+      return { ...item, core }
+    }
+    const detail = store.getQuery(api.snaps.get, { snapId: args.snapId })
+    if (detail) store.setQuery(api.snaps.get, { snapId: args.snapId }, update(detail))
+    const query = { sourceGameId: snap.sourceGameId }
+    const current = store.getQuery(api.snaps.listBySourceGame, query)
+    if (current) store.setQuery(api.snaps.listBySourceGame, query, current.map(update))
+  })
+  // ponytail: read-only values; add inline editing here only if coaches chart from Detail.
+  return <main className="space-y-6 p-6">
+    <header className="flex flex-wrap items-center gap-4">
+      <h1 className="text-lg font-semibold">Snap {snap.core.clipNumber ?? snap.order}</h1>
+      <Link className="underline" to={base}>Back to Play Log</Link>
+      <Button variant="outline" disabled={marking} onClick={() => {
+        setMarking(true)
+        void mark({ snapId: snap._id, mustReview: !snap.mustReview })
+          .catch((error: unknown) => show({ message: `Could not update Must Review. ${error instanceof Error ? error.message : String(error)}` }))
+          .finally(() => setMarking(false))
+      }}>{snap.mustReview ? 'Resolve Must Review' : 'Mark Must Review'}</Button>
+    </header>
+    <section className="space-y-3" aria-label="Core Snap Data">
+      <h2 className="font-semibold">Core Snap Data</h2>
+      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {columns.filter((column) => column.kind === 'core').map((column) => {
+          const edited = provenanceOf(snap.imported, column.field.key, snap.core[column.field.key]) === 'Coach Edited'
+          return <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt>
+            <dd><Cell snap={snap} column={column} />{!displayValue(snap, column) && '—'}
+              {edited && <div className="space-y-1 text-sm">
+                <p>Original Hudl value: {snap.imported?.[column.field.key]}</p>
+                <Button variant="outline" size="sm" disabled={restoring !== null} aria-label={`Restore original ${column.label}`}
+                  onClick={() => {
+                    setRestoring(column.key)
+                    void restore({ snapId: snap._id, key: column.field.key })
+                      .catch((error: unknown) => show({ message: `Could not restore ${column.label}. ${error instanceof Error ? error.message : String(error)}` }))
+                      .finally(() => setRestoring(null))
+                  }}>Restore original</Button>
+              </div>}
+            </dd>
+          </div>
+        })}
+      </dl>
+    </section>
+    <section className="space-y-3" aria-label="Template Analysis Data">
+      <h2 className="font-semibold">Template Analysis Data</h2>
+      {tree.sections.map((section) => <div key={section._id} className="space-y-2">
+        <h3 className="text-sm font-semibold">{section.name}</h3>
+        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{columns.filter((column) => column.kind === 'template' && column.field.sectionId === section._id)
+          .map((column) => <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt><dd>{displayValue(snap, column) || '—'}</dd></div>)}</dl>
+      </div>)}
+    </section>
+    <section className="space-y-3" aria-label="Cell Notes">
+      <h2 className="font-semibold">Cell Notes</h2>
+      {columns.filter((column) => column.key === adding || notes.some((note) => note.fieldKey === column.key)).map((column) =>
+        <div key={column.key} className="max-w-xl space-y-1"><h3 className="text-sm">{column.label}</h3>
+          <CellNoteEditor label={column.label} note={notes.find((note) => note.fieldKey === column.key)?.text ?? ''}
+            onSave={(text) => saveNote({ snapId: snap._id, fieldKey: column.key, text })} />
+        </div>)}
+      <Select className="max-w-xs" aria-label="Add note to field" value={adding} onChange={(event) => setAdding(event.target.value)}>
+        <option value="">Add note to field…</option>
+        {columns.filter((column) => column.key === adding || !notes.some((note) => note.fieldKey === column.key))
+          .map((column) => <option key={column.key} value={column.key}>{column.label}</option>)}
+      </Select>
+    </section>
+    <section className="space-y-2" aria-label="Quick Notes">
+      <h2 className="font-semibold">Quick Notes</h2><Link className="underline" to={`${base}/notes?snap=${snap._id}`}>Quick Notes for this Snap</Link>
+    </section>
+    <section className="space-y-2" aria-label="Play Diagram">
+      <h2 className="font-semibold">Play Diagram</h2><Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Add / Edit Play Diagram</Link>
+    </section>
+  </main>
+}

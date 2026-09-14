@@ -174,30 +174,30 @@ The core of the product. Build the grid before the power features.
 
 ## Phase 5 — Play Log Power Features
 
-- [~] **5.1 Column visibility.** The Columns dropdown; changes apply immediately (SPEC §33).
-- [~] **5.2 Column reordering and resizing.** Header drag plus keyboard move; drag-to-resize
+- [x] **5.1 Column visibility.** The Columns dropdown; changes apply immediately (SPEC §33).
+- [x] **5.2 Column reordering and resizing.** Header drag plus keyboard move; drag-to-resize
       (SPEC §34, §35).
 - [x] **5.3 Layout persistence.** `columnLayouts` stores selected view, visible columns, order,
       and widths per Source Game. Sort and search deliberately do not persist (SPEC §39).
       *Verify:* relaunch the app; layout is identical, sort and search are cleared.
-- [~] **5.4 View switching.** Apply a template's saved Play Log Views; save the current layout
+- [x] **5.4 View switching.** Apply a template's saved Play Log Views; save the current layout
       as a new view (SPEC §38).
-- [~] **5.5 Single-column sorting.** Unsorted → ascending → descending, one column at a time
+- [x] **5.5 Single-column sorting.** Unsorted → ascending → descending, one column at a time
       (SPEC §36).
 - [x] **5.6 Search.** One box narrowing rows by displayed values. No syntax, no per-column
       filters (SPEC §37).
-- [~] **5.7 Multi-row selection and bulk edit.** Select rows, set one field across them, confirm,
+- [x] **5.7 Multi-row selection and bulk edit.** Select rows, set one field across them, confirm,
       write a `bulkEdits` record, apply in one mutation (SPEC §41).
 - [x] **5.8 Bulk-edit undo.** The toast restores every affected value as one operation.
       *Verify:* bulk-edit fifty rows over mixed prior values; Undo restores each original.
-- [~] **5.9 Row actions menu.** Open Play Detail, Add Quick Note, Mark/Resolve Must Review,
+- [x] **5.9 Row actions menu.** Open Play Detail, Add Quick Note, Mark/Resolve Must Review,
       Add/Edit Play Diagram, Duplicate Snap, Delete Snap; destructive actions confirm (SPEC §43).
-- [~] **5.10 Duplicate Snap.** Copies Core Snap Data and Template Analysis Data and nothing else
+- [x] **5.10 Duplicate Snap.** Copies Core Snap Data and Template Analysis Data and nothing else
       (SPEC §44).
       *Verify:* the copy has no quick notes, cell notes, must-review flag, or diagram.
-- [~] **5.11 Cell notes.** A note attached to one cell, editable from the cell and Play Detail
+- [x] **5.11 Cell notes.** A note attached to one cell, editable from the cell and Play Detail
       (SPEC §42).
-- [ ] **5.12 Play Detail.** Core data, template fields grouped by section, cell notes, original
+- [x] **5.12 Play Detail.** Core data, template fields grouped by section, cell notes, original
       imported values, quick note access, must-review status, diagram (SPEC §45).
 
 ---
