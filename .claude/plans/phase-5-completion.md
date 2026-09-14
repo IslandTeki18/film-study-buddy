@@ -108,3 +108,5 @@ Quick Note popup, diagram editing/preview, Cmd/Ctrl+R, Cmd/Ctrl+F, and `countInc
 with their planned later phases. Before cross-platform release, manually smoke-test native
 select popups and keyboard shortcuts on each supported operating system. For coach review,
 focus on column drag/resize, 50-Snap bulk Undo, and Cell Note editing between the grid and Detail.
+
+2026-09-14: The Play Log UI was replaced by the charting view per user decision; `columnLayouts` and the Play Log Views backend plus the template views editor are retained; the grid capabilities from SPEC §32–§38 are no longer on screen. Play Detail remains read-only for field values.
