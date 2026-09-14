@@ -122,3 +122,59 @@ export const restoreImportedValue = mutation({
     return null
   },
 })
+
+export const bulkUpdate = mutation({
+  args: {
+    sourceGameId: v.id('sourceGames'), snapIds: v.array(v.id('snaps')),
+    target: v.union(v.object({ kind: v.literal('core'), key: v.string() }),
+      v.object({ kind: v.literal('template'), fieldId: v.id('templateFields') })),
+    value: v.union(analysisValueValidator, v.null()),
+  },
+  returns: v.id('bulkEdits'),
+  handler: async (ctx, args) => {
+    const game = await requireLiveSourceGame(ctx, args.sourceGameId)
+    if (!args.snapIds.length) throw new Error('Select at least one Snap')
+    const target = args.target
+    let value
+    let fieldKey: string
+    if (target.kind === 'core') {
+      if (target.key === 'yardLine') throw new Error('Yard Line cannot be bulk edited')
+      if (!isCoreFieldKey(target.key)) throw new Error('Unknown Core Snap field')
+      value = normalizeCoreValue(target.key, args.value) ?? null
+      fieldKey = `core:${target.key}`
+    } else {
+      const field = await ctx.db.get(target.fieldId)
+      if (!field || field.deletedAt !== undefined || field.templateId !== game.templateId) throw new Error('Template Field not found')
+      const section = await ctx.db.get(field.sectionId)
+      if (!section || section.deletedAt !== undefined || section.templateId !== game.templateId) throw new Error('Section not found')
+      const template = await ctx.db.get(game.templateId)
+      if (!template || template.deletedAt !== undefined) throw new Error('Coaching Template not found')
+      value = normalizeAnalysisValue(field, args.value)
+      fieldKey = `field:${field._id}`
+    }
+    const snaps = await Promise.all([...new Set(args.snapIds)].map((id) => requireLiveSnap(ctx, id)))
+    if (snaps.some((snap) => snap.sourceGameId !== game._id)) throw new Error('Snap belongs to another Source Game')
+    const changes = snaps.map((snap) => {
+      const before = target.kind === 'core' && isCoreFieldKey(target.key) ? snap.core[target.key] :
+        target.kind === 'template' ? snap.analysis[target.fieldId] : undefined
+      if (typeof before === 'object' && before !== null && !Array.isArray(before)) throw new Error('Yard Line cannot be bulk edited')
+      return { snapId: snap._id, fieldKey, before: before ?? null }
+    })
+    const id = await ctx.db.insert('bulkEdits', { sourceGameId: game._id, createdAt: Date.now(), changes })
+    // ponytail: 200 Snaps in one transaction; chunk if Convex write limits appear.
+    for (const snap of snaps) {
+      if (target.kind === 'core' && isCoreFieldKey(target.key)) {
+        const core = { ...snap.core }
+        if (value === null) delete core[target.key]
+        else Object.assign(core, { [target.key]: value })
+        await ctx.db.patch(snap._id, { core })
+      } else if (target.kind === 'template') {
+        const analysis = { ...snap.analysis }
+        if (value === null) delete analysis[target.fieldId]
+        else if (typeof value !== 'object' || Array.isArray(value)) analysis[target.fieldId] = value
+        await ctx.db.patch(snap._id, { analysis })
+      }
+    }
+    return id
+  },
+})

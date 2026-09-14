@@ -14,6 +14,9 @@ import { useReorder } from '@/lib/reorder'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { COLUMN_MIN_WIDTH } from './use-column-layout'
 import { nextSort, type SortState } from './row-model'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
+import { BulkEditDialog } from './bulk-edit-dialog'
 import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
@@ -28,6 +31,17 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
   readonly widths: Readonly<Record<string, number>>
   readonly pendingCommit: RefObject<Promise<boolean>>
 }): ReactNode {
+  const [selected, setSelected] = useState<Set<Id<'snaps'>>>(new Set())
+  const [bulkEditing, setBulkEditing] = useState(false)
+  const selectedIds = useMemo(() => snaps.filter((snap) => selected.has(snap._id)).map((snap) => snap._id), [snaps, selected])
+  useEffect(() => { setSelected((current) => {
+    const live = new Set(snaps.map((snap) => snap._id))
+    return [...current].some((id) => !live.has(id)) ? new Set([...current].filter((id) => live.has(id))) : current
+  }) }, [snaps])
+  useEffect(() => {
+    const selectAll = container.current?.querySelector<HTMLInputElement>('[aria-label="Select all visible Snaps"]')
+    if (selectAll) selectAll.indeterminate = selectedIds.length > 0 && selectedIds.length < snaps.length
+  }, [selectedIds.length, snaps.length])
   const [draftWidth, setDraftWidth] = useState<{ key: ColumnKey; width: number } | null>(null)
   const resizing = useRef<{ key: ColumnKey; x: number; width: number } | null>(null)
   const drag = useReorder({ itemCount: columns.length, onReorder, label: (index) => columns[index]?.label ?? 'Column' })
@@ -185,9 +199,18 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
     size: draftWidth?.key === column.key ? draftWidth.width : widths[column.key] ?? defaultWidth(column),
   })), [columns, widths, draftWidth])
   const table = useLegacyTable({ data: snaps, columns: definitions, getCoreRowModel: getCoreRowModel(), getRowId: (snap) => snap._id })
+  // ponytail: 32px selection column matches left-[2rem]; use a shared CSS variable if its size changes.
   // ponytail: fixed offset; switch the tab panels to a flex column if the chrome height changes.
   // ponytail: no virtualization; add windowing if a Source Game exceeds ~1000 Snaps.
-  return <div ref={container} className="max-h-[calc(100dvh-9rem)] overflow-auto" tabIndex={editing ? -1 : 0} aria-label="Play Log" onKeyDown={(event) => {
+  return <>
+    {selectedIds.length > 0 && <div className="flex items-center gap-3">
+      <span>{selectedIds.length} Snaps selected</span>
+      <Button variant="outline" onClick={() => setBulkEditing(true)}>Set field…</Button>
+      <Button variant="ghost" onClick={() => setSelected(new Set())}>Clear selection</Button>
+    </div>}
+    {bulkEditing && snaps[0] && <BulkEditDialog sourceGameId={snaps[0].sourceGameId} snapIds={selectedIds} columns={columns}
+      terminology={terminology} onClose={() => setBulkEditing(false)} onApplied={() => { setSelected(new Set()); setBulkEditing(false) }} />}
+    <div ref={container} className="max-h-[calc(100dvh-9rem)] overflow-auto" tabIndex={editing ? -1 : 0} aria-label="Play Log" onKeyDown={(event) => {
     if (editing || event.nativeEvent.isComposing) return
     if (event.target instanceof Element && !event.target.matches('[data-cell], [aria-label="Play Log"]')) return
     const column = columns[active.col]
@@ -213,15 +236,19 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
     }
   }}>
     <p className="sr-only" aria-live="polite">{drag.announcement}</p>
-    <Table role="grid" className="table-fixed text-xs" style={{ width: table.getTotalSize() }}>
-      <colgroup>{table.getAllLeafColumns().map((column) => <col key={column.id} style={{ width: column.getSize() }} />)}</colgroup>
+    <Table role="grid" className="table-fixed text-xs" style={{ width: table.getTotalSize() + 32 }}>
+      <colgroup><col style={{ width: 32 }} />{table.getAllLeafColumns().map((column) => <col key={column.id} style={{ width: column.getSize() }} />)}</colgroup>
       <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>
+        <TableHead className="sticky top-0 left-0 z-30 bg-muted px-1.5">
+          <Checkbox label="" aria-label="Select all visible Snaps" checked={snaps.length > 0 && selectedIds.length === snaps.length}
+            onChange={(event) => setSelected(event.target.checked ? new Set(snaps.map((snap) => snap._id)) : new Set())} />
+        </TableHead>
         {group.headers.map((header, index) => {
           const column = columns[index]
           if (!column) return null
           const width = header.getSize()
           return <TableHead key={header.id} scope="col" aria-sort={sort?.key === column.key ? sort.direction === 'asc' ? 'ascending' : 'descending' : 'none'} {...drag.getItemProps(index)}
-            className={`sticky top-0 bg-muted px-1.5 py-0 ${index === 0 ? 'left-0 z-30' : 'z-20'} ${drag.dragOverIndex === index ? 'border-2 border-primary' : ''}`}>
+            className={`sticky top-0 bg-muted px-1.5 py-0 ${index === 0 ? 'left-[2rem] z-30' : 'z-20'} ${drag.dragOverIndex === index ? 'border-2 border-primary' : ''}`}>
             <div className="flex items-center pr-2">
               <button className="min-w-0 flex-1 truncate text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => onSort(nextSort(sort, column.key))}>{column.label}{sort?.key === column.key ? sort.direction === 'asc' ? ' ↑' : ' ↓' : ''}</button>
@@ -264,6 +291,15 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
         })}
       </TableRow>)}</TableHeader>
       <TableBody>{table.getRowModel().rows.map((row, rowIndex) => <TableRow key={row.id} className="h-7">
+        <TableCell className="sticky left-0 z-10 bg-background px-1.5">
+          <Checkbox label="" aria-label={`Select Snap ${row.original.core.clipNumber ?? row.original.order}`} checked={selectedIds.includes(row.original._id)}
+            onChange={(event) => setSelected((current) => {
+              const next = new Set(current)
+              if (event.target.checked) next.add(row.original._id)
+              else next.delete(row.original._id)
+              return next
+            })} />
+        </TableCell>
         {columns.map((column, index) => {
           const isEditing = editing?.row === rowIndex && editing.col === index
           const checkbox = column.kind === 'template' && column.field.type === 'checkbox'
@@ -273,7 +309,7 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
             onFocus={() => setActive({ row: rowIndex, col: index })}
             onClick={() => { if (!isEditing) { focus(rowIndex, index); if (checkbox) toggleCheckbox(row.original, column) } }}
             onDoubleClick={() => { if (!checkbox) setEditing({ row: rowIndex, col: index }) }}
-            className={`h-7 px-1.5 py-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${isEditing ? '' : 'truncate'} ${index === 0 ? 'sticky left-0 z-10 bg-background' : ''}`}>
+            className={`h-7 px-1.5 py-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${isEditing ? '' : 'truncate'} ${index === 0 ? 'sticky left-[2rem] z-10 bg-background' : ''}`}>
             {isEditing ? <CellEditor snap={row.original} column={column} initialDraft={editing.draft} canTab={canTab} terminology={terminology} onCancel={() => close()}
               onRestore={() => restoreOriginal(row.original, column)}
               onCommit={(value, move, option) => { void commit(row.original, column, value, option); close(move) }} />
@@ -283,4 +319,5 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
       </TableRow>)}</TableBody>
     </Table>
   </div>
+  </>
 }

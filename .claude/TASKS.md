@@ -186,7 +186,7 @@ The core of the product. Build the grid before the power features.
       (SPEC §36).
 - [x] **5.6 Search.** One box narrowing rows by displayed values. No syntax, no per-column
       filters (SPEC §37).
-- [ ] **5.7 Multi-row selection and bulk edit.** Select rows, set one field across them, confirm,
+- [~] **5.7 Multi-row selection and bulk edit.** Select rows, set one field across them, confirm,
       write a `bulkEdits` record, apply in one mutation (SPEC §41).
 - [ ] **5.8 Bulk-edit undo.** The toast restores every affected value as one operation.
       *Verify:* bulk-edit fifty rows over mixed prior values; Undo restores each original.
