@@ -44,7 +44,10 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
   latest.current = draft
   const active = columns[groupIdx] ?? columns[0]
   const activeKind = active ? groupKind(active, terminology) : undefined
-  function next(): void { setGroupIdx((current) => columns.length ? (current + 1) % columns.length : 0) }
+  function next(column: PlayLogColumn): void {
+    const index = columns.findIndex((item) => item.key === column.key)
+    setGroupIdx(columns.length ? (index + 1) % columns.length : 0)
+  }
   function change(column: PlayLogColumn, value: unknown): void {
     if (saving || pending.current) return
     const updated = { ...latest.current, [column.key]: value }
@@ -112,7 +115,7 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
       if (target !== document.body && !section.current?.contains(target)) return
       if (target.isContentEditable) return
       const interactive = target.closest('button, a, [role="button"], [role="radio"]')
-      if (interactive && (!interactive.matches('[role="tab"], [data-palette-tag]') || event.key === 'Enter' || event.key === ' ')) return
+      if (interactive && (!interactive.matches('[role="tab"], [data-palette-tag]') || event.key === 'Enter' || event.key === ' ' || event.key === 'Tab')) return
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); save(); return }
       if (event.key === 'Escape') { event.preventDefault(); clear(); return }
       if (event.key === 'Tab' && columns.length) {
@@ -174,8 +177,8 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
             })}
           </div>
           {addInput(active)}
-          {active.kind === 'core' && active.field.key === 'quarter' && <GroupInput column={active} value={draft[active.key]} disabled={saving || adding} onChange={(value) => change(active, value)} onNext={next} />}
-          </> : <GroupInput key={active.key} column={active} value={draft[active.key]} disabled={saving || adding} onChange={(value) => change(active, value)} onNext={next} />}
+          {active.kind === 'core' && active.field.key === 'quarter' && <GroupInput key={active.key} column={active} value={draft[active.key]} disabled={saving || adding} onChange={(value) => change(active, value)} onNext={() => next(active)} />}
+          </> : <GroupInput key={active.key} column={active} value={draft[active.key]} disabled={saving || adding} onChange={(value) => change(active, value)} onNext={() => next(active)} />}
         </div>
       </div> : <div className="grid gap-2.5">
         {columns.map((column, index) => {
@@ -200,8 +203,8 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
               })}
             </div>
             {addInput(column)}
-            {column.kind === 'core' && column.field.key === 'quarter' && <GroupInput column={column} value={draft[column.key]} disabled={saving || adding} onChange={(value) => change(column, value)} onNext={next} />}
-            </> : <GroupInput key={column.key} column={column} value={draft[column.key]} disabled={saving || adding} onChange={(value) => change(column, value)} onNext={next} />}
+            {column.kind === 'core' && column.field.key === 'quarter' && <GroupInput key={column.key} column={column} value={draft[column.key]} disabled={saving || adding} onChange={(value) => change(column, value)} onNext={() => next(column)} />}
+            </> : <GroupInput key={column.key} column={column} value={draft[column.key]} disabled={saving || adding} onChange={(value) => change(column, value)} onNext={() => next(column)} />}
           </div>
         })}
       </div>}
