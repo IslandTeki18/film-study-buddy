@@ -1,7 +1,7 @@
-import { useId, useState, type ReactNode } from 'react'
-import { useMutation } from 'convex/react'
+import { useId, useRef, useState, type ReactNode } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import type { Id } from '@convex/_generated/dataModel'
+import type { Doc, Id } from '@convex/_generated/dataModel'
 import { CORE_NUMBER_BOUNDS, isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { normalizeAnalysisValue, RATING_MIN, RATING_MAX, type AnalysisValue } from '@convex/domain/templateFields'
 import { builtInTerminology, type TerminologyList } from '@convex/domain/terminology'
@@ -11,6 +11,8 @@ import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
+import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
+import type { FunctionArgs } from 'convex/server'
 import type { PlayLogColumn } from './columns'
 
 export function BulkEditDialog({ sourceGameId, snapIds, columns, terminology, onClose, onApplied }: {
@@ -51,6 +53,32 @@ export function BulkEditDialog({ sourceGameId, snapIds, columns, terminology, on
       return snap
     }))
   })
+  const current = useQuery(api.snaps.listBySourceGame, { sourceGameId })
+  const before = useRef<Doc<'snaps'>[]>([])
+  const undo = useMutation(api.snaps.undoBulkUpdate).withOptimisticUpdate((store) => {
+    const snaps = store.getQuery(api.snaps.listBySourceGame, { sourceGameId })
+    if (!snaps || !column) return
+    store.setQuery(api.snaps.listBySourceGame, { sourceGameId }, snaps.map((snap) => {
+      const original = before.current.find((item) => item._id === snap._id)
+      if (!original) return snap
+      if (column.kind === 'core') {
+        const core = { ...snap.core }
+        const value = original.core[column.field.key]
+        if (value === undefined) delete core[column.field.key]
+        else Object.assign(core, { [column.field.key]: value })
+        return { ...snap, core }
+      }
+      const analysis = { ...snap.analysis }
+      const value = original.analysis[column.field._id]
+      if (value === undefined) delete analysis[column.field._id]
+      else analysis[column.field._id] = value
+      return { ...snap, analysis }
+    }))
+  })
+  const run = useUndoableMutation(async (args: FunctionArgs<typeof api.snaps.bulkUpdate>) => {
+    before.current = (current ?? []).filter((snap) => args.snapIds.includes(snap._id))
+    return update(args)
+  }, async ({ batchId }) => { await undo({ bulkEditId: batchId }) }, () => `Set ${column?.label ?? 'field'} on ${snapIds.length} Snaps`)
   const list = column?.kind === 'core' && column.field.input.kind === 'terminology' ? column.field.input.list : null
   const terms = list ? [...new Set([...builtInTerminology(list), ...terminology.filter((item) => item.list === list).map((item) => item.value)])].sort() : []
   const options = column?.kind === 'core' && column.field.input.kind === 'select' ? column.field.input.options
@@ -78,7 +106,7 @@ export function BulkEditDialog({ sourceGameId, snapIds, columns, terminology, on
             : type === 'tags' ? draft.split(',') : type === 'number' || type === 'rating' ? draft.trim() ? Number(draft) : null : draft)
         }
       }
-      await update({ sourceGameId, snapIds, target: column.kind === 'core' ? { kind: 'core', key: column.field.key }
+      await run({ sourceGameId, snapIds, target: column.kind === 'core' ? { kind: 'core', key: column.field.key }
         : { kind: 'template', fieldId: column.field._id }, value })
       onApplied()
     } catch (error) {
@@ -87,7 +115,8 @@ export function BulkEditDialog({ sourceGameId, snapIds, columns, terminology, on
       show({ message })
     } finally { setPending(false) }
   }
-  return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose() }} aria-label="Set field on selected Snaps">
+  return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose() }} aria-label="Set field on selected Snaps"
+    onToggle={(event) => { if (event.currentTarget.open) event.currentTarget.querySelector<HTMLButtonElement>('button')?.focus() }}>
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Set field on {snapIds.length} Snaps</h2>
       <label className="block space-y-1">Field<Select value={key} disabled={pending} onChange={(event) => {

@@ -188,7 +188,7 @@ The core of the product. Build the grid before the power features.
       filters (SPEC §37).
 - [~] **5.7 Multi-row selection and bulk edit.** Select rows, set one field across them, confirm,
       write a `bulkEdits` record, apply in one mutation (SPEC §41).
-- [ ] **5.8 Bulk-edit undo.** The toast restores every affected value as one operation.
+- [x] **5.8 Bulk-edit undo.** The toast restores every affected value as one operation.
       *Verify:* bulk-edit fifty rows over mixed prior values; Undo restores each original.
 - [ ] **5.9 Row actions menu.** Open Play Detail, Add Quick Note, Mark/Resolve Must Review,
       Add/Edit Play Diagram, Duplicate Snap, Delete Snap; destructive actions confirm (SPEC §43).

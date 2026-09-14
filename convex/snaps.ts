@@ -178,3 +178,35 @@ export const bulkUpdate = mutation({
     return id
   },
 })
+
+export const undoBulkUpdate = mutation({
+  args: { bulkEditId: v.string() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const id = ctx.db.normalizeId('bulkEdits', args.bulkEditId)
+    const edit = id ? await ctx.db.get(id) : null
+    if (!edit) throw new Error('Bulk edit not found')
+    await requireLiveSourceGame(ctx, edit.sourceGameId)
+    for (const change of edit.changes) {
+      const snap = await ctx.db.get(change.snapId)
+      if (!snap || snap.deletedAt !== undefined) continue
+      if (snap.sourceGameId !== edit.sourceGameId) throw new Error('Snap belongs to another Source Game')
+      if (change.fieldKey.startsWith('core:')) {
+        const key = change.fieldKey.slice(5)
+        if (!isCoreFieldKey(key)) throw new Error('Unknown Core Snap field')
+        const value = normalizeCoreValue(key, change.before)
+        const core = { ...snap.core }
+        if (value === undefined) delete core[key]
+        else Object.assign(core, { [key]: value })
+        await ctx.db.patch(snap._id, { core })
+      } else {
+        const analysis = { ...snap.analysis }
+        const key = change.fieldKey.slice(6)
+        if (change.before === null) delete analysis[key]
+        else analysis[key] = change.before
+        await ctx.db.patch(snap._id, { analysis })
+      }
+    }
+    await ctx.db.delete(edit._id)
+    return null
+  },
+})
