@@ -3,79 +3,80 @@ import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
-import { CARRY_FORWARD_CORE_KEYS } from '@convex/domain/coreFields'
 import { useToast } from '@/components/ui/toast'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Eyebrow } from '@/components/ui/panel'
+import { PlayerNotes } from '../preview/charting-preview'
+import type { Mode } from '../preview/preview-data'
+import { MODE_OPTIONS, PreviewBadge, Segmented } from '../preview/preview-shared'
 import { buildColumns } from './columns'
-import { useColumnLayout } from './use-column-layout'
-import { moved } from '@/features/templates/section-list'
-import { ViewPicker } from './view-picker'
-import { ColumnsMenu } from './columns-menu'
-import { filterSnaps, sortSnaps, type SortState } from './row-model'
-import { PlayLogTable } from './play-log-table'
+import { carryForwardDraft, hasAnyValue, toCreateArgs, type Draft } from './palette-model'
+import { SnapPalette } from './snap-palette'
+import { ChartedSnaps } from './charted-snaps'
+import { ChartingAside } from './charting-aside'
 
-export function PlayLog({ workspaceId, sourceGameId }: {
-  readonly workspaceId: string; readonly sourceGameId: string
-}): ReactNode {
+type PlayLogProps = { readonly workspaceId: string; readonly sourceGameId: string }
+
+export function PlayLog(props: PlayLogProps): ReactNode {
+  return <GamePlayLog key={`${props.workspaceId}/${props.sourceGameId}`} {...props} />
+}
+
+function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const tree = useQuery(api.templates.getFull, game ? { templateId: game.templateId } : 'skip')
   const snaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
-  const notes = useQuery(api.notes.listCellNotesBySourceGame, game ? { sourceGameId: game._id } : 'skip')
   const terminology = useQuery(api.terminology.list, {})
-  const pendingCommit = useRef<Promise<boolean>>(Promise.resolve(true))
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
-  const { layout, setVisible, setOrder, setWidth, applyView } = useColumnLayout(game?._id, columns.map((column) => column.key), game?.templateId)
-  const visibleColumns = layout?.order.filter((key) => layout.visible.includes(key))
-    .flatMap((key) => columns.filter((column) => column.key === key)) ?? []
-  const [sort, setSort] = useState<SortState>(null)
-  const [search, setSearch] = useState('')
-  const displayedSnaps = sortSnaps(filterSnaps(snaps ?? [], visibleColumns, search), columns.find((column) => column.key === sort?.key), sort)
+  const [draft, setDraft] = useState<Draft>({})
+  const [mustReview, setMustReview] = useState(false)
+  const [dataTab, setDataTab] = useState<'charting' | 'players'>('charting')
+  const [mode, setMode] = useState<Mode>('off')
   const creating = useRef(false)
   const [pending, setPending] = useState(false)
   const [createdId, setCreatedId] = useState<Id<'snaps'> | null>(null)
   const { show } = useToast()
-  const create = useMutation(api.snaps.create).withOptimisticUpdate((store, args) => {
-    const current = store.getQuery(api.snaps.listBySourceGame, args)
-    if (!current || !tree) return
-    const last = current.at(-1)
+  const addTerminology = useMutation(api.terminology.add)
+  const addFieldOption = useMutation(api.templates.addFieldOption)
+  function carriedValues(last: Doc<'snaps'> | undefined): Pick<Doc<'snaps'>, 'core' | 'analysis'> {
     const core: Doc<'snaps'>['core'] = {}
     const analysis: Doc<'snaps'>['analysis'] = {}
-    if (last) {
-      for (const key of CARRY_FORWARD_CORE_KEYS) {
-        if (last.core[key] !== undefined) core[key] = last.core[key]
-      }
-      for (const section of tree.sections) for (const field of section.fields) {
-        if (field.carryForward && last.analysis[field._id] !== undefined) analysis[field._id] = last.analysis[field._id]!
-      }
+    const carried = last ? carryForwardDraft(last, columns) : {}
+    for (const column of columns) {
+      if (carried[column.key] === undefined || !last) continue
+      if (column.kind === 'core') Object.assign(core, { [column.field.key]: last.core[column.field.key] })
+      else analysis[column.field._id] = last.analysis[column.field._id]!
     }
+    return { core, analysis }
+  }
+  const create = useMutation(api.snaps.create).withOptimisticUpdate((store, args) => {
+    const queryArgs = { sourceGameId: args.sourceGameId }
+    const current = store.getQuery(api.snaps.listBySourceGame, queryArgs)
+    if (!current || !tree) return
+    const last = current.at(-1)
+    const carried = carriedValues(last)
     const now = Date.now()
-    store.setQuery(api.snaps.listBySourceGame, args, [...current, {
+    store.setQuery(api.snaps.listBySourceGame, queryArgs, [...current, {
       _id: `optimistic-${now}` as Id<'snaps'>, _creationTime: now, sourceGameId: args.sourceGameId,
-      order: (last?.order ?? 0) + 1, core, analysis, mustReview: false, createdAt: now,
+      order: (last?.order ?? 0) + 1, core: { ...carried.core, ...args.core },
+      analysis: { ...carried.analysis, ...args.analysis }, mustReview: args.mustReview ?? false, createdAt: now,
     }])
   })
-  function newSnap(): void {
-    if (!game || creating.current) return
-    const invalid = document.querySelector<HTMLElement>('[aria-label="Play Log"] [aria-invalid="true"]')
-    if (invalid) { invalid.focus(); return }
+  async function save(): Promise<void> {
+    if (!game || creating.current || !hasAnyValue(draft)) return
     creating.current = true
     setPending(true)
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-    document.querySelector<HTMLElement>('[aria-label="Play Log"] [popover]:popover-open')?.hidePopover()
-    const edits = pendingCommit.current
-    setTimeout(() => {
-      void edits.then(async (saved) => {
-        if (!saved) throw new Error('The previous cell edit could not be saved')
-        setSort(null)
-        setSearch('')
-        setCreatedId(await create({ sourceGameId: game._id }))
-      })
-        .catch((error: unknown) => show({ message: `Could not create Snap. ${error instanceof Error ? error.message : String(error)}` }))
-        .finally(() => { creating.current = false; setPending(false) })
-    }, 0)
+    try {
+      const { core, analysis } = toCreateArgs(draft, columns)
+      const last = snaps?.at(-1)
+      const carried = carriedValues(last)
+      const id = await create({ sourceGameId: game._id, core, analysis, mustReview })
+      setCreatedId(id)
+      setDraft(carryForwardDraft({ core: { ...carried.core, ...core }, analysis: { ...carried.analysis, ...analysis } }, columns))
+      setMustReview(false)
+    } catch (error) {
+      show({ message: `Could not save Snap. ${error instanceof Error ? error.message : String(error)}` })
+    } finally { creating.current = false; setPending(false) }
   }
-  if (game === undefined || (game && (tree === undefined || snaps === undefined || terminology === undefined || notes === undefined || layout === undefined))) {
+  if (game === undefined || (game && (tree === undefined || snaps === undefined || terminology === undefined))) {
     return <div role="status" aria-label="Loading Play Log" className="m-6 h-32 animate-pulse rounded bg-muted" />
   }
   if (!game || game.workspaceId !== workspaceId) return <main className="space-y-3 p-6">
@@ -84,28 +85,38 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   if (!tree) return <main className="space-y-3 p-6">
     <h1>Coaching Template not found</h1><Link className="underline" to={`/w/${workspaceId}/games`}>Source Games</Link>
   </main>
-  return <main className="min-w-0 space-y-3 p-3" onKeyDownCapture={(event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
-      event.preventDefault()
-      event.stopPropagation()
-      newSnap()
-    }
-  }}>
-    <header className="flex flex-wrap items-center gap-3">
-      <h1 className="text-xs font-semibold tracking-[0.11em] uppercase text-muted-foreground">{game.label}</h1>
-      <span className="font-mono text-[11px] text-muted-foreground">{search.trim() ? `${displayedSnaps.length} of ${snaps?.length ?? 0} Snaps` : `${snaps?.length ?? 0} charted`} · {visibleColumns.length} columns · ⌘N new snap</span>
-      <Input type="search" aria-label="Search Play Log" placeholder="Search" className="w-40" value={search} onChange={(event) => setSearch(event.target.value)} />
-      {layout && <ViewPicker templateId={game.templateId} layout={layout} onApply={applyView} />}
-      {layout && <ColumnsMenu columns={columns} layout={layout} onChange={setVisible} />}
-      <Button className="ml-auto h-8 px-3.5 font-mono text-[11px] font-bold" disabled={pending} onClick={newSnap}>New snap</Button>
-    </header>
-    {!snaps?.length ? <section className="space-y-3">
-      <h2 className="font-semibold">No Snaps yet</h2>
-      <Link className="underline" to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>
-    </section> : <PlayLogTable sourceGameId={game._id} notes={notes ?? []} onDuplicated={(id) => { setSort(null); setSearch(''); setCreatedId(id) }} base={`/w/${workspaceId}/games/${game._id}`} snaps={displayedSnaps} sort={sort} onSort={setSort} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
-      const source = visibleColumns[from]?.key
-      const target = visibleColumns[to]?.key
-      if (layout && source && target) setOrder(moved(layout.order, layout.order.indexOf(source), layout.order.indexOf(target)))
-    }} widths={layout?.widths ?? {}} createdId={createdId} terminology={terminology ?? []} pendingCommit={pendingCommit} />}
+  return <main className="min-w-0">
+    <div className="grid">
+      <div className="flex flex-wrap items-center gap-3 px-5 pt-3.5">
+        <h1><Eyebrow className="text-xs">{game.label}</Eyebrow></h1>
+        <Segmented label="Opponent data section" value={dataTab} options={[['charting', 'Charting'], ['players', 'Player notes']]} onChange={setDataTab} />
+        <Segmented label="Which side of the ball" value={mode} options={MODE_OPTIONS} onChange={setMode} accent />
+        <span className="ml-auto"><PreviewBadge /></span>
+      </div>
+      {dataTab === 'charting' ? <div className="mt-3.5 flex flex-wrap items-stretch gap-px bg-border">
+        <section className="min-w-0 flex-[1_1_620px] bg-background px-5 pt-4 pb-6">
+          <SnapPalette columns={columns} terminology={terminology ?? []} draft={draft} onDraftChange={setDraft}
+            nextSnapNumber={(snaps?.length ?? 0) + 1} mustReview={mustReview} onMustReviewChange={setMustReview}
+            saving={pending} onSave={() => { void save() }} onClear={() => { setDraft({}); setMustReview(false) }}
+            onAddTerminology={async (list, value) => {
+              try { await addTerminology({ list, value }) }
+              catch (error) {
+                show({ message: `Could not add terminology. ${error instanceof Error ? error.message : String(error)}` })
+                throw error
+              }
+            }} onAddFieldOption={async (fieldId, option) => {
+              try { await addFieldOption({ fieldId, option }) }
+              catch (error) {
+                show({ message: `Could not add field option. ${error instanceof Error ? error.message : String(error)}` })
+                throw error
+              }
+            }} />
+          <ChartedSnaps snaps={snaps ?? []} freshId={createdId} base={`/w/${workspaceId}/games/${game._id}`}
+            workspaceId={workspaceId} sourceGameId={game._id} onDuplicated={setCreatedId} />
+        </section>
+        <ChartingAside chartedCount={snaps?.length ?? 0} mustReviewCount={snaps?.filter((snap) => snap.mustReview).length ?? 0}
+          mode={mode} onOpenPlayers={() => setDataTab('players')} />
+      </div> : <PlayerNotes mode={mode} />}
+    </div>
   </main>
 }

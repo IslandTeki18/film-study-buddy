@@ -219,7 +219,7 @@ function Charting({ mode, onOpenPlayers }: { readonly mode: Mode; readonly onOpe
   </div>
 }
 
-function PlayerNotes({ mode }: { readonly mode: Mode }): ReactNode {
+export function PlayerNotes({ mode }: { readonly mode: Mode }): ReactNode {
   return <section className="grid min-w-0 gap-5 px-5 pt-4 pb-11">
     <p className="text-[13px] text-muted-foreground">Grouped by position. Every note carries the snap and clip it came from.</p>
     {PLAYERS[mode].map((group) => <div key={group.abbr} className="min-w-0">
