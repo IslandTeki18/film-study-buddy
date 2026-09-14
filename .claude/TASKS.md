@@ -136,7 +136,7 @@ Implementation, verification, and final CLI follow-up: [Phase 2 report](plans/ph
 
 The core of the product. Build the grid before the power features.
 
-- [ ] **4.1 Source Game CRUD.** Create with a label and exactly one template; rename; cascading
+- [x] **4.1 Source Game CRUD.** Create with a label and exactly one template; rename; cascading
       soft delete (SPEC §9, §99).
       *Verify:* a game cannot be created without a template.
 - [ ] **4.2 Source Games List and Add dialog.** Empty state leads with Import Hudl CSV, with
