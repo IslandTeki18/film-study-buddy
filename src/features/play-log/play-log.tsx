@@ -21,6 +21,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const tree = useQuery(api.templates.getFull, game ? { templateId: game.templateId } : 'skip')
   const snaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
+  const notes = useQuery(api.notes.listCellNotesBySourceGame, game ? { sourceGameId: game._id } : 'skip')
   const terminology = useQuery(api.terminology.list, {})
   const pendingCommit = useRef<Promise<boolean>>(Promise.resolve(true))
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
@@ -74,7 +75,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
         .finally(() => { creating.current = false; setPending(false) })
     }, 0)
   }
-  if (game === undefined || (game && (tree === undefined || snaps === undefined || terminology === undefined || layout === undefined))) {
+  if (game === undefined || (game && (tree === undefined || snaps === undefined || terminology === undefined || notes === undefined || layout === undefined))) {
     return <div role="status" aria-label="Loading Play Log" className="m-6 h-32 animate-pulse rounded bg-muted" />
   }
   if (!game || game.workspaceId !== workspaceId) return <main className="space-y-3 p-6">
@@ -101,7 +102,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     {!snaps?.length ? <section className="space-y-3">
       <h2 className="font-semibold">No Snaps yet</h2>
       <Link className="underline" to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>
-    </section> : <PlayLogTable onDuplicated={(id) => { setSort(null); setSearch(''); setCreatedId(id) }} base={`/w/${workspaceId}/games/${game._id}`} snaps={displayedSnaps} sort={sort} onSort={setSort} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
+    </section> : <PlayLogTable sourceGameId={game._id} notes={notes ?? []} onDuplicated={(id) => { setSort(null); setSearch(''); setCreatedId(id) }} base={`/w/${workspaceId}/games/${game._id}`} snaps={displayedSnaps} sort={sort} onSort={setSort} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
       const source = visibleColumns[from]?.key
       const target = visibleColumns[to]?.key
       if (layout && source && target) setOrder(moved(layout.order, layout.order.indexOf(source), layout.order.indexOf(target)))

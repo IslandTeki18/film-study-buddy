@@ -161,11 +161,12 @@ export default defineSchema({
     .index('by_sourceGame', ['sourceGameId', 'order'])
     .index('by_sourceGame_mustReview', ['sourceGameId', 'mustReview']),
   cellNotes: defineTable({
+    sourceGameId: v.id('sourceGames'),
     snapId: v.id('snaps'),
     fieldKey: v.string(),
     text: v.string(),
     ...softDelete,
-  }).index('by_snap', ['snapId']),
+  }).index('by_snap', ['snapId']).index('by_sourceGame', ['sourceGameId']),
   bulkEdits: defineTable({
     sourceGameId: v.id('sourceGames'),
     createdAt: v.number(),

@@ -1,7 +1,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
+import { useMutation } from 'convex/react'
+import { api } from '@convex/_generated/api'
+import { useAutosave } from '@/lib/db/use-autosave'
+import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
-import type { Doc } from '@convex/_generated/dataModel'
+import type { Doc, Id } from '@convex/_generated/dataModel'
 import { CORE_NUMBER_BOUNDS, formatCoreValue } from '@convex/domain/coreFields'
 import { isValidYardLine } from '@convex/domain/fieldZone'
 import { builtInTerminology, type TerminologyList } from '@convex/domain/terminology'
@@ -13,7 +17,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Popover } from '@/components/ui/popover'
 import type { PlayLogColumn } from './columns'
 
-export function CellEditor({ snap, column, initialDraft, canTab, terminology, onCommit, onRestore, onCancel }: {
+export function CellEditor({ snap, column, initialDraft, canTab, terminology, onCommit, onRestore, onCancel, note, onSaveNote }: {
+  readonly note: string
+  readonly onSaveNote: (text: string) => Promise<void>
   readonly snap: Doc<'snaps'>
   readonly column: PlayLogColumn
   readonly initialDraft: string | undefined
@@ -23,6 +29,9 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
   readonly onRestore: () => Promise<boolean>
   readonly onCancel: () => void
 }): ReactNode {
+  const [noting, setNoting] = useState(false)
+  const editor = useRef<HTMLDivElement>(null)
+  const [booleanValue, setBooleanValue] = useState(column.kind === 'template' && Boolean(snap.analysis[column.field._id]))
   const [restoring, setRestoring] = useState(false)
   const original = column.kind === 'core' && provenanceOf(snap.imported, column.field.key, snap.core[column.field.key]) === 'Coach Edited'
     ? restoredValueFor(snap.imported, column.field.key) : null
@@ -56,7 +65,8 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
     ended.current = true
     let value: unknown = yardLine ? spot : draft
     if (column.kind === 'template') {
-      if (multi) value = newOption.trim() ? [...checked, newOption.trim()] : checked
+      if (column.field.type === 'checkbox') value = booleanValue
+      else if (multi) value = newOption.trim() ? [...checked, newOption.trim()] : checked
       else if (adding) value = newOption.trim()
       else if (column.field.type === 'number' || column.field.type === 'rating') value = draft.trim() === '' ? null : Number(draft)
       // ponytail: comma-separated tags; add chip input if coaches need commas inside a tag.
@@ -64,8 +74,16 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
     }
     onCommit(value, move, adding || multi ? newOption.trim() || undefined : undefined)
   }
+  const noteControls = <>
+    <Button data-note-toggle aria-keyshortcuts="Alt+N" type="button" variant="outline" size="sm" aria-expanded={noting}
+      onClick={() => setNoting((current) => !current)}>Note</Button>
+    {noting && <CellNoteEditor label={column.label} note={note} onSave={onSaveNote}
+      onEscape={() => { setNoting(false); editor.current?.querySelector<HTMLButtonElement>('[data-note-toggle]')?.focus() }} />}
+  </>
   let control: ReactNode
-  if (adding) {
+  if (column.kind === 'template' && column.field.type === 'checkbox') {
+    control = <Checkbox autoFocus label={column.label} checked={booleanValue} onChange={(event) => setBooleanValue(event.target.checked)} />
+  } else if (adding) {
     control = <Input autoFocus aria-label="New option" className="h-7 px-1 text-xs" value={newOption}
       onChange={(event) => setNewOption(event.target.value)} />
   } else if (yardLine) {
@@ -86,6 +104,7 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
           onChange={(event) => setChecked(event.target.checked ? [...checked, option] : checked.filter((item) => item !== option))} />)}
         {column.field.options.length === 0 && <p>No options yet</p>}
         <Input aria-label="New option" placeholder="Add new option…" value={newOption} onChange={(event) => setNewOption(event.target.value)} />
+        {noteControls}
       </div>
     </Popover>
   } else if ((column.kind === 'core' && column.field.input.kind === 'select') ||
@@ -114,11 +133,18 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
       {list && <datalist id={datalistId}>{terms.map((term) => <option key={term} value={term} />)}</datalist>}
     </>
   }
-  return <div onBlur={(event) => {
+  return <div ref={editor} onBlur={(event) => {
     if (!multi && !event.currentTarget.contains(event.relatedTarget)) commit(null)
   }} onKeyDown={(event) => {
     event.stopPropagation()
     if (event.nativeEvent.isComposing) return
+    if (event.altKey && event.key.toLowerCase() === 'n') {
+      event.preventDefault()
+      setNoting(true)
+      requestAnimationFrame(() => editor.current?.querySelector<HTMLTextAreaElement>('[aria-label^="Cell Note for"]')?.focus())
+      return
+    }
+    if (event.target instanceof HTMLElement && event.target.hasAttribute('data-note-toggle') && event.key !== 'Escape') return
     if (original !== null && event.altKey && event.key === 'ArrowDown') {
       event.preventDefault()
       event.currentTarget.querySelector<HTMLButtonElement>('[data-restore]')?.focus()
@@ -152,6 +178,7 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
       commit()
     }
   }}>{control}
+    {!multi && noteControls}
     {original !== null && <Button data-restore type="button" variant="outline" size="sm" className="mt-1 max-w-full text-xs"
       disabled={restoring} title="Alt+ArrowDown focuses Restore original" onClick={() => {
         if (restoring || column.kind !== 'core') return
@@ -163,4 +190,42 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
         }).finally(() => setRestoring(false))
       }}>Restore original ({original})</Button>}
   </div>
+}
+
+export function CellNoteEditor({ label, note, onSave, onEscape }: {
+  readonly label: string; readonly note: string; readonly onSave: (text: string) => Promise<void>
+  readonly onEscape?: () => void
+}): ReactNode {
+  const { draft, setDraft, flush, status } = useAutosave(note, onSave)
+  return <div onKeyDown={(event) => {
+    event.stopPropagation()
+    if (event.key === 'Escape' && onEscape) { event.preventDefault(); flush(); onEscape() }
+  }}>
+    <Textarea aria-label={`Cell Note for ${label}`} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={flush} />
+    {status === 'error' && <p role="alert">Cell Note could not be saved. Edit or blur to retry.</p>}
+  </div>
+}
+
+export function useSaveCellNote(sourceGameId: Id<'sourceGames'>): (args: { snapId: Id<'snaps'>; fieldKey: string; text: string }) => Promise<void> {
+  const { show } = useToast()
+  const save = useMutation(api.notes.setCellNote).withOptimisticUpdate((store, args) => {
+    function update(notes: Doc<'cellNotes'>[]): Doc<'cellNotes'>[] {
+      const existing = notes.find((note) => note.snapId === args.snapId && note.fieldKey === args.fieldKey)
+      const rest = notes.filter((note) => note !== existing)
+      const text = args.text.trim()
+      return text ? [...rest, { _id: existing?._id ?? `optimistic-${args.snapId}-${args.fieldKey}` as Id<'cellNotes'>,
+        _creationTime: existing?._creationTime ?? Date.now(), snapId: args.snapId, sourceGameId, fieldKey: args.fieldKey, text }] : rest
+    }
+    const gameNotes = store.getQuery(api.notes.listCellNotesBySourceGame, { sourceGameId })
+    if (gameNotes) store.setQuery(api.notes.listCellNotesBySourceGame, { sourceGameId }, update(gameNotes))
+    const snapNotes = store.getQuery(api.notes.listCellNotes, { snapId: args.snapId })
+    if (snapNotes) store.setQuery(api.notes.listCellNotes, { snapId: args.snapId }, update(snapNotes))
+  })
+  return async (args) => {
+    try { await save(args) }
+    catch (error) {
+      show({ message: `Could not update Cell Note. ${error instanceof Error ? error.message : String(error)}` })
+      throw error
+    }
+  }
 }

@@ -20,12 +20,14 @@ import { BulkEditDialog } from './bulk-edit-dialog'
 import { useNavigate } from 'react-router'
 import { RowActions } from './row-actions'
 import { Cell } from './cell'
-import { CellEditor } from './cell-editors'
+import { CellEditor, useSaveCellNote } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize, sort, onSort, base, onDuplicated }: {
+export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize, sort, onSort, base, onDuplicated, sourceGameId, notes }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
   readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly sourceGameId: Id<'sourceGames'>
+  readonly notes: readonly Doc<'cellNotes'>[]
   readonly onDuplicated: (id: Id<'snaps'>) => void
   readonly base: string
   readonly sort: SortState
@@ -35,6 +37,8 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
   readonly widths: Readonly<Record<string, number>>
   readonly pendingCommit: RefObject<Promise<boolean>>
 }): ReactNode {
+  const saveNote = useSaveCellNote(sourceGameId)
+  const noteMap = useMemo(() => new Map(notes.map((note) => [`${note.snapId}:${note.fieldKey}`, note.text])), [notes])
   const navigate = useNavigate()
   const [selected, setSelected] = useState<Set<Id<'snaps'>>>(new Set())
   const [bulkEditing, setBulkEditing] = useState(false)
@@ -233,6 +237,7 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
       if (target) { event.preventDefault(); focus(target.row, target.col) }
       return
     }
+    if (event.key === 'F2') { event.preventDefault(); setEditing(active); return }
     const checkbox = column.kind === 'template' && column.field.type === 'checkbox'
     if (event.key === 'Enter' || (checkbox && event.key === ' ')) {
       event.preventDefault()
@@ -312,16 +317,18 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
             })} />
         </TableCell>
         {columns.map((column, index) => {
+          const note = noteMap.get(`${row.original._id}:${column.key}`) ?? ''
           const isEditing = editing?.row === rowIndex && editing.col === index
           const checkbox = column.kind === 'template' && column.field.type === 'checkbox'
-          return <TableCell role="gridcell" key={column.key} data-cell={`${rowIndex}:${index}`}
+          return <TableCell title={note || undefined} aria-keyshortcuts="F2" role="gridcell" key={column.key} data-cell={`${rowIndex}:${index}`}
             tabIndex={!editing && active.row === rowIndex && active.col === index ? 0 : -1}
             aria-selected={active.row === rowIndex && active.col === index}
             onFocus={() => setActive({ row: rowIndex, col: index })}
             onClick={() => { if (!isEditing) { focus(rowIndex, index); if (checkbox) toggleCheckbox(row.original, column) } }}
-            onDoubleClick={() => { if (!checkbox) setEditing({ row: rowIndex, col: index }) }}
-            className={`h-7 px-1.5 py-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${isEditing ? '' : 'truncate'} ${index === 0 ? 'sticky left-[2rem] z-10 bg-background' : ''}`}>
-            {isEditing ? <CellEditor snap={row.original} column={column} initialDraft={editing.draft} canTab={canTab} terminology={terminology} onCancel={() => close()}
+            onDoubleClick={() => setEditing({ row: rowIndex, col: index })}
+            className={`relative h-7 px-1.5 py-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${isEditing ? '' : 'truncate'} ${index === 0 ? 'sticky left-[2rem] z-10 bg-background' : ''}`}>
+            {note && <span aria-label="Has Cell Note" className="absolute top-0.5 right-0.5 size-1 rounded-full bg-primary" />}
+            {isEditing ? <CellEditor note={note} onSaveNote={(text) => saveNote({ snapId: row.original._id, fieldKey: column.key, text })} snap={row.original} column={column} initialDraft={editing.draft} canTab={canTab} terminology={terminology} onCancel={() => close()}
               onRestore={() => restoreOriginal(row.original, column)}
               onCommit={(value, move, option) => { void commit(row.original, column, value, option); close(move) }} />
               : <Cell snap={row.original} column={column} />}

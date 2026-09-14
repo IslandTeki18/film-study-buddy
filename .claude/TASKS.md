@@ -195,7 +195,7 @@ The core of the product. Build the grid before the power features.
 - [~] **5.10 Duplicate Snap.** Copies Core Snap Data and Template Analysis Data and nothing else
       (SPEC §44).
       *Verify:* the copy has no quick notes, cell notes, must-review flag, or diagram.
-- [ ] **5.11 Cell notes.** A note attached to one cell, editable from the cell and Play Detail
+- [~] **5.11 Cell notes.** A note attached to one cell, editable from the cell and Play Detail
       (SPEC §42).
 - [ ] **5.12 Play Detail.** Core data, template fields grouped by section, cell notes, original
       imported values, quick note access, must-review status, diagram (SPEC §45).
