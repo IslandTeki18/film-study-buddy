@@ -11,6 +11,7 @@ import { useColumnLayout } from './use-column-layout'
 import { moved } from '@/features/templates/section-list'
 import { ViewPicker } from './view-picker'
 import { ColumnsMenu } from './columns-menu'
+import { sortSnaps, type SortState } from './row-model'
 import { PlayLogTable } from './play-log-table'
 
 export function PlayLog({ workspaceId, sourceGameId }: {
@@ -25,6 +26,8 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   const { layout, setVisible, setOrder, setWidth, applyView } = useColumnLayout(game?._id, columns.map((column) => column.key), game?.templateId)
   const visibleColumns = layout?.order.filter((key) => layout.visible.includes(key))
     .flatMap((key) => columns.filter((column) => column.key === key)) ?? []
+  const [sort, setSort] = useState<SortState>(null)
+  const displayedSnaps = sortSnaps(snaps ?? [], columns.find((column) => column.key === sort?.key), sort)
   const creating = useRef(false)
   const [pending, setPending] = useState(false)
   const [createdId, setCreatedId] = useState<Id<'snaps'> | null>(null)
@@ -61,6 +64,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     setTimeout(() => {
       void edits.then(async (saved) => {
         if (!saved) throw new Error('The previous cell edit could not be saved')
+        setSort(null)
         setCreatedId(await create({ sourceGameId: game._id }))
       })
         .catch((error: unknown) => show({ message: `Could not create Snap. ${error instanceof Error ? error.message : String(error)}` }))
@@ -93,7 +97,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     {!snaps?.length ? <section className="space-y-3">
       <h2 className="font-semibold">No Snaps yet</h2>
       <Link className="underline" to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>
-    </section> : <PlayLogTable snaps={snaps} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
+    </section> : <PlayLogTable snaps={displayedSnaps} sort={sort} onSort={setSort} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
       const source = visibleColumns[from]?.key
       const target = visibleColumns[to]?.key
       if (layout && source && target) setOrder(moved(layout.order, layout.order.indexOf(source), layout.order.indexOf(target)))

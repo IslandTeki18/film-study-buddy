@@ -13,13 +13,16 @@ import { defaultWidth, type PlayLogColumn } from './columns'
 import { useReorder } from '@/lib/reorder'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { COLUMN_MIN_WIDTH } from './use-column-layout'
+import { nextSort, type SortState } from './row-model'
 import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize }: {
+export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize, sort, onSort }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
   readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly sort: SortState
+  readonly onSort: (sort: SortState) => void
   readonly onReorder: (from: number, to: number) => void
   readonly onResize: (key: ColumnKey, width: number) => void
   readonly widths: Readonly<Record<string, number>>
@@ -217,11 +220,15 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
           const column = columns[index]
           if (!column) return null
           const width = header.getSize()
-          return <TableHead key={header.id} scope="col" {...drag.getItemProps(index)}
+          return <TableHead key={header.id} scope="col" aria-sort={sort?.key === column.key ? sort.direction === 'asc' ? 'ascending' : 'descending' : 'none'} {...drag.getItemProps(index)}
             className={`sticky top-0 bg-muted px-1.5 py-0 ${index === 0 ? 'left-0 z-30' : 'z-20'} ${drag.dragOverIndex === index ? 'border-2 border-primary' : ''}`}>
             <div className="flex items-center pr-2">
-              <span className="min-w-0 flex-1 truncate">{column.label}</span>
+              <button className="min-w-0 flex-1 truncate text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => onSort(nextSort(sort, column.key))}>{column.label}{sort?.key === column.key ? sort.direction === 'asc' ? ' ↑' : ' ↓' : ''}</button>
               <DropdownMenu label="⋯" triggerProps={{ size: 'sm', variant: 'ghost', className: 'h-7 px-1', 'aria-label': `Column options for ${column.label}` }} items={[
+                { label: 'Sort ascending', onSelect: () => onSort({ key: column.key, direction: 'asc' }) },
+                { label: 'Sort descending', onSelect: () => onSort({ key: column.key, direction: 'desc' }) },
+                { label: 'Clear sort', onSelect: () => onSort(null), disabled: sort?.key !== column.key },
                 { label: 'Move left', onSelect: () => drag.moveUp(index), disabled: !drag.canMoveUp(index) },
                 { label: 'Move right', onSelect: () => drag.moveDown(index), disabled: !drag.canMoveDown(index) },
               ]} />

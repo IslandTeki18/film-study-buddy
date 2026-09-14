@@ -182,7 +182,7 @@ The core of the product. Build the grid before the power features.
       *Verify:* relaunch the app; layout is identical, sort and search are cleared.
 - [~] **5.4 View switching.** Apply a template's saved Play Log Views; save the current layout
       as a new view (SPEC §38).
-- [ ] **5.5 Single-column sorting.** Unsorted → ascending → descending, one column at a time
+- [~] **5.5 Single-column sorting.** Unsorted → ascending → descending, one column at a time
       (SPEC §36).
 - [ ] **5.6 Search.** One box narrowing rows by displayed values. No syntax, no per-column
       filters (SPEC §37).
