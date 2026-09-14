@@ -4,6 +4,7 @@ import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { builtInTerminology, type TerminologyList } from '@convex/domain/terminology'
+import { restoredValueFor } from '@convex/domain/provenance'
 import { normalizeAnalysisValue } from '@convex/domain/templateFields'
 import { useToast } from '@/components/ui/toast'
 import type { Doc, Id } from '@convex/_generated/dataModel'
@@ -23,6 +24,7 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
   const [editing, setEditing] = useState<(CellCursor & { readonly draft?: string }) | null>(null)
   const focusedId = useRef<Id<'snaps'> | null>(null)
   const pendingCells = useRef(new Map<string, Promise<boolean>>())
+  const pendingCheckboxes = useRef(new Map<string, { value: boolean; saving: Promise<boolean> }>())
   useEffect(() => {
     if (!createdId || focusedId.current === createdId) return
     const row = snaps.findIndex((snap) => snap._id === createdId)
@@ -35,6 +37,25 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
   const { show } = useToast()
   const addTerminology = useMutation(api.terminology.add)
   const addFieldOption = useMutation(api.templates.addFieldOption)
+  const restore = useMutation(api.snaps.restoreImportedValue).withOptimisticUpdate((store, args) => {
+    const sourceGameId = snaps[0]?.sourceGameId
+    if (!sourceGameId || !isCoreFieldKey(args.key)) return
+    const key = args.key
+    const current = store.getQuery(api.snaps.listBySourceGame, { sourceGameId })
+    if (!current) return
+    const target = current.find((item) => item._id === args.snapId)
+    const original = target ? restoredValueFor(target.imported, key) : null
+    if (original === null) return
+    let value
+    try { value = normalizeCoreValue(key, original) } catch { return }
+    store.setQuery(api.snaps.listBySourceGame, { sourceGameId }, current.map((item) => {
+      if (item._id !== args.snapId) return item
+      const core = { ...item.core }
+      if (value === undefined) delete core[key]
+      else Object.assign(core, { [key]: value })
+      return { ...item, core }
+    }))
+  })
   const updateCore = useMutation(api.snaps.updateCore).withOptimisticUpdate((store, args) => {
     const sourceGameId = snaps[0]?.sourceGameId
     if (!sourceGameId || !isCoreFieldKey(args.key)) return
@@ -109,10 +130,10 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
       return false
     }
   }
-  function commit(snap: Doc<'snaps'>, column: PlayLogColumn, raw: unknown, newOption?: string): Promise<boolean> {
+  function enqueue(snap: Doc<'snaps'>, column: PlayLogColumn, operation: (forceWrite: boolean) => Promise<boolean>): Promise<boolean> {
     const key = `${snap._id}:${column.key}`
     const forceWrite = pendingCells.current.has(key)
-    const saving = pendingCommit.current.then(() => persist(snap, column, raw, newOption, forceWrite))
+    const saving = pendingCommit.current.then(() => operation(forceWrite))
     pendingCommit.current = saving
     pendingCells.current.set(key, saving)
     void saving.then(() => {
@@ -120,6 +141,31 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
       if (pendingCommit.current === saving) pendingCommit.current = Promise.resolve(true)
     })
     return saving
+  }
+  function commit(snap: Doc<'snaps'>, column: PlayLogColumn, raw: unknown, newOption?: string): Promise<boolean> {
+    return enqueue(snap, column, (forceWrite) => persist(snap, column, raw, newOption, forceWrite))
+  }
+  function toggleCheckbox(snap: Doc<'snaps'>, column: PlayLogColumn): void {
+    if (column.kind !== 'template') return
+    const key = `${snap._id}:${column.key}`
+    const value = !(pendingCheckboxes.current.get(key)?.value ?? Boolean(snap.analysis[column.field._id]))
+    const saving = commit(snap, column, value)
+    pendingCheckboxes.current.set(key, { value, saving })
+    void saving.then(() => {
+      if (pendingCheckboxes.current.get(key)?.saving === saving) pendingCheckboxes.current.delete(key)
+    })
+  }
+  function restoreOriginal(snap: Doc<'snaps'>, column: PlayLogColumn): Promise<boolean> {
+    return enqueue(snap, column, async () => {
+      if (column.kind !== 'core') return false
+      try {
+        await restore({ snapId: snap._id, key: column.field.key })
+        return true
+      } catch (error) {
+        show({ message: `Could not restore ${column.label}. ${error instanceof Error ? error.message : String(error)}` })
+        return false
+      }
+    })
   }
   const definitions = useMemo<LegacyColumnDef<Doc<'snaps'>>[]>(() => columns.map((column) => ({
     id: column.key,
@@ -148,7 +194,7 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
     const checkbox = column.kind === 'template' && column.field.type === 'checkbox'
     if (event.key === 'Enter' || (checkbox && event.key === ' ')) {
       event.preventDefault()
-      if (checkbox && column.kind === 'template') void commit(snap, column, !snap.analysis[column.field._id])
+      if (checkbox) toggleCheckbox(snap, column)
       else setEditing(active)
     } else if (event.key.length === 1 && !command && !event.altKey && !checkbox &&
       (column.kind === 'core' ? column.field.input.kind !== 'select' && column.field.input.kind !== 'fieldPosition'
@@ -169,15 +215,15 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
         {columns.map((column, index) => {
           const isEditing = editing?.row === rowIndex && editing.col === index
           const checkbox = column.kind === 'template' && column.field.type === 'checkbox'
-          const toggle = (): void => { if (column.kind === 'template') void commit(row.original, column, !row.original.analysis[column.field._id]) }
           return <TableCell role="gridcell" key={column.key} data-cell={`${rowIndex}:${index}`}
             tabIndex={!editing && active.row === rowIndex && active.col === index ? 0 : -1}
             aria-selected={active.row === rowIndex && active.col === index}
             onFocus={() => setActive({ row: rowIndex, col: index })}
-            onClick={() => { if (!isEditing) { focus(rowIndex, index); if (checkbox) toggle() } }}
+            onClick={() => { if (!isEditing) { focus(rowIndex, index); if (checkbox) toggleCheckbox(row.original, column) } }}
             onDoubleClick={() => { if (!checkbox) setEditing({ row: rowIndex, col: index }) }}
             className={`h-7 px-1.5 py-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${isEditing ? '' : 'truncate'} ${index === 0 ? 'sticky left-0 z-10 bg-background' : ''}`}>
             {isEditing ? <CellEditor snap={row.original} column={column} initialDraft={editing.draft} canTab={canTab} terminology={terminology} onCancel={() => close()}
+              onRestore={() => restoreOriginal(row.original, column)}
               onCommit={(value, move, option) => { void commit(row.original, column, value, option); close(move) }} />
               : <Cell snap={row.original} column={column} />}
           </TableCell>

@@ -164,7 +164,7 @@ The core of the product. Build the grid before the power features.
 - [x] **4.9 Inline terminology creation.** Formation, Play Concept, and template select fields
       accept a new value inline, which becomes reusable (SPEC §20, §21, §27).
       *Verify:* a formation added while charting appears in the next snap's picker.
-- [ ] **4.10 Provenance display and restore.** Imported markers, the Coach Edited state, and
+- [x] **4.10 Provenance display and restore.** Imported markers, the Coach Edited state, and
       Restore original (SPEC §14).
       *Verify:* edit an imported cell, confirm the state flips, restore, confirm it flips back.
 

@@ -3,7 +3,8 @@ import { mutation, query, type MutationCtx } from './_generated/server'
 import schema, { analysisValueValidator } from './schema'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireLiveSourceGame } from './sourceGames'
-import { CARRY_FORWARD_CORE_KEYS, isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
+import { CARRY_FORWARD_CORE_KEYS, getCoreField, isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
+import { restoredValueFor } from './domain/provenance.ts'
 import { normalizeAnalysisValue } from './domain/templateFields.ts'
 
 const snapValidator = v.object({
@@ -100,5 +101,24 @@ export const create = mutation({
     return ctx.db.insert('snaps', {
       sourceGameId: game._id, order: (last?.order ?? 0) + 1, core, analysis, mustReview: false, createdAt: Date.now(),
     })
+  },
+})
+
+export const restoreImportedValue = mutation({
+  args: { snapId: v.id('snaps'), key: v.string() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const snap = await requireLiveSnap(ctx, args.snapId)
+    if (!isCoreFieldKey(args.key)) throw new Error('Unknown Core Snap field')
+    const label = getCoreField(args.key).label
+    const original = restoredValueFor(snap.imported, args.key)
+    if (original === null) throw new Error(`No imported value for ${label}`)
+    let value
+    try { value = normalizeCoreValue(args.key, original) }
+    catch { throw new Error(`Original value "${original}" is not a valid ${label}`) }
+    const core = { ...snap.core }
+    if (value === undefined) delete core[args.key]
+    else Object.assign(core, { [args.key]: value })
+    await ctx.db.patch(snap._id, { core })
+    return null
   },
 })

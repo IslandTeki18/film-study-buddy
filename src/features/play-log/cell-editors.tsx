@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
+import { Button } from '@/components/ui/button'
 import type { Doc } from '@convex/_generated/dataModel'
 import { CORE_NUMBER_BOUNDS, formatCoreValue } from '@convex/domain/coreFields'
 import { isValidYardLine } from '@convex/domain/fieldZone'
@@ -11,15 +13,19 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Popover } from '@/components/ui/popover'
 import type { PlayLogColumn } from './columns'
 
-export function CellEditor({ snap, column, initialDraft, canTab, terminology, onCommit, onCancel }: {
+export function CellEditor({ snap, column, initialDraft, canTab, terminology, onCommit, onRestore, onCancel }: {
   readonly snap: Doc<'snaps'>
   readonly column: PlayLogColumn
   readonly initialDraft: string | undefined
   readonly canTab: (shift: boolean) => boolean
   readonly terminology: readonly { list: TerminologyList; value: string }[]
   readonly onCommit: (value: unknown, move: number | null, newOption?: string) => void
+  readonly onRestore: () => Promise<boolean>
   readonly onCancel: () => void
 }): ReactNode {
+  const [restoring, setRestoring] = useState(false)
+  const original = column.kind === 'core' && provenanceOf(snap.imported, column.field.key, snap.core[column.field.key]) === 'Coach Edited'
+    ? restoredValueFor(snap.imported, column.field.key) : null
   const current = column.kind === 'core' ? snap.core[column.field.key] : snap.analysis[column.field._id]
   const [draft, setDraft] = useState(initialDraft ?? (column.kind === 'core' ? formatCoreValue(column.field.key, current)
     : Array.isArray(current) ? current.join(', ') : current === undefined ? '' : String(current)))
@@ -113,7 +119,15 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
   }} onKeyDown={(event) => {
     event.stopPropagation()
     if (event.nativeEvent.isComposing) return
-    if (yardLine && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+    if (original !== null && event.altKey && event.key === 'ArrowDown') {
+      event.preventDefault()
+      event.currentTarget.querySelector<HTMLButtonElement>('[data-restore]')?.focus()
+    } else if (event.target instanceof HTMLElement && event.target.hasAttribute('data-restore') && event.key === 'ArrowUp') {
+      event.preventDefault()
+      event.currentTarget.querySelector<HTMLElement>('input, select, textarea')?.focus()
+    } else if (event.target instanceof HTMLElement && event.target.hasAttribute('data-restore') && (event.key === 'Enter' || event.key === ' ')) {
+      return
+    } else if (yardLine && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
       event.preventDefault()
       event.currentTarget.querySelector<HTMLElement>(event.key === 'ArrowRight' ? 'input:not(:disabled)' : 'select')?.focus()
     } else if (multi && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
@@ -137,5 +151,16 @@ export function CellEditor({ snap, column, initialDraft, canTab, terminology, on
       event.preventDefault()
       commit()
     }
-  }}>{control}</div>
+  }}>{control}
+    {original !== null && <Button data-restore type="button" variant="outline" size="sm" className="mt-1 max-w-full text-xs"
+      disabled={restoring} title="Alt+ArrowDown focuses Restore original" onClick={() => {
+        if (restoring || column.kind !== 'core') return
+        ended.current = true
+        setRestoring(true)
+        void onRestore().then((saved) => {
+          if (saved) onCancel()
+          else ended.current = false
+        }).finally(() => setRestoring(false))
+      }}>Restore original ({original})</Button>}
+  </div>
 }
