@@ -21,7 +21,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   const terminology = useQuery(api.terminology.list, {})
   const pendingCommit = useRef<Promise<boolean>>(Promise.resolve(true))
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
-  const { layout, setVisible, setOrder, setWidth } = useColumnLayout(game?._id, columns.map((column) => column.key))
+  const { layout, setVisible, setOrder, setWidth } = useColumnLayout(game?._id, columns.map((column) => column.key), game?.templateId)
   const visibleColumns = layout?.order.filter((key) => layout.visible.includes(key))
     .flatMap((key) => columns.filter((column) => column.key === key)) ?? []
   const creating = useRef(false)

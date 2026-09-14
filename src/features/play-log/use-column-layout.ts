@@ -12,12 +12,13 @@ export interface ColumnLayout {
   readonly widths: Readonly<Record<string, number>>
 }
 
-export function useColumnLayout(sourceGameId: Id<'sourceGames'> | undefined, catalog: ColumnKey[]): {
+export function useColumnLayout(sourceGameId: Id<'sourceGames'> | undefined, catalog: ColumnKey[], templateId: Id<'templates'> | undefined): {
   layout: ColumnLayout | undefined
   setVisible: (visible: ColumnKey[]) => void
   setOrder: (order: ColumnKey[]) => void
   setWidth: (key: ColumnKey, width: number) => void
 } {
+  const views = useQuery(api.templates.listViews, templateId ? { templateId } : 'skip')
   const saved = useQuery(api.columnLayouts.get, sourceGameId ? { sourceGameId } : 'skip')
   const { show } = useToast()
   const save = useMutation(api.columnLayouts.save).withOptimisticUpdate((store, args) => {
@@ -28,8 +29,8 @@ export function useColumnLayout(sourceGameId: Id<'sourceGames'> | undefined, cat
     })
   })
   const reconciled = saved ? reconcileView({ visibleColumns: saved.visible, columnOrder: saved.order }, catalog) : null
-  const layout: ColumnLayout | undefined = saved === undefined ? undefined : {
-    viewId: saved?.viewId ?? null, visible: reconciled?.visibleColumns ?? catalog,
+  const layout: ColumnLayout | undefined = saved === undefined || views === undefined ? undefined : {
+    viewId: views?.some((view) => view._id === saved?.viewId) ? saved?.viewId ?? null : null, visible: reconciled?.visibleColumns ?? catalog,
     order: reconciled?.columnOrder ?? catalog,
     widths: Object.fromEntries(Object.entries(saved?.widths ?? {}).filter(([key]) => catalog.includes(key as ColumnKey))),
   }
