@@ -180,7 +180,7 @@ The core of the product. Build the grid before the power features.
 - [~] **5.3 Layout persistence.** `columnLayouts` stores selected view, visible columns, order,
       and widths per Source Game. Sort and search deliberately do not persist (SPEC §39).
       *Verify:* relaunch the app; layout is identical, sort and search are cleared.
-- [ ] **5.4 View switching.** Apply a template's saved Play Log Views; save the current layout
+- [~] **5.4 View switching.** Apply a template's saved Play Log Views; save the current layout
       as a new view (SPEC §38).
 - [ ] **5.5 Single-column sorting.** Unsorted → ascending → descending, one column at a time
       (SPEC §36).

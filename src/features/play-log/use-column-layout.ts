@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import type { Id } from '@convex/_generated/dataModel'
+import type { Doc, Id } from '@convex/_generated/dataModel'
 import { reconcileView, type ColumnKey } from '@convex/domain/templateFields'
 import { useToast } from '@/components/ui/toast'
 
@@ -14,6 +14,7 @@ export interface ColumnLayout {
 
 export function useColumnLayout(sourceGameId: Id<'sourceGames'> | undefined, catalog: ColumnKey[], templateId: Id<'templates'> | undefined): {
   layout: ColumnLayout | undefined
+  applyView: (view: Pick<Doc<'templateViews'>, '_id' | 'visibleColumns' | 'columnOrder'> | null) => void
   setVisible: (visible: ColumnKey[]) => void
   setOrder: (order: ColumnKey[]) => void
   setWidth: (key: ColumnKey, width: number) => void
@@ -41,6 +42,11 @@ export function useColumnLayout(sourceGameId: Id<'sourceGames'> | undefined, cat
       visible: next.order.filter((key) => next.visible.includes(key)), order: next.order, widths: { ...next.widths },
     }).catch((error: unknown) => show({ message: `Could not update layout. ${error instanceof Error ? error.message : String(error)}` }))
   }
-  return { layout, setVisible: (visible) => persist({ visible }), setOrder: (order) => persist({ order }),
+  return { layout, applyView: (view) => {
+    if (!view) { persist({ viewId: null }); return }
+    const next = reconcileView(view, catalog)
+    // ponytail: viewId is a label, not a lock; add a modified marker if coaches ask.
+    persist({ viewId: view._id, visible: next.visibleColumns, order: next.columnOrder })
+  }, setVisible: (visible) => persist({ visible }), setOrder: (order) => persist({ order }),
     setWidth: (key, width) => persist({ widths: { ...layout?.widths, [key]: Math.max(COLUMN_MIN_WIDTH, width) } }) }
 }

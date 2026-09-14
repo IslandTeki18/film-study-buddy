@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { buildColumns } from './columns'
 import { useColumnLayout } from './use-column-layout'
 import { moved } from '@/features/templates/section-list'
+import { ViewPicker } from './view-picker'
 import { ColumnsMenu } from './columns-menu'
 import { PlayLogTable } from './play-log-table'
 
@@ -21,7 +22,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   const terminology = useQuery(api.terminology.list, {})
   const pendingCommit = useRef<Promise<boolean>>(Promise.resolve(true))
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
-  const { layout, setVisible, setOrder, setWidth } = useColumnLayout(game?._id, columns.map((column) => column.key), game?.templateId)
+  const { layout, setVisible, setOrder, setWidth, applyView } = useColumnLayout(game?._id, columns.map((column) => column.key), game?.templateId)
   const visibleColumns = layout?.order.filter((key) => layout.visible.includes(key))
     .flatMap((key) => columns.filter((column) => column.key === key)) ?? []
   const creating = useRef(false)
@@ -85,6 +86,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     <header className="flex flex-wrap items-center gap-3">
       <h1 className="text-xs font-semibold tracking-[0.11em] uppercase text-muted-foreground">{game.label}</h1>
       <span className="font-mono text-[11px] text-muted-foreground">{snaps?.length ?? 0} charted · {visibleColumns.length} columns · ⌘N new snap</span>
+      {layout && <ViewPicker templateId={game.templateId} layout={layout} onApply={applyView} />}
       {layout && <ColumnsMenu columns={columns} layout={layout} onChange={setVisible} />}
       <Button className="ml-auto h-8 px-3.5 font-mono text-[11px] font-bold" disabled={pending} onClick={newSnap}>New snap</Button>
     </header>
