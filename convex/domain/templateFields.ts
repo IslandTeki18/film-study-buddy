@@ -58,3 +58,38 @@ export function reconcileView(
     .filter((key): key is ColumnKey => valid.has(key) && existing.has(key as ColumnKey))
   return { visibleColumns, columnOrder: [...columnOrder, ...catalog.filter((key) => !existing.has(key))] }
 }
+
+export type AnalysisValue = string | number | boolean | string[]
+
+export function normalizeAnalysisValue(
+  field: { readonly type: TemplateFieldType; readonly options: readonly string[] }, raw: unknown,
+): AnalysisValue | null {
+  const value = typeof raw === 'string' ? raw.trim() : raw
+  if (value === null || value === undefined || value === '') return null
+  switch (field.type) {
+    case 'shortText':
+    case 'longText':
+      if (typeof value === 'string') return value
+      break
+    case 'number':
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      break
+    case 'checkbox':
+      if (typeof value === 'boolean') return value
+      break
+    case 'rating':
+      if (typeof value === 'number' && Number.isInteger(value) && value >= RATING_MIN && value <= RATING_MAX) return value
+      break
+    case 'select':
+      if (typeof value === 'string' && field.options.includes(value)) return value
+      break
+    case 'multiSelect':
+    case 'tags':
+      if (Array.isArray(value) && value.every((item): item is string => typeof item === 'string')) {
+        const values = [...new Set(value.map((item) => item.trim()).filter(Boolean))]
+        if (field.type === 'tags' || values.every((item) => field.options.includes(item))) return values.length ? values : null
+      }
+      break
+  }
+  throw new Error(`Invalid ${TEMPLATE_FIELD_TYPE_LABELS[field.type]} value`)
+}

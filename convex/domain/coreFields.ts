@@ -1,7 +1,7 @@
 /** Fourteen charting fields; Play # remains a Hudl Reference outside this registry.
  * Clock/personnel stay plain text; number ranges belong to the cell editor.
  */
-import { formatYardLine, isValidYardLine } from './fieldZone.ts'
+import { formatYardLine, isValidYardLine, parseYardLine, type YardLine } from './fieldZone.ts'
 import type { TerminologyList } from './terminology.ts'
 
 export const HASHES = ['Left', 'Middle', 'Right'] as const
@@ -60,4 +60,35 @@ export function formatCoreValue(key: CoreFieldKey, value: unknown): string {
   if (value === undefined || value === null) return ''
   if (key === 'yardLine') return isValidYardLine(value) ? formatYardLine(value) : ''
   return typeof value === 'string' || typeof value === 'number' ? String(value) : ''
+}
+
+export const CORE_NUMBER_BOUNDS = {
+  quarter: { min: 1, max: 9 }, down: { min: 1, max: 4 },
+  distance: { min: 0, max: 99 }, yards: { min: -99, max: 99 },
+} as const
+
+export type CoreValue = string | number | YardLine
+
+export function normalizeCoreValue(key: CoreFieldKey, raw: unknown): CoreValue | undefined {
+  const field = getCoreField(key)
+  const value = typeof raw === 'string' ? raw.trim() : raw
+  if (value === undefined || value === null || value === '') return undefined
+  if (field.input.kind === 'fieldPosition') {
+    const line = typeof value === 'string' ? parseYardLine(value) : value
+    if (!isValidYardLine(line)) throw new Error('Yard Line must be OWN 1–49, 50, or OPP 1–49')
+    return line
+  }
+  if (key === 'quarter' || key === 'down' || key === 'distance' || key === 'yards') {
+    const { min, max } = CORE_NUMBER_BOUNDS[key]
+    const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN
+    if (!Number.isInteger(number) || number < min || number > max) {
+      throw new Error(`${field.label} must be a whole number between ${min} and ${max}`)
+    }
+    return number
+  }
+  if (typeof value !== 'string') throw new Error(`${field.label} must be text`)
+  if (field.input.kind === 'select' && !field.input.options.includes(value)) {
+    throw new Error(`${field.label} must match an available option`)
+  }
+  return value
 }

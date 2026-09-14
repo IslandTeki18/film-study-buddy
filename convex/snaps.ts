@@ -1,6 +1,10 @@
 import { v } from 'convex/values'
-import { query } from './_generated/server'
-import schema from './schema'
+import { mutation, query, type MutationCtx } from './_generated/server'
+import schema, { analysisValueValidator } from './schema'
+import type { Doc, Id } from './_generated/dataModel'
+import { requireLiveSourceGame } from './sourceGames'
+import { isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
+import { normalizeAnalysisValue } from './domain/templateFields.ts'
 
 const snapValidator = v.object({
   ...schema.tables.snaps.validator.fields,
@@ -19,5 +23,53 @@ export const listBySourceGame = query({
     return (await ctx.db.query('snaps')
       .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', args.sourceGameId)).collect())
       .filter((snap) => snap.deletedAt === undefined)
+  },
+})
+
+async function requireLiveSnap(ctx: MutationCtx, id: Id<'snaps'>): Promise<Doc<'snaps'>> {
+  const snap = await ctx.db.get(id)
+  if (!snap || snap.deletedAt !== undefined) throw new Error('Snap not found')
+  await requireLiveSourceGame(ctx, snap.sourceGameId)
+  return snap
+}
+
+export const updateCore = mutation({
+  args: {
+    snapId: v.id('snaps'), key: v.string(),
+    value: v.optional(v.union(v.string(), v.number(), v.object({
+      side: v.union(v.literal('own'), v.literal('mid'), v.literal('opp')), yard: v.number(),
+    }))),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const snap = await requireLiveSnap(ctx, args.snapId)
+    if (!isCoreFieldKey(args.key)) throw new Error('Unknown Core Snap field')
+    const value = normalizeCoreValue(args.key, args.value)
+    const core = { ...snap.core }
+    if (value === undefined) delete core[args.key]
+    else Object.assign(core, { [args.key]: value })
+    await ctx.db.patch(snap._id, { core })
+    return null
+  },
+})
+
+export const updateAnalysis = mutation({
+  args: { snapId: v.id('snaps'), fieldId: v.id('templateFields'), value: v.union(analysisValueValidator, v.null()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const snap = await requireLiveSnap(ctx, args.snapId)
+    const game = await requireLiveSourceGame(ctx, snap.sourceGameId)
+    const field = await ctx.db.get(args.fieldId)
+    if (!field || field.deletedAt !== undefined || field.templateId !== game.templateId) throw new Error('Template Field not found')
+    const section = await ctx.db.get(field.sectionId)
+    if (!section || section.deletedAt !== undefined || section.templateId !== game.templateId) throw new Error('Section not found')
+    const template = await ctx.db.get(game.templateId)
+    if (!template || template.deletedAt !== undefined) throw new Error('Coaching Template not found')
+    const value = normalizeAnalysisValue(field, args.value)
+    const analysis = { ...snap.analysis }
+    if (value === null) delete analysis[args.fieldId]
+    else analysis[args.fieldId] = value
+    await ctx.db.patch(snap._id, { analysis })
+    return null
   },
 })

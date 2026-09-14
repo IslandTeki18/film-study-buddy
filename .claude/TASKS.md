@@ -148,7 +148,7 @@ The core of the product. Build the grid before the power features.
 - [x] **4.4 Play Log table shell.** TanStack Table into a plain `<table>`: vertical and
       horizontal scroll, sticky header, sticky first column, compact density (SPEC §32, §109).
       *Verify:* 200 seeded snaps scroll smoothly in both directions.
-- [ ] **4.5 Cell editing.** Read-only cells become editors on Enter or double-click, typed per
+- [x] **4.5 Cell editing.** Read-only cells become editors on Enter or double-click, typed per
       field (text, number, select, multi-select, checkbox, rating, tags). Commit on Enter, Tab,
       or blur; cancel on Esc. Autosave, no Save button.
       *Verify:* every field type edits and persists; Esc discards.
