@@ -142,7 +142,7 @@ The core of the product. Build the grid before the power features.
 - [x] **4.2 Source Games List and Add dialog.** Empty state leads with Import Hudl CSV, with
       Create Manually secondary (SPEC §11).
       *Verify:* both paths reach the right screen.
-- [ ] **4.3 Snap read model.** `snaps.listBySourceGame` plus the column model that merges Core
+- [x] **4.3 Snap read model.** `snaps.listBySourceGame` plus the column model that merges Core
       Snap fields with the game's template fields into one ordered column list.
       *Verify:* a game on a ten-field template yields twenty-four columns in template order.
 - [ ] **4.4 Play Log table shell.** TanStack Table into a plain `<table>`: vertical and
