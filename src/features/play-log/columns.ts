@@ -27,3 +27,10 @@ export function buildColumns(tree: TemplateTree): PlayLogColumn[] {
     return column
   })
 }
+
+export function defaultWidth(column: PlayLogColumn): number {
+  if (column.kind !== 'core') return 150
+  if (column.field.key === 'clipNumber') return 90
+  if (['quarter', 'down', 'distance', 'yards'].includes(column.field.key)) return 70
+  return ['hash', 'direction'].includes(column.field.key) ? 100 : 150
+}

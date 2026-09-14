@@ -9,14 +9,15 @@ import { normalizeAnalysisValue } from '@convex/domain/templateFields'
 import { useToast } from '@/components/ui/toast'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import type { PlayLogColumn } from './columns'
+import { defaultWidth, type PlayLogColumn } from './columns'
 import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit }: {
+export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
   readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly widths: Readonly<Record<string, number>>
   readonly pendingCommit: RefObject<Promise<boolean>>
 }): ReactNode {
   const container = useRef<HTMLDivElement>(null)
@@ -170,12 +171,8 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
   const definitions = useMemo<LegacyColumnDef<Doc<'snaps'>>[]>(() => columns.map((column) => ({
     id: column.key,
     header: column.label,
-    size: column.kind === 'core'
-      ? column.field.key === 'clipNumber' ? 90
-        : ['quarter', 'down', 'distance', 'yards'].includes(column.field.key) ? 70
-          : ['hash', 'direction'].includes(column.field.key) ? 100 : 150
-      : 150,
-  })), [columns])
+    size: widths[column.key] ?? defaultWidth(column),
+  })), [columns, widths])
   const table = useLegacyTable({ data: snaps, columns: definitions, getCoreRowModel: getCoreRowModel(), getRowId: (snap) => snap._id })
   // ponytail: fixed offset; switch the tab panels to a flex column if the chrome height changes.
   // ponytail: no virtualization; add windowing if a Source Game exceeds ~1000 Snaps.

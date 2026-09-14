@@ -428,6 +428,27 @@ export const listViews = query({
   },
 })
 
+export async function requireValidColumnSelection(
+  ctx: ReadCtx, templateId: Id<'templates'>, columnOrder: readonly string[], visibleColumns: readonly string[],
+): Promise<void> {
+  await requireLiveTemplate(ctx, templateId)
+  const order = new Set(columnOrder)
+  if (order.size !== columnOrder.length) throw new Error('Column order must not contain duplicates')
+  const fieldIds = new Set<string>((await templateTree(ctx, templateId))
+    .flatMap((section) => section.fields.map((field) => field._id)))
+  for (const key of order) {
+    if (key.startsWith('core:') && isCoreFieldKey(key.slice(5))) continue
+    if (key.startsWith('field:') && fieldIds.has(key.slice(6))) continue
+    throw new Error(`Unknown column: ${key}`)
+  }
+  if (new Set(visibleColumns).size !== visibleColumns.length) {
+    throw new Error('Visible columns must not contain duplicates')
+  }
+  if (visibleColumns.some((key) => !order.has(key))) {
+    throw new Error('Visible columns must be a subset of column order')
+  }
+}
+
 /** Views contain only a name, visibility, and order of this template's valid columns. */
 export const saveView = mutation({
   args: {
@@ -442,21 +463,7 @@ export const saveView = mutation({
       const view = await ctx.db.get(args.viewId)
       if (!view || view.templateId !== args.templateId) throw new Error('Play Log View not found in this template')
     }
-    const order = new Set(args.columnOrder)
-    if (order.size !== args.columnOrder.length) throw new Error('Column order must not contain duplicates')
-    const fieldIds = new Set<string>((await templateTree(ctx, args.templateId))
-      .flatMap((section) => section.fields.map((field) => field._id)))
-    for (const key of order) {
-      if (key.startsWith('core:') && isCoreFieldKey(key.slice(5))) continue
-      if (key.startsWith('field:') && fieldIds.has(key.slice(6))) continue
-      throw new Error(`Unknown column: ${key}`)
-    }
-    if (new Set(args.visibleColumns).size !== args.visibleColumns.length) {
-      throw new Error('Visible columns must not contain duplicates')
-    }
-    if (args.visibleColumns.some((key) => !order.has(key))) {
-      throw new Error('Visible columns must be a subset of column order')
-    }
+    await requireValidColumnSelection(ctx, args.templateId, args.columnOrder, args.visibleColumns)
     const value = { name, visibleColumns: args.visibleColumns, columnOrder: args.columnOrder }
     if (args.viewId) {
       await ctx.db.patch(args.viewId, value)

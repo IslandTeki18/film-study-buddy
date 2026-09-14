@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as columnLayouts from "../columnLayouts.js";
 import type * as crons from "../crons.js";
 import type * as deletions from "../deletions.js";
 import type * as domain_coreFields from "../domain/coreFields.js";
@@ -33,6 +34,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  columnLayouts: typeof columnLayouts;
   crons: typeof crons;
   deletions: typeof deletions;
   "domain/coreFields": typeof domain_coreFields;
