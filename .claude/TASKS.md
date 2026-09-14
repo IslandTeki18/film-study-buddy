@@ -145,7 +145,7 @@ The core of the product. Build the grid before the power features.
 - [x] **4.3 Snap read model.** `snaps.listBySourceGame` plus the column model that merges Core
       Snap fields with the game's template fields into one ordered column list.
       *Verify:* a game on a ten-field template yields twenty-four columns in template order.
-- [ ] **4.4 Play Log table shell.** TanStack Table into a plain `<table>`: vertical and
+- [x] **4.4 Play Log table shell.** TanStack Table into a plain `<table>`: vertical and
       horizontal scroll, sticky header, sticky first column, compact density (SPEC §32, §109).
       *Verify:* 200 seeded snaps scroll smoothly in both directions.
 - [ ] **4.5 Cell editing.** Read-only cells become editors on Enter or double-click, typed per

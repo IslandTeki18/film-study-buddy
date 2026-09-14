@@ -10,6 +10,7 @@
 
 import type * as crons from "../crons.js";
 import type * as deletions from "../deletions.js";
+import type * as devFixtures from "../devFixtures.js";
 import type * as domain_coreFields from "../domain/coreFields.js";
 import type * as domain_fieldZone from "../domain/fieldZone.js";
 import type * as domain_names from "../domain/names.js";
@@ -34,6 +35,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   deletions: typeof deletions;
+  devFixtures: typeof devFixtures;
   "domain/coreFields": typeof domain_coreFields;
   "domain/fieldZone": typeof domain_fieldZone;
   "domain/names": typeof domain_names;
