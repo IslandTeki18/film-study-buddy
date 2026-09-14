@@ -78,7 +78,14 @@ export const updateAnalysis = mutation({
 })
 
 export const create = mutation({
-  args: { sourceGameId: v.id('sourceGames') }, returns: v.id('snaps'),
+  args: {
+    sourceGameId: v.id('sourceGames'),
+    core: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.object({
+      side: v.union(v.literal('own'), v.literal('mid'), v.literal('opp')), yard: v.number(),
+    })))),
+    analysis: v.optional(v.record(v.string(), analysisValueValidator)),
+    mustReview: v.optional(v.boolean()),
+  }, returns: v.id('snaps'),
   handler: async (ctx, args) => {
     const game = await requireLiveSourceGame(ctx, args.sourceGameId)
     const template = await ctx.db.get(game.templateId)
@@ -87,21 +94,34 @@ export const create = mutation({
       .order('desc').filter((q) => q.eq(q.field('deletedAt'), undefined)).first()
     const core: Doc<'snaps'>['core'] = {}
     const analysis: Doc<'snaps'>['analysis'] = {}
+    const fields = await ctx.db.query('templateFields').withIndex('by_template', (q) => q.eq('templateId', game.templateId)).collect()
+    const sections = await ctx.db.query('templateSections').withIndex('by_template', (q) => q.eq('templateId', game.templateId)).collect()
+    const liveSections = new Set(sections.filter((section) => section.deletedAt === undefined).map((section) => section._id))
     if (last) {
       for (const key of CARRY_FORWARD_CORE_KEYS) {
         if (last.core[key] !== undefined) core[key] = last.core[key]
       }
-      const fields = await ctx.db.query('templateFields').withIndex('by_template', (q) => q.eq('templateId', game.templateId)).collect()
-      const sections = await ctx.db.query('templateSections').withIndex('by_template', (q) => q.eq('templateId', game.templateId)).collect()
-      const liveSections = new Set(sections.filter((section) => section.deletedAt === undefined).map((section) => section._id))
       for (const field of fields) {
         if (field.deletedAt === undefined && field.carryForward && liveSections.has(field.sectionId) && last.analysis[field._id] !== undefined) {
           analysis[field._id] = last.analysis[field._id]!
         }
       }
     }
+    for (const [key, raw] of Object.entries(args.core ?? {})) {
+      if (!isCoreFieldKey(key)) throw new Error('Unknown Core Snap field')
+      const value = normalizeCoreValue(key, raw)
+      if (value === undefined) delete core[key]
+      else Object.assign(core, { [key]: value })
+    }
+    for (const [fieldId, raw] of Object.entries(args.analysis ?? {})) {
+      const field = fields.find((field) => field._id === fieldId && field.deletedAt === undefined && liveSections.has(field.sectionId))
+      if (!field) throw new Error('Template Field not found')
+      const value = normalizeAnalysisValue(field, raw)
+      if (value === null) delete analysis[fieldId]
+      else analysis[fieldId] = value
+    }
     return ctx.db.insert('snaps', {
-      sourceGameId: game._id, order: (last?.order ?? 0) + 1, core, analysis, mustReview: false, createdAt: Date.now(),
+      sourceGameId: game._id, order: (last?.order ?? 0) + 1, core, analysis, mustReview: args.mustReview ?? false, createdAt: Date.now(),
     })
   },
 })
