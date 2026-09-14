@@ -93,6 +93,34 @@ export const rename = mutation({
   },
 })
 
+export function isIncluded(game: { included?: boolean }): boolean {
+  return game.included !== false
+}
+
+export const setIncluded = mutation({
+  args: { sourceGameId: v.id('sourceGames'), included: v.boolean() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireLiveSourceGame(ctx, args.sourceGameId)
+    await ctx.db.patch(args.sourceGameId, { included: args.included })
+    return null
+  },
+})
+
+/** Bulk scope: every live Source Game of the Workspace becomes included iff its id is listed. */
+export const setIncludedGames = mutation({
+  args: { workspaceId: v.id('workspaces'), includedIds: v.array(v.id('sourceGames')) }, returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireLiveWorkspace(ctx, args.workspaceId)
+    const wanted = new Set<string>(args.includedIds)
+    const games = await ctx.db.query('sourceGames')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', args.workspaceId)).collect()
+    for (const game of games) {
+      if (game.deletedAt === undefined) await ctx.db.patch(game._id, { included: wanted.has(game._id) })
+    }
+    return null
+  },
+})
+
 export const remove = mutation({
   args: { sourceGameId: v.id('sourceGames') }, returns: v.string(),
   handler: async (ctx, args) => {

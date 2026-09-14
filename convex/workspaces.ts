@@ -175,7 +175,9 @@ export const getOverview = query({
   args: { workspaceId: v.string() },
   returns: v.union(v.null(), v.object({
     opponentName: v.string(), week: v.number(), seasonName: v.string(), gameDate: v.optional(v.string()),
-    sourceGames: v.array(v.object({ _id: v.id('sourceGames'), label: v.string(), snapCount: v.number() })),
+    sourceGames: v.array(v.object({ _id: v.id('sourceGames'), label: v.string(), snapCount: v.number(), included: v.boolean() })),
+    includedGameCount: v.number(),
+    // Charted and Must Review counts cover included Source Games only.
     snapCount: v.number(), mustReviewCount: v.number(), tendencyCount: v.number(),
     reports: v.array(v.object({ _id: v.id('reports'), name: v.string(), intent: schema.tables.reports.validator.fields.intent })),
     continueGameId: v.union(v.id('sourceGames'), v.null()),
@@ -198,8 +200,9 @@ export const getOverview = query({
         .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect()
       const review = await ctx.db.query('snaps')
         .withIndex('by_sourceGame_mustReview', (q) => q.eq('sourceGameId', game._id).eq('mustReview', true)).collect()
-      mustReviewCount += review.filter((snap) => snap.deletedAt === undefined).length
-      sourceGames.push({ _id: game._id, label: game.label, snapCount: snaps.filter((snap) => snap.deletedAt === undefined).length })
+      const included = game.included !== false
+      if (included) mustReviewCount += review.filter((snap) => snap.deletedAt === undefined).length
+      sourceGames.push({ _id: game._id, label: game.label, snapCount: snaps.filter((snap) => snap.deletedAt === undefined).length, included })
     }
     const tendencies = await ctx.db.query('tendencies')
       .withIndex('by_workspace', (q) => q.eq('workspaceId', id)).collect()
@@ -208,7 +211,8 @@ export const getOverview = query({
     return {
       opponentName: workspace.opponentName, week: workspace.week, seasonName: season.name,
       ...(workspace.gameDate ? { gameDate: workspace.gameDate } : {}), sourceGames,
-      snapCount: sourceGames.reduce((sum, game) => sum + game.snapCount, 0), mustReviewCount,
+      includedGameCount: sourceGames.filter((game) => game.included).length,
+      snapCount: sourceGames.reduce((sum, game) => sum + (game.included ? game.snapCount : 0), 0), mustReviewCount,
       tendencyCount: tendencies.filter((tendency) => tendency.deletedAt === undefined).length,
       reports: reports.filter((report) => report.deletedAt === undefined)
         .map(({ _id, name, intent }) => ({ _id, name, intent })),

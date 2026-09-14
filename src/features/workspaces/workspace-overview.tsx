@@ -19,8 +19,8 @@ export function WorkspaceOverview({ workspaceId }: { readonly workspaceId: strin
   const rows: ReadonlyArray<{ label: string; value: ReactNode; note: string; warm?: boolean }> = [
     { label: 'Opponent', value: overview.opponentName, note: overview.gameDate ?? 'no game date' },
     { label: 'Week', value: `Week ${overview.week} · ${overview.seasonName}`, note: workspace.yourTeam ? `vs ${workspace.yourTeam}` : '' },
-    { label: 'Source games', value: overview.sourceGames.length, note: 'you choose what counts' },
-    { label: 'Charted snaps', value: overview.snapCount, note: 'across all source games' },
+    { label: 'Source games', value: `${overview.includedGameCount} of ${overview.sourceGames.length}`, note: 'you choose what counts' },
+    { label: 'Charted snaps', value: overview.snapCount, note: overview.includedGameCount === overview.sourceGames.length ? 'across all source games' : 'across included source games' },
     { label: 'Must review snaps', value: overview.mustReviewCount, note: overview.mustReviewCount ? 'flagged while charting' : 'nothing flagged', warm: overview.mustReviewCount > 0 },
     { label: 'Tendencies / alerts', value: overview.tendencyCount, note: 'from charted data' },
     { label: 'Reports', value: overview.reports.length, note: overview.reports.length ? overview.reports.map((report) => report.name).join(', ') : 'none yet' },
@@ -49,7 +49,7 @@ export function WorkspaceOverview({ workspaceId }: { readonly workspaceId: strin
         {overview.sourceGames.map((game) => <Link key={game._id} to={`/w/${workspace._id}/games/${game._id}`}
           className="flex items-center gap-4 border-b border-border px-4.5 py-3 text-[13.5px] transition-colors last:border-b-0 hover:bg-accent">
           <span className="min-w-0 flex-1 truncate">{game.label}</span>
-          <Meta>{game.snapCount} snaps</Meta>
+          <Meta>{game.snapCount} snaps{game.included ? '' : ' · out'}</Meta>
         </Link>)}
       </Panel>
     </section>}

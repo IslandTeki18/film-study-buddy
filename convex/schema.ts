@@ -92,6 +92,8 @@ export default defineSchema({
     workspaceId: v.id('workspaces'),
     label: v.string(),
     templateId: v.id('templates'),
+    // Absent means included: the flag was added after the first Source Games existed.
+    included: v.optional(v.boolean()),
     createdAt: v.number(),
     ...softDelete,
   }).index('by_workspace', ['workspaceId']),
