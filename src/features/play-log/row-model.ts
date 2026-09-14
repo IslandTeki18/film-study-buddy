@@ -37,3 +37,8 @@ export function sortSnaps(snaps: readonly Doc<'snaps'>[], column: PlayLogColumn 
     return comparison * (sort.direction === 'asc' ? 1 : -1)
   })
 }
+
+export function filterSnaps(snaps: readonly Doc<'snaps'>[], columns: readonly PlayLogColumn[], query: string): Doc<'snaps'>[] {
+  const text = query.trim().toLocaleLowerCase()
+  return text ? snaps.filter((snap) => columns.some((column) => displayValue(snap, column).toLocaleLowerCase().includes(text))) : [...snaps]
+}

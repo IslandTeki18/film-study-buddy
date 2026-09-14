@@ -5,13 +5,14 @@ import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { CARRY_FORWARD_CORE_KEYS } from '@convex/domain/coreFields'
 import { useToast } from '@/components/ui/toast'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { buildColumns } from './columns'
 import { useColumnLayout } from './use-column-layout'
 import { moved } from '@/features/templates/section-list'
 import { ViewPicker } from './view-picker'
 import { ColumnsMenu } from './columns-menu'
-import { sortSnaps, type SortState } from './row-model'
+import { filterSnaps, sortSnaps, type SortState } from './row-model'
 import { PlayLogTable } from './play-log-table'
 
 export function PlayLog({ workspaceId, sourceGameId }: {
@@ -27,7 +28,8 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   const visibleColumns = layout?.order.filter((key) => layout.visible.includes(key))
     .flatMap((key) => columns.filter((column) => column.key === key)) ?? []
   const [sort, setSort] = useState<SortState>(null)
-  const displayedSnaps = sortSnaps(snaps ?? [], columns.find((column) => column.key === sort?.key), sort)
+  const [search, setSearch] = useState('')
+  const displayedSnaps = sortSnaps(filterSnaps(snaps ?? [], visibleColumns, search), columns.find((column) => column.key === sort?.key), sort)
   const creating = useRef(false)
   const [pending, setPending] = useState(false)
   const [createdId, setCreatedId] = useState<Id<'snaps'> | null>(null)
@@ -65,6 +67,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
       void edits.then(async (saved) => {
         if (!saved) throw new Error('The previous cell edit could not be saved')
         setSort(null)
+        setSearch('')
         setCreatedId(await create({ sourceGameId: game._id }))
       })
         .catch((error: unknown) => show({ message: `Could not create Snap. ${error instanceof Error ? error.message : String(error)}` }))
@@ -89,7 +92,8 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   }}>
     <header className="flex flex-wrap items-center gap-3">
       <h1 className="text-xs font-semibold tracking-[0.11em] uppercase text-muted-foreground">{game.label}</h1>
-      <span className="font-mono text-[11px] text-muted-foreground">{snaps?.length ?? 0} charted · {visibleColumns.length} columns · ⌘N new snap</span>
+      <span className="font-mono text-[11px] text-muted-foreground">{search.trim() ? `${displayedSnaps.length} of ${snaps?.length ?? 0} Snaps` : `${snaps?.length ?? 0} charted`} · {visibleColumns.length} columns · ⌘N new snap</span>
+      <Input type="search" aria-label="Search Play Log" placeholder="Search" className="w-40" value={search} onChange={(event) => setSearch(event.target.value)} />
       {layout && <ViewPicker templateId={game.templateId} layout={layout} onApply={applyView} />}
       {layout && <ColumnsMenu columns={columns} layout={layout} onChange={setVisible} />}
       <Button className="ml-auto h-8 px-3.5 font-mono text-[11px] font-bold" disabled={pending} onClick={newSnap}>New snap</Button>

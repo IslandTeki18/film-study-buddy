@@ -177,14 +177,14 @@ The core of the product. Build the grid before the power features.
 - [~] **5.1 Column visibility.** The Columns dropdown; changes apply immediately (SPEC §33).
 - [~] **5.2 Column reordering and resizing.** Header drag plus keyboard move; drag-to-resize
       (SPEC §34, §35).
-- [~] **5.3 Layout persistence.** `columnLayouts` stores selected view, visible columns, order,
+- [x] **5.3 Layout persistence.** `columnLayouts` stores selected view, visible columns, order,
       and widths per Source Game. Sort and search deliberately do not persist (SPEC §39).
       *Verify:* relaunch the app; layout is identical, sort and search are cleared.
 - [~] **5.4 View switching.** Apply a template's saved Play Log Views; save the current layout
       as a new view (SPEC §38).
 - [~] **5.5 Single-column sorting.** Unsorted → ascending → descending, one column at a time
       (SPEC §36).
-- [ ] **5.6 Search.** One box narrowing rows by displayed values. No syntax, no per-column
+- [x] **5.6 Search.** One box narrowing rows by displayed values. No syntax, no per-column
       filters (SPEC §37).
 - [ ] **5.7 Multi-row selection and bulk edit.** Select rows, set one field across them, confirm,
       write a `bulkEdits` record, apply in one mutation (SPEC §41).
