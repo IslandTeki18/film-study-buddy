@@ -9,15 +9,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Popover } from '@/components/ui/popover'
 import type { PlayLogColumn } from './columns'
 
-export function CellEditor({ snap, column, onCommit, onCancel }: {
+export function CellEditor({ snap, column, initialDraft, canTab, onCommit, onCancel }: {
   readonly snap: Doc<'snaps'>
   readonly column: PlayLogColumn
-  readonly onCommit: (value: unknown, move: number) => void
+  readonly initialDraft: string | undefined
+  readonly canTab: (shift: boolean) => boolean
+  readonly onCommit: (value: unknown, move: number | null) => void
   readonly onCancel: () => void
 }): ReactNode {
   const current = column.kind === 'core' ? snap.core[column.field.key] : snap.analysis[column.field._id]
-  const [draft, setDraft] = useState(column.kind === 'core' ? formatCoreValue(column.field.key, current)
-    : Array.isArray(current) ? current.join(', ') : current === undefined ? '' : String(current))
+  const [draft, setDraft] = useState(initialDraft ?? (column.kind === 'core' ? formatCoreValue(column.field.key, current)
+    : Array.isArray(current) ? current.join(', ') : current === undefined ? '' : String(current)))
   const [checked, setChecked] = useState<string[]>(Array.isArray(current) ? current : [])
   const ended = useRef(false)
   const popover = useRef<HTMLDivElement>(null)
@@ -28,7 +30,7 @@ export function CellEditor({ snap, column, onCommit, onCancel }: {
       popover.current?.querySelector<HTMLInputElement>('input')?.focus()
     }
   }, [multi])
-  function commit(move = 0): void {
+  function commit(move: number | null = 0): void {
     if (ended.current) return
     ended.current = true
     let value: unknown = draft
@@ -43,7 +45,7 @@ export function CellEditor({ snap, column, onCommit, onCancel }: {
   let control: ReactNode
   if (column.kind === 'template' && multi) {
     control = <Popover trigger="Choose options" contentRef={popover}
-      onToggle={(event) => { if (event.newState === 'closed') commit() }}>
+      onToggle={(event) => { if (event.newState === 'closed') commit(null) }}>
       <div className="flex flex-col gap-2">
         {column.field.options.map((option) => <Checkbox key={option} label={option} checked={checked.includes(option)}
           onChange={(event) => setChecked(event.target.checked ? [...checked, option] : checked.filter((item) => item !== option))} />)}
@@ -71,17 +73,25 @@ export function CellEditor({ snap, column, onCommit, onCancel }: {
       step={column.kind === 'core' ? 1 : 'any'} {...bounds} value={draft} onChange={(event) => setDraft(event.target.value)} />
   }
   return <div onBlur={(event) => {
-    if (!multi && !event.currentTarget.contains(event.relatedTarget)) commit()
+    if (!multi && !event.currentTarget.contains(event.relatedTarget)) commit(null)
   }} onKeyDown={(event) => {
     event.stopPropagation()
     if (event.nativeEvent.isComposing) return
-    if (event.key === 'Escape') {
+    if (multi && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault()
+      const options = Array.from(popover.current?.querySelectorAll<HTMLInputElement>('input') ?? [])
+      const index = options.findIndex((option) => option === document.activeElement)
+      options[Math.max(0, Math.min(options.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus()
+    } else if (event.key === 'Escape') {
       event.preventDefault()
       ended.current = true
       onCancel()
     } else if (event.key === 'Tab') {
-      event.preventDefault()
-      commit(event.shiftKey ? -1 : 1)
+      const inside = canTab(event.shiftKey)
+      if (inside) event.preventDefault()
+      else event.currentTarget.querySelectorAll<HTMLElement>('input, select, textarea, button, [tabindex]')
+        .forEach((control) => { control.tabIndex = -1 })
+      commit(inside ? event.shiftKey ? -1 : 1 : null)
     } else if (event.key === 'Enter' && !(event.shiftKey && column.kind === 'template' && column.field.type === 'longText')) {
       event.preventDefault()
       commit()

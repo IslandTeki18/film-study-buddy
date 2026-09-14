@@ -10,13 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { PlayLogColumn } from './columns'
 import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
+import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
 export function PlayLogTable({ snaps, columns }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]
 }): ReactNode {
   const container = useRef<HTMLDivElement>(null)
-  const [active, setActive] = useState({ row: 0, col: 0 })
-  const [editing, setEditing] = useState<{ row: number; col: number } | null>(null)
+  const { cursor: active, setCursor: setActive, next } = useCellCursor(snaps.length, columns.length)
+  const [editing, setEditing] = useState<(CellCursor & { readonly draft?: string }) | null>(null)
   const { show } = useToast()
   const updateCore = useMutation(api.snaps.updateCore).withOptimisticUpdate((store, args) => {
     const sourceGameId = snaps[0]?.sourceGameId
@@ -50,11 +51,21 @@ export function PlayLogTable({ snaps, columns }: {
     setActive({ row, col })
     requestAnimationFrame(() => container.current?.querySelector<HTMLElement>(`[data-cell="${row}:${col}"]`)?.focus())
   }
-  function close(move = 0): void {
+  function close(move: number | null = 0): void {
     const cell = editing ?? active
+    if (move === null) {
+      setTimeout(() => setEditing(null), 0)
+      return
+    }
     setEditing(null)
-    const next = Math.max(0, Math.min(snaps.length * columns.length - 1, cell.row * columns.length + cell.col + move))
-    focus(Math.floor(next / columns.length), next % columns.length)
+    const target = move === 0 ? cell : nextCell(cell, 'Tab', snaps.length, columns.length, move < 0)
+    if (target) focus(target.row, target.col)
+  }
+  function canTab(shift: boolean): boolean {
+    if (next('Tab', shift)) return true
+    if (container.current) container.current.tabIndex = -1
+    setTimeout(() => { if (container.current) container.current.tabIndex = 0 }, 0)
+    return false
   }
   async function commit(snap: Doc<'snaps'>, column: PlayLogColumn, raw: unknown): Promise<void> {
     try {
@@ -83,8 +94,31 @@ export function PlayLogTable({ snaps, columns }: {
   const table = useLegacyTable({ data: snaps, columns: definitions, getCoreRowModel: getCoreRowModel(), getRowId: (snap) => snap._id })
   // ponytail: fixed offset; switch the tab panels to a flex column if the chrome height changes.
   // ponytail: no virtualization; add windowing if a Source Game exceeds ~1000 Snaps.
-  return <div ref={container} className="max-h-[calc(100dvh-9rem)] overflow-auto" tabIndex={0} aria-label="Play Log">
-    <Table className="table-fixed text-xs" style={{ width: table.getTotalSize() }}>
+  return <div ref={container} className="max-h-[calc(100dvh-9rem)] overflow-auto" tabIndex={editing ? -1 : 0} aria-label="Play Log" onKeyDown={(event) => {
+    if (editing || event.nativeEvent.isComposing) return
+    const column = columns[active.col]
+    const snap = snaps[active.row]
+    if (!column || !snap) return
+    const command = event.ctrlKey || event.metaKey
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Tab'].includes(event.key)) {
+      if (event.key === 'Tab' && !canTab(event.shiftKey)) return
+      const target = next(event.key, event.shiftKey, command)
+      if (target) { event.preventDefault(); focus(target.row, target.col) }
+      return
+    }
+    const checkbox = column.kind === 'template' && column.field.type === 'checkbox'
+    if (event.key === 'Enter' || (checkbox && event.key === ' ')) {
+      event.preventDefault()
+      if (checkbox && column.kind === 'template') void commit(snap, column, !snap.analysis[column.field._id])
+      else setEditing(active)
+    } else if (event.key.length === 1 && !command && !event.altKey && !checkbox &&
+      (column.kind === 'core' ? column.field.input.kind !== 'select' && column.field.input.kind !== 'fieldPosition'
+        : !['select', 'multiSelect', 'rating'].includes(column.field.type))) {
+      event.preventDefault()
+      setEditing({ ...active, draft: event.key })
+    }
+  }}>
+    <Table role="grid" className="table-fixed text-xs" style={{ width: table.getTotalSize() }}>
       <colgroup>{table.getAllLeafColumns().map((column) => <col key={column.id} style={{ width: column.getSize() }} />)}</colgroup>
       <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>
         {group.headers.map((header, index) => <TableHead key={header.id} scope="col"
@@ -97,21 +131,14 @@ export function PlayLogTable({ snaps, columns }: {
           const isEditing = editing?.row === rowIndex && editing.col === index
           const checkbox = column.kind === 'template' && column.field.type === 'checkbox'
           const toggle = (): void => { if (column.kind === 'template') void commit(row.original, column, !row.original.analysis[column.field._id]) }
-          return <TableCell key={column.key} data-cell={`${rowIndex}:${index}`}
-            tabIndex={active.row === rowIndex && active.col === index ? 0 : -1}
+          return <TableCell role="gridcell" key={column.key} data-cell={`${rowIndex}:${index}`}
+            tabIndex={!editing && active.row === rowIndex && active.col === index ? 0 : -1}
             aria-selected={active.row === rowIndex && active.col === index}
             onFocus={() => setActive({ row: rowIndex, col: index })}
             onClick={() => { if (!isEditing) { focus(rowIndex, index); if (checkbox) toggle() } }}
             onDoubleClick={() => { if (!checkbox) setEditing({ row: rowIndex, col: index }) }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || (checkbox && event.key === ' ')) {
-                event.preventDefault()
-                if (checkbox) toggle()
-                else setEditing({ row: rowIndex, col: index })
-              }
-            }}
             className={`h-7 px-1.5 py-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${isEditing ? '' : 'truncate'} ${index === 0 ? 'sticky left-0 z-10 bg-background' : ''}`}>
-            {isEditing ? <CellEditor snap={row.original} column={column} onCancel={() => close()}
+            {isEditing ? <CellEditor snap={row.original} column={column} initialDraft={editing.draft} canTab={canTab} onCancel={() => close()}
               onCommit={(value, move) => { void commit(row.original, column, value); close(move) }} />
               : <Cell snap={row.original} column={column} />}
           </TableCell>

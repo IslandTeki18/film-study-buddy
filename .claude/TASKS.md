@@ -152,7 +152,7 @@ The core of the product. Build the grid before the power features.
       field (text, number, select, multi-select, checkbox, rating, tags). Commit on Enter, Tab,
       or blur; cancel on Esc. Autosave, no Save button.
       *Verify:* every field type edits and persists; Esc discards.
-- [ ] **4.6 Keyboard navigation.** Arrow-key cell cursor, Tab and Shift+Tab, home and end rows.
+- [x] **4.6 Keyboard navigation.** Arrow-key cell cursor, Tab and Shift+Tab, home and end rows.
       Enter never creates a row (SPEC §98).
       *Verify:* a full row charted without touching the mouse.
 - [ ] **4.7 Structured field position.** The Yard Line editor produces `OWN 35`, `50`, `OPP 22`
