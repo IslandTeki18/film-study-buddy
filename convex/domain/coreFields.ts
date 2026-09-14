@@ -92,3 +92,5 @@ export function normalizeCoreValue(key: CoreFieldKey, raw: unknown): CoreValue |
   }
   return value
 }
+
+export const CARRY_FORWARD_CORE_KEYS = ['personnel', 'formation', 'motion'] as const

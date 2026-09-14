@@ -1,23 +1,33 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getCoreRowModel, useLegacyTable, type LegacyColumnDef } from '@tanstack/react-table/legacy'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { normalizeAnalysisValue } from '@convex/domain/templateFields'
 import { useToast } from '@/components/ui/toast'
-import type { Doc } from '@convex/_generated/dataModel'
+import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { PlayLogColumn } from './columns'
 import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns }: {
-  readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]
+export function PlayLogTable({ snaps, columns, createdId }: {
+  readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
 }): ReactNode {
   const container = useRef<HTMLDivElement>(null)
   const { cursor: active, setCursor: setActive, next } = useCellCursor(snaps.length, columns.length)
   const [editing, setEditing] = useState<(CellCursor & { readonly draft?: string }) | null>(null)
+  const focusedId = useRef<Id<'snaps'> | null>(null)
+  useEffect(() => {
+    if (!createdId || focusedId.current === createdId) return
+    const row = snaps.findIndex((snap) => snap._id === createdId)
+    if (row < 0) return
+    focusedId.current = createdId
+    setEditing(null)
+    setActive({ row, col: 0 })
+    requestAnimationFrame(() => container.current?.querySelector<HTMLElement>(`[data-cell="${row}:0"]`)?.focus())
+  }, [createdId, snaps, setActive])
   const { show } = useToast()
   const updateCore = useMutation(api.snaps.updateCore).withOptimisticUpdate((store, args) => {
     const sourceGameId = snaps[0]?.sourceGameId

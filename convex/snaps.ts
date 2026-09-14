@@ -3,7 +3,7 @@ import { mutation, query, type MutationCtx } from './_generated/server'
 import schema, { analysisValueValidator } from './schema'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireLiveSourceGame } from './sourceGames'
-import { isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
+import { CARRY_FORWARD_CORE_KEYS, isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
 import { normalizeAnalysisValue } from './domain/templateFields.ts'
 
 const snapValidator = v.object({
@@ -71,5 +71,34 @@ export const updateAnalysis = mutation({
     else analysis[args.fieldId] = value
     await ctx.db.patch(snap._id, { analysis })
     return null
+  },
+})
+
+export const create = mutation({
+  args: { sourceGameId: v.id('sourceGames') }, returns: v.id('snaps'),
+  handler: async (ctx, args) => {
+    const game = await requireLiveSourceGame(ctx, args.sourceGameId)
+    const template = await ctx.db.get(game.templateId)
+    if (!template || template.deletedAt !== undefined) throw new Error('Coaching Template not found')
+    const last = await ctx.db.query('snaps').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id))
+      .order('desc').filter((q) => q.eq(q.field('deletedAt'), undefined)).first()
+    const core: Doc<'snaps'>['core'] = {}
+    const analysis: Doc<'snaps'>['analysis'] = {}
+    if (last) {
+      for (const key of CARRY_FORWARD_CORE_KEYS) {
+        if (last.core[key] !== undefined) core[key] = last.core[key]
+      }
+      const fields = await ctx.db.query('templateFields').withIndex('by_template', (q) => q.eq('templateId', game.templateId)).collect()
+      const sections = await ctx.db.query('templateSections').withIndex('by_template', (q) => q.eq('templateId', game.templateId)).collect()
+      const liveSections = new Set(sections.filter((section) => section.deletedAt === undefined).map((section) => section._id))
+      for (const field of fields) {
+        if (field.deletedAt === undefined && field.carryForward && liveSections.has(field.sectionId) && last.analysis[field._id] !== undefined) {
+          analysis[field._id] = last.analysis[field._id]!
+        }
+      }
+    }
+    return ctx.db.insert('snaps', {
+      sourceGameId: game._id, order: (last?.order ?? 0) + 1, core, analysis, mustReview: false, createdAt: Date.now(),
+    })
   },
 })
