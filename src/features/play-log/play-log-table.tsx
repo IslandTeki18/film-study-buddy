@@ -17,13 +17,16 @@ import { nextSort, type SortState } from './row-model'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { BulkEditDialog } from './bulk-edit-dialog'
+import { useNavigate } from 'react-router'
+import { RowActions } from './row-actions'
 import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize, sort, onSort }: {
+export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize, sort, onSort, base }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
   readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly base: string
   readonly sort: SortState
   readonly onSort: (sort: SortState) => void
   readonly onReorder: (from: number, to: number) => void
@@ -31,6 +34,7 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
   readonly widths: Readonly<Record<string, number>>
   readonly pendingCommit: RefObject<Promise<boolean>>
 }): ReactNode {
+  const navigate = useNavigate()
   const [selected, setSelected] = useState<Set<Id<'snaps'>>>(new Set())
   const [bulkEditing, setBulkEditing] = useState(false)
   const selectedIds = useMemo(() => snaps.filter((snap) => selected.has(snap._id)).map((snap) => snap._id), [snaps, selected])
@@ -217,6 +221,11 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
     const snap = snaps[active.row]
     if (!column || !snap) return
     const command = event.ctrlKey || event.metaKey
+    if (command && event.key === 'Enter') {
+      event.preventDefault()
+      navigate(`${base}/snap/${snap._id}`)
+      return
+    }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Tab'].includes(event.key)) {
       if (event.key === 'Tab' && !canTab(event.shiftKey)) return
       const target = next(event.key, event.shiftKey, command)
@@ -236,8 +245,8 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
     }
   }}>
     <p className="sr-only" aria-live="polite">{drag.announcement}</p>
-    <Table role="grid" className="table-fixed text-xs" style={{ width: table.getTotalSize() + 32 }}>
-      <colgroup><col style={{ width: 32 }} />{table.getAllLeafColumns().map((column) => <col key={column.id} style={{ width: column.getSize() }} />)}</colgroup>
+    <Table role="grid" className="table-fixed text-xs" style={{ width: table.getTotalSize() + 64 }}>
+      <colgroup><col style={{ width: 32 }} />{table.getAllLeafColumns().map((column) => <col key={column.id} style={{ width: column.getSize() }} />)}<col style={{ width: 32 }} /></colgroup>
       <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>
         <TableHead className="sticky top-0 left-0 z-30 bg-muted px-1.5">
           <Checkbox label="" aria-label="Select all visible Snaps" checked={snaps.length > 0 && selectedIds.length === snaps.length}
@@ -289,8 +298,9 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
               }} />
           </TableHead>
         })}
+        <TableHead className="sticky top-0 z-20 bg-muted"><span className="sr-only">Snap actions</span></TableHead>
       </TableRow>)}</TableHeader>
-      <TableBody>{table.getRowModel().rows.map((row, rowIndex) => <TableRow key={row.id} className="h-7">
+      <TableBody>{table.getRowModel().rows.map((row, rowIndex) => <TableRow key={row.id} className="h-7" data-must-review={row.original.mustReview || undefined}>
         <TableCell className="sticky left-0 z-10 bg-background px-1.5">
           <Checkbox label="" aria-label={`Select Snap ${row.original.core.clipNumber ?? row.original.order}`} checked={selectedIds.includes(row.original._id)}
             onChange={(event) => setSelected((current) => {
@@ -316,6 +326,9 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
               : <Cell snap={row.original} column={column} />}
           </TableCell>
         })}
+        <TableCell className={`px-0 ${row.original.mustReview ? 'border-l-2 border-amber-500' : ''}`}>
+          <RowActions snap={row.original} base={base} />
+        </TableCell>
       </TableRow>)}</TableBody>
     </Table>
   </div>

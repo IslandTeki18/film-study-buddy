@@ -101,7 +101,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     {!snaps?.length ? <section className="space-y-3">
       <h2 className="font-semibold">No Snaps yet</h2>
       <Link className="underline" to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>
-    </section> : <PlayLogTable snaps={displayedSnaps} sort={sort} onSort={setSort} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
+    </section> : <PlayLogTable base={`/w/${workspaceId}/games/${game._id}`} snaps={displayedSnaps} sort={sort} onSort={setSort} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
       const source = visibleColumns[from]?.key
       const target = visibleColumns[to]?.key
       if (layout && source && target) setOrder(moved(layout.order, layout.order.indexOf(source), layout.order.indexOf(target)))

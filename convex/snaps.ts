@@ -1,7 +1,9 @@
 import { v } from 'convex/values'
-import { mutation, query, type MutationCtx } from './_generated/server'
+import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import schema, { analysisValueValidator } from './schema'
 import type { Doc, Id } from './_generated/dataModel'
+import { collectSnapCascade } from './workspaces'
+import { softDeleteBatch } from './deletions'
 import { requireLiveSourceGame } from './sourceGames'
 import { CARRY_FORWARD_CORE_KEYS, getCoreField, isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
 import { restoredValueFor } from './domain/provenance.ts'
@@ -27,7 +29,7 @@ export const listBySourceGame = query({
   },
 })
 
-async function requireLiveSnap(ctx: MutationCtx, id: Id<'snaps'>): Promise<Doc<'snaps'>> {
+export async function requireLiveSnap(ctx: MutationCtx | QueryCtx, id: Id<'snaps'>): Promise<Doc<'snaps'>> {
   const snap = await ctx.db.get(id)
   if (!snap || snap.deletedAt !== undefined) throw new Error('Snap not found')
   await requireLiveSourceGame(ctx, snap.sourceGameId)
@@ -208,5 +210,38 @@ export const undoBulkUpdate = mutation({
     }
     await ctx.db.delete(edit._id)
     return null
+  },
+})
+
+export const get = query({
+  args: { snapId: v.string() }, returns: v.union(snapValidator, v.null()),
+  handler: async (ctx, args) => {
+    const id = ctx.db.normalizeId('snaps', args.snapId)
+    const snap = id ? await ctx.db.get(id) : null
+    if (!snap || snap.deletedAt !== undefined) return null
+    const game = await ctx.db.get(snap.sourceGameId)
+    if (!game || game.deletedAt !== undefined) return null
+    const workspace = await ctx.db.get(game.workspaceId)
+    if (!workspace || workspace.deletedAt !== undefined) return null
+    const season = await ctx.db.get(workspace.seasonId)
+    return season && season.deletedAt === undefined ? snap : null
+  },
+})
+
+export const setMustReview = mutation({
+  args: { snapId: v.id('snaps'), mustReview: v.boolean() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireLiveSnap(ctx, args.snapId)
+    await ctx.db.patch(args.snapId, { mustReview: args.mustReview })
+    return null
+  },
+})
+
+export const remove = mutation({
+  args: { snapId: v.id('snaps') }, returns: v.string(),
+  handler: async (ctx, args) => {
+    const snap = await requireLiveSnap(ctx, args.snapId)
+    return softDeleteBatch(ctx, { kind: 'snap', label: snap.core.clipNumber ?? `Snap ${snap.order}`,
+      records: await collectSnapCascade(ctx, snap) })
   },
 })

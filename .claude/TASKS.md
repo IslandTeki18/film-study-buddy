@@ -190,7 +190,7 @@ The core of the product. Build the grid before the power features.
       write a `bulkEdits` record, apply in one mutation (SPEC §41).
 - [x] **5.8 Bulk-edit undo.** The toast restores every affected value as one operation.
       *Verify:* bulk-edit fifty rows over mixed prior values; Undo restores each original.
-- [ ] **5.9 Row actions menu.** Open Play Detail, Add Quick Note, Mark/Resolve Must Review,
+- [~] **5.9 Row actions menu.** Open Play Detail, Add Quick Note, Mark/Resolve Must Review,
       Add/Edit Play Diagram, Duplicate Snap, Delete Snap; destructive actions confirm (SPEC §43).
 - [ ] **5.10 Duplicate Snap.** Copies Core Snap Data and Template Analysis Data and nothing else
       (SPEC §44).

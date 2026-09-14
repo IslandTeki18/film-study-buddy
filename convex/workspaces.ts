@@ -105,6 +105,18 @@ export const update = mutation({
   },
 })
 
+export async function collectSnapCascade(ctx: MutationCtx, snap: Doc<'snaps'>): Promise<CascadeRecords> {
+  const records: CascadeRecords = [{ table: 'snaps', id: snap._id }]
+  const notes = await ctx.db.query('cellNotes').withIndex('by_snap', (q) => q.eq('snapId', snap._id)).collect()
+  for (const note of notes) if (note.deletedAt === undefined) records.push({ table: 'cellNotes', id: note._id })
+  const diagrams = await ctx.db.query('diagrams').withIndex('by_snap', (q) => q.eq('snapId', snap._id)).collect()
+  for (const diagram of diagrams) if (diagram.deletedAt === undefined) records.push({ table: 'diagrams', id: diagram._id })
+  // ponytail: scans the game's Quick Notes per Snap; add a by_snap index if cascades exceed V1 volume.
+  const quickNotes = await ctx.db.query('quickNotes').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', snap.sourceGameId)).collect()
+  for (const note of quickNotes) if (note.snapId === snap._id && note.deletedAt === undefined) records.push({ table: 'quickNotes', id: note._id })
+  return records
+}
+
 /** Already-deleted descendants keep their original batch and Undo lifetime. */
 export async function collectSourceGameCascade(
   ctx: MutationCtx, sourceGameId: Id<'sourceGames'>,
@@ -115,15 +127,7 @@ export async function collectSourceGameCascade(
   const snaps = (await ctx.db.query('snaps')
     .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', sourceGameId)).collect())
     .filter((snap) => snap.deletedAt === undefined)
-  for (const snap of snaps) {
-    records.push({ table: 'snaps', id: snap._id })
-    // ponytail: one Cell Note scan per Snap at V1 volume; batch reads if transaction limits show up.
-    const notes = await ctx.db.query('cellNotes')
-      .withIndex('by_snap', (q) => q.eq('snapId', snap._id)).collect()
-    for (const note of notes) {
-      if (note.deletedAt === undefined) records.push({ table: 'cellNotes', id: note._id })
-    }
-  }
+  for (const snap of snaps) records.push(...await collectSnapCascade(ctx, snap))
   for (const table of ['quickNotes', 'diagrams'] as const) {
     const rows = await ctx.db.query(table)
       .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', sourceGameId)).collect()
