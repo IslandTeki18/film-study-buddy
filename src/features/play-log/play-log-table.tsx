@@ -5,21 +5,29 @@ import { api } from '@convex/_generated/api'
 import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { builtInTerminology, type TerminologyList } from '@convex/domain/terminology'
 import { restoredValueFor } from '@convex/domain/provenance'
-import { normalizeAnalysisValue } from '@convex/domain/templateFields'
+import { normalizeAnalysisValue, type ColumnKey } from '@convex/domain/templateFields'
 import { useToast } from '@/components/ui/toast'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { defaultWidth, type PlayLogColumn } from './columns'
+import { useReorder } from '@/lib/reorder'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
+import { COLUMN_MIN_WIDTH } from './use-column-layout'
 import { Cell } from './cell'
 import { CellEditor } from './cell-editors'
 import { useCellCursor, nextCell, type CellCursor } from './use-cell-cursor'
 
-export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths }: {
+export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCommit, widths, onReorder, onResize }: {
   readonly snaps: Doc<'snaps'>[]; readonly columns: PlayLogColumn[]; readonly createdId: Id<'snaps'> | null
   readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly onReorder: (from: number, to: number) => void
+  readonly onResize: (key: ColumnKey, width: number) => void
   readonly widths: Readonly<Record<string, number>>
   readonly pendingCommit: RefObject<Promise<boolean>>
 }): ReactNode {
+  const [draftWidth, setDraftWidth] = useState<{ key: ColumnKey; width: number } | null>(null)
+  const resizing = useRef<{ key: ColumnKey; x: number; width: number } | null>(null)
+  const drag = useReorder({ itemCount: columns.length, onReorder, label: (index) => columns[index]?.label ?? 'Column' })
   const container = useRef<HTMLDivElement>(null)
   const { cursor: active, setCursor: setActive, next } = useCellCursor(snaps.length, columns.length)
   const [editing, setEditing] = useState<(CellCursor & { readonly draft?: string }) | null>(null)
@@ -171,13 +179,14 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
   const definitions = useMemo<LegacyColumnDef<Doc<'snaps'>>[]>(() => columns.map((column) => ({
     id: column.key,
     header: column.label,
-    size: widths[column.key] ?? defaultWidth(column),
-  })), [columns, widths])
+    size: draftWidth?.key === column.key ? draftWidth.width : widths[column.key] ?? defaultWidth(column),
+  })), [columns, widths, draftWidth])
   const table = useLegacyTable({ data: snaps, columns: definitions, getCoreRowModel: getCoreRowModel(), getRowId: (snap) => snap._id })
   // ponytail: fixed offset; switch the tab panels to a flex column if the chrome height changes.
   // ponytail: no virtualization; add windowing if a Source Game exceeds ~1000 Snaps.
   return <div ref={container} className="max-h-[calc(100dvh-9rem)] overflow-auto" tabIndex={editing ? -1 : 0} aria-label="Play Log" onKeyDown={(event) => {
     if (editing || event.nativeEvent.isComposing) return
+    if (event.target instanceof Element && !event.target.matches('[data-cell], [aria-label="Play Log"]')) return
     const column = columns[active.col]
     const snap = snaps[active.row]
     if (!column || !snap) return
@@ -200,13 +209,52 @@ export function PlayLogTable({ snaps, columns, createdId, terminology, pendingCo
       setEditing({ ...active, draft: event.key })
     }
   }}>
+    <p className="sr-only" aria-live="polite">{drag.announcement}</p>
     <Table role="grid" className="table-fixed text-xs" style={{ width: table.getTotalSize() }}>
       <colgroup>{table.getAllLeafColumns().map((column) => <col key={column.id} style={{ width: column.getSize() }} />)}</colgroup>
       <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>
-        {group.headers.map((header, index) => <TableHead key={header.id} scope="col"
-          className={`sticky top-0 bg-muted px-1.5 py-0 ${index === 0 ? 'left-0 z-30' : 'z-20'}`}>
-          {columns[index]?.label}
-        </TableHead>)}
+        {group.headers.map((header, index) => {
+          const column = columns[index]
+          if (!column) return null
+          const width = header.getSize()
+          return <TableHead key={header.id} scope="col" {...drag.getItemProps(index)}
+            className={`sticky top-0 bg-muted px-1.5 py-0 ${index === 0 ? 'left-0 z-30' : 'z-20'} ${drag.dragOverIndex === index ? 'border-2 border-primary' : ''}`}>
+            <div className="flex items-center pr-2">
+              <span className="min-w-0 flex-1 truncate">{column.label}</span>
+              <DropdownMenu label="⋯" triggerProps={{ size: 'sm', variant: 'ghost', className: 'h-7 px-1', 'aria-label': `Column options for ${column.label}` }} items={[
+                { label: 'Move left', onSelect: () => drag.moveUp(index), disabled: !drag.canMoveUp(index) },
+                { label: 'Move right', onSelect: () => drag.moveDown(index), disabled: !drag.canMoveDown(index) },
+              ]} />
+            </div>
+            <div role="separator" aria-orientation="vertical" aria-label={`Resize ${column.label}`} tabIndex={0}
+              aria-valuenow={width} aria-valuemin={COLUMN_MIN_WIDTH} draggable={false}
+              className="absolute inset-y-0 right-0 w-1.5 cursor-col-resize select-none hover:bg-primary/40 focus-visible:ring-2 focus-visible:ring-ring"
+              onDragStart={(event) => { event.preventDefault(); event.stopPropagation() }}
+              onPointerDown={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                event.currentTarget.setPointerCapture(event.pointerId)
+                resizing.current = { key: column.key, x: event.clientX, width }
+              }}
+              onPointerMove={(event) => {
+                const start = resizing.current
+                if (start?.key === column.key) setDraftWidth({ key: column.key, width: Math.max(COLUMN_MIN_WIDTH, start.width + event.clientX - start.x) })
+              }}
+              onPointerUp={(event) => {
+                const start = resizing.current
+                if (start?.key !== column.key) return
+                onResize(column.key, Math.max(COLUMN_MIN_WIDTH, start.width + event.clientX - start.x))
+                resizing.current = null
+                setDraftWidth(null)
+              }}
+              onPointerCancel={() => { resizing.current = null; setDraftWidth(null) }}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+                event.preventDefault()
+                onResize(column.key, Math.max(COLUMN_MIN_WIDTH, width + (event.key === 'ArrowLeft' ? -10 : 10)))
+              }} />
+          </TableHead>
+        })}
       </TableRow>)}</TableHeader>
       <TableBody>{table.getRowModel().rows.map((row, rowIndex) => <TableRow key={row.id} className="h-7">
         {columns.map((column, index) => {

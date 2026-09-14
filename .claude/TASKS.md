@@ -175,7 +175,7 @@ The core of the product. Build the grid before the power features.
 ## Phase 5 — Play Log Power Features
 
 - [~] **5.1 Column visibility.** The Columns dropdown; changes apply immediately (SPEC §33).
-- [ ] **5.2 Column reordering and resizing.** Header drag plus keyboard move; drag-to-resize
+- [~] **5.2 Column reordering and resizing.** Header drag plus keyboard move; drag-to-resize
       (SPEC §34, §35).
 - [ ] **5.3 Layout persistence.** `columnLayouts` stores selected view, visible columns, order,
       and widths per Source Game. Sort and search deliberately do not persist (SPEC §39).

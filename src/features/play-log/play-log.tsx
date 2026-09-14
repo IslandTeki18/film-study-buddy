@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { buildColumns } from './columns'
 import { useColumnLayout } from './use-column-layout'
+import { moved } from '@/features/templates/section-list'
 import { ColumnsMenu } from './columns-menu'
 import { PlayLogTable } from './play-log-table'
 
@@ -20,7 +21,7 @@ export function PlayLog({ workspaceId, sourceGameId }: {
   const terminology = useQuery(api.terminology.list, {})
   const pendingCommit = useRef<Promise<boolean>>(Promise.resolve(true))
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
-  const { layout, setVisible } = useColumnLayout(game?._id, columns.map((column) => column.key))
+  const { layout, setVisible, setOrder, setWidth } = useColumnLayout(game?._id, columns.map((column) => column.key))
   const visibleColumns = layout?.order.filter((key) => layout.visible.includes(key))
     .flatMap((key) => columns.filter((column) => column.key === key)) ?? []
   const creating = useRef(false)
@@ -90,6 +91,10 @@ export function PlayLog({ workspaceId, sourceGameId }: {
     {!snaps?.length ? <section className="space-y-3">
       <h2 className="font-semibold">No Snaps yet</h2>
       <Link className="underline" to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>
-    </section> : <PlayLogTable snaps={snaps} columns={visibleColumns} widths={layout?.widths ?? {}} createdId={createdId} terminology={terminology ?? []} pendingCommit={pendingCommit} />}
+    </section> : <PlayLogTable snaps={snaps} columns={visibleColumns} onResize={setWidth} onReorder={(from, to) => {
+      const source = visibleColumns[from]?.key
+      const target = visibleColumns[to]?.key
+      if (layout && source && target) setOrder(moved(layout.order, layout.order.indexOf(source), layout.order.indexOf(target)))
+    }} widths={layout?.widths ?? {}} createdId={createdId} terminology={terminology ?? []} pendingCommit={pendingCommit} />}
   </main>
 }
