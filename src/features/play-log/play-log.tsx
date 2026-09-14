@@ -76,11 +76,10 @@ export function PlayLog({ workspaceId, sourceGameId }: {
       newSnap()
     }
   }}>
-    <header className="flex items-center justify-between gap-4">
-      <div><h1 className="text-lg font-semibold">{game.label}</h1>
-        <p className="text-xs text-muted-foreground">{snaps?.length ?? 0} Snaps · {columns.length} columns</p>
-      </div>
-      <Button disabled={pending} onClick={newSnap}>New Snap</Button>
+    <header className="flex flex-wrap items-center gap-3">
+      <h1 className="text-xs font-semibold tracking-[0.11em] uppercase text-muted-foreground">{game.label}</h1>
+      <span className="font-mono text-[11px] text-muted-foreground">{snaps?.length ?? 0} charted · {columns.length} columns · ⌘N new snap</span>
+      <Button className="ml-auto h-8 px-3.5 font-mono text-[11px] font-bold" disabled={pending} onClick={newSnap}>New snap</Button>
     </header>
     {!snaps?.length ? <section className="space-y-3">
       <h2 className="font-semibold">No Snaps yet</h2>

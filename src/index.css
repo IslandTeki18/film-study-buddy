@@ -1,36 +1,57 @@
 @import 'tailwindcss';
+@import '@fontsource/archivo/400.css';
+@import '@fontsource/archivo/500.css';
+@import '@fontsource/archivo/600.css';
+@import '@fontsource/archivo/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/700.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Film Room palette. Dark is the designed appearance; light is a derived counterpart. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: oklch(0.985 0.003 255);
+  --foreground: oklch(0.2 0.02 260);
+  --card: oklch(1 0 0);
+  --muted: oklch(0.95 0.006 255);
+  --muted-foreground: oklch(0.5 0.025 260);
+  --accent: oklch(0.93 0.008 255);
+  --accent-foreground: oklch(0.2 0.02 260);
+  --primary: oklch(0.55 0.17 255);
+  --primary-foreground: oklch(0.99 0 0);
+  --border: oklch(0.88 0.01 255);
+  --border-strong: oklch(0.8 0.015 255);
+  --ring: oklch(0.55 0.17 255);
+  --brand: oklch(0.55 0.17 255);
+  --warm: oklch(0.6 0.15 75);
+  --positive: oklch(0.55 0.15 145);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --border: oklch(0.269 0 0);
-  --ring: oklch(0.556 0 0);
+  --background: #0d0e12;
+  --foreground: #e6e8ee;
+  --card: #101218;
+  --muted: #161a22;
+  --muted-foreground: #8b92a6;
+  --accent: #181b23;
+  --accent-foreground: #e6e8ee;
+  --primary: oklch(0.68 0.15 255);
+  --primary-foreground: #0d0e12;
+  --border: #222633;
+  --border-strong: #2b3142;
+  --ring: oklch(0.68 0.15 255);
+  --brand: oklch(0.75 0.13 255);
+  --warm: oklch(0.72 0.15 75);
+  --positive: oklch(0.72 0.15 145);
 }
 
 @theme inline {
+  --font-sans: 'Archivo', Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -38,7 +59,11 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-warm: var(--warm);
+  --color-positive: var(--positive);
 }
 
 @layer base {
@@ -49,13 +74,25 @@
     @apply bg-background text-foreground;
     overflow: hidden;
   }
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-lg bg-border-strong;
+  }
 }
 
-/* Electron: the sidebar header doubles as the window drag region. */
+/* Electron: the app header doubles as the window drag region. */
 .app-drag-region {
   -webkit-app-region: drag;
 }
 .app-drag-region button,
-.app-drag-region a {
+.app-drag-region a,
+.app-drag-region select,
+.app-drag-region input {
   -webkit-app-region: no-drag;
 }

@@ -3,13 +3,14 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center gap-2 rounded-md text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center gap-2 rounded-lg text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        outline: 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        default: 'bg-primary font-semibold text-primary-foreground hover:bg-primary/85',
+        outline: 'border border-border-strong bg-muted/60 font-mono text-[11px] text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground',
+        ghost: 'text-muted-foreground hover:bg-accent hover:text-foreground',
+        dashed: 'border border-dashed border-border-strong text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground',
       },
       size: {
         default: 'h-9 px-4 py-2',

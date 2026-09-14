@@ -3,6 +3,8 @@ import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
+import { AppHeader } from '@/components/app-header'
+import { buttonVariants } from '@/components/ui/button'
 import { ViewEditor } from './view-editor'
 import { FieldEditor } from './field-editor'
 import { InlineName } from './inline-name'
@@ -22,13 +24,13 @@ export function TemplateBuilder({ templateId }: { readonly templateId: string })
     <h1 className="text-2xl font-semibold">Coaching Template not found</h1>
     <Link className="underline" to="/templates">Back to Coaching Templates</Link>
   </main>
-  return <main className="space-y-6 p-6">
-    <Link className="text-sm underline" to="/templates">Back to Coaching Templates</Link>
-    <header className="space-y-2">
-      <h1 className="text-2xl font-semibold">Template Builder</h1>
+  return <>
+    <AppHeader title="Template builder">
+      <Link className={buttonVariants({ variant: 'outline', size: 'sm' })} to="/templates">All templates</Link>
       <InlineName key={tree.template._id} label="Template name" value={tree.template.name}
         save={async (name) => { await rename({ templateId: tree.template._id, name }) }} />
-    </header>
+    </AppHeader>
+    <main className="space-y-6 p-6">
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
       <div className="space-y-6">
         <SectionList key={tree.template._id} tree={tree} selectedFieldId={selectedFieldId} onSelectField={setSelectedFieldId} />
@@ -38,4 +40,5 @@ export function TemplateBuilder({ templateId }: { readonly templateId: string })
         <p className="text-sm text-muted-foreground">Select a field to edit it</p>}
     </div>
   </main>
+  </>
 }

@@ -45,7 +45,7 @@ export function Tabs({ value, onValueChange, items, label, className, ...props }
             aria-controls={`${baseId}-panel-${item.value}`}
             tabIndex={item.value === value ? 0 : -1}
             disabled={item.disabled}
-            className={cn('px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring', item.value === value && 'border-b-2 border-primary font-medium')}
+            className={cn('px-3 py-2 text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring', item.value === value && 'border-b-2 border-primary font-semibold text-foreground')}
             onClick={() => onValueChange(item.value)}
           >
             {item.label}

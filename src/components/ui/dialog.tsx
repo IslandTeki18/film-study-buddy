@@ -20,7 +20,7 @@ export function Dialog({ open, onOpenChange, onClose, className, children, ...pr
     <dialog
       ref={ref}
       className={cn(
-        'm-auto max-w-lg rounded-lg border border-border bg-background p-6 text-foreground shadow-xl backdrop:bg-foreground/40',
+        'm-auto max-w-lg rounded-xl border border-border-strong bg-card p-6 text-foreground shadow-xl backdrop:bg-foreground/40',
         className,
       )}
       {...props}

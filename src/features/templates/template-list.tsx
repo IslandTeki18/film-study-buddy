@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
+import { AppHeader } from '@/components/app-header'
 import { Button } from '@/components/ui/button'
+import { Meta, Page } from '@/components/ui/panel'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
@@ -31,20 +33,23 @@ export function TemplateList(): ReactNode {
   function report(verb: string, error: unknown): void {
     show({ message: `Could not ${verb} template. ${error instanceof Error ? error.message : String(error)}` })
   }
-  return <main className="space-y-6 p-6">
-    <header className="flex items-center justify-between gap-4">
-      <h1 className="text-2xl font-semibold">Coaching Templates</h1>
-      <Button onClick={() => setDialog('create')}>New template</Button>
-    </header>
+  return <>
+    <AppHeader title="Coaching templates" meta={templates ? `${templates.length} templates` : undefined}>
+      <Button className="ml-auto" size="sm" onClick={() => setDialog('create')}>New template</Button>
+    </AppHeader>
+    <Page width="max-w-[820px]">
+    <p className="max-w-[64ch] text-[13.5px] text-muted-foreground">
+      These are the fields you chart against and the words your staff uses. Change them once and every opponent workspace, past and future, speaks the same language.
+    </p>
     {templates === undefined ? <div aria-label="Loading Coaching Templates" role="status" className="space-y-3">
       {[0, 1, 2].map((row) => <div key={row} className="h-16 animate-pulse rounded-md bg-muted" />)}
     </div> : templates.length === 0 ? <p className="text-muted-foreground">No Coaching Templates yet</p> :
-      <ul className="divide-y divide-border rounded-md border border-border">
-        {templates.map((template) => <li key={template._id} className="flex items-center justify-between gap-4 p-4">
-          <div>
-            <Link className="font-medium underline-offset-4 hover:underline" to={`/templates/${template._id}`}>{template.name}</Link>
-            {template.isStarter && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs">Starter</span>}
-            <p className="text-sm text-muted-foreground">{template.coachingArea}</p>
+      <ul className="grid gap-2">
+        {templates.map((template) => <li key={template._id} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3.5 transition-colors hover:border-brand/50">
+          <div className="min-w-0">
+            <Link className="text-base font-semibold tracking-tight hover:text-brand" to={`/templates/${template._id}`}>{template.name}</Link>
+            {template.isStarter && <span className="ml-2 rounded-md bg-primary/15 px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-brand">starter</span>}
+            <Meta className="mt-0.5 block">{template.coachingArea}</Meta>
           </div>
           <DropdownMenu label="Actions" triggerProps={{ 'aria-label': `Actions for ${template.name}`, variant: 'outline' }} items={[
             { label: 'Rename', onSelect: () => setDialog({ templateId: template._id, name: template.name }) },
@@ -71,5 +76,6 @@ export function TemplateList(): ReactNode {
           throw error
         }
       }} />
-  </main>
+    </Page>
+  </>
 }

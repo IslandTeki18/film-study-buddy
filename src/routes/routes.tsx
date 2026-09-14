@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Archive, Clapperboard, LayoutTemplate, Settings, type LucideIcon } from 'lucide-react'
 import {
   Outlet,
   createHashRouter,
@@ -10,6 +9,7 @@ import {
 } from 'react-router'
 import { App } from '@/app'
 import { Tabs } from '@/components/ui/tabs'
+import { WorkspaceHeader } from '@/components/workspace-header'
 import { AddSourceGamePage } from './add-source-game-page'
 import { ArchivePage } from './archive-page'
 import { CreateOpponentPage } from './create-opponent-page'
@@ -35,42 +35,12 @@ import { TendenciesPage } from './tendencies-page'
 import { WelcomePage } from './welcome-page'
 import { WorkspaceOverviewPage } from './workspace-overview-page'
 
-export const ROUTES = [
-  { path: '/', label: 'Home', Icon: Clapperboard },
-  { path: '/templates', label: 'Templates', Icon: LayoutTemplate },
-  { path: '/archive', label: 'Archive', Icon: Archive },
-  { path: '/settings', label: 'Settings', Icon: Settings },
-] as const satisfies ReadonlyArray<{ path: string; label: string; Icon: LucideIcon }>
-
 function WorkspaceLayout(): ReactNode {
   const { workspaceId = '' } = useParams()
-  const { pathname } = useLocation()
-  const navigate = useNavigate()
-  const base = `/w/${workspaceId}`
-  const section = pathname.slice(base.length).split('/')[1] ?? ''
-  const value = ['games', 'data', 'tendencies', 'reports'].includes(section) ? section : 'overview'
-  const paths = {
-    overview: base,
-    games: `${base}/games`,
-    data: `${base}/data`,
-    tendencies: `${base}/tendencies`,
-    reports: `${base}/reports`,
-  }
-
-  return (
-    <Tabs
-      label="Workspace"
-      value={value}
-      onValueChange={(next) => navigate(paths[next as keyof typeof paths])}
-      items={[
-        { value: 'overview', label: 'Overview', content: <Outlet /> },
-        { value: 'games', label: 'Source Games', content: <Outlet /> },
-        { value: 'data', label: 'Opponent Data', content: <Outlet /> },
-        { value: 'tendencies', label: 'Tendencies', content: <Outlet /> },
-        { value: 'reports', label: 'Reports', content: <Outlet /> },
-      ]}
-    />
-  )
+  return <>
+    <WorkspaceHeader workspaceId={workspaceId} />
+    <Outlet />
+  </>
 }
 
 function SourceGameLayout(): ReactNode {

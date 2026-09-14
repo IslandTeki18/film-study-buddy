@@ -64,9 +64,11 @@ film-study-buddy/
 │   ├── index.html                    # Pre-render theme bootstrap script lives here
 │   ├── main.tsx                      # Error boundary + optional Convex provider + ThemeProvider
 │   ├── convex-client.ts              # Client from VITE_CONVEX_URL, or null when unset
-│   ├── app.tsx                       # Sidebar shell and view switching
-│   ├── components/app-sidebar.tsx    # desktop-sidebar navigation
-│   ├── components/ui/button.tsx      # ShadCN-style primitive
+│   ├── app.tsx                       # First-launch gate and scroll shell
+│   ├── components/app-header.tsx     # Top bar for Home and top-level screens (Film Room design)
+│   ├── components/workspace-header.tsx # Opponent identity, actions and workspace tab strip
+│   ├── components/ui/                # ShadCN-style primitives plus panel.tsx (Panel, Eyebrow, Meta, Chip, Page)
+│   ├── features/preview/             # Static Charting / Player notes / Tendencies / Reports screens on sample data
 │   ├── features/theme-settings/      # theme.ts, theme-provider.tsx, theme-toggle.tsx, convex-theme-sync.tsx
 │   └── routes/                       # home-page.tsx, settings-page.tsx
 └── convex/

@@ -365,7 +365,7 @@ The twenty-four screens of SPEC §110 mapped to routes and owning features.
 | 23 | Settings | `/settings` | theme-settings |
 | 24 | Archived Opponents | `/archive` | workspaces |
 
-Layout: the persistent sidebar carries Home, Templates, Archive, Settings. Inside a workspace a
+Layout (Film Room design, Sept 2026): a top header carries the brand, coaching area and links to Templates, Settings, Archive; sub-screens show a Home link and their title. There is no sidebar. Inside a workspace a
 secondary tab strip carries Overview, Source Games, Opponent Data, Tendencies, Reports
 (SPEC §7). Inside a Source Game a third strip carries Play Log, Quick Notes, Must Review,
 Play Diagrams (SPEC §10). Density over comfort: compact rows, small controls, minimal chrome
