@@ -5,7 +5,6 @@ import {
   useLocation,
   useNavigate,
   useParams,
-  useSearchParams,
 } from 'react-router'
 import { App } from '@/app'
 import { Tabs } from '@/components/ui/tabs'
@@ -15,7 +14,6 @@ import { ArchivePage } from './archive-page'
 import { CreateOpponentPage } from './create-opponent-page'
 import { HomePage } from './home-page'
 import { HudlImportPage } from './hudl-import-page'
-import { ImportPreviewPage } from './import-preview-page'
 import { MustReviewPage } from './must-review-page'
 import { OpponentDataPage } from './opponent-data-page'
 import { PlayDesignerPage } from './play-designer-page'
@@ -73,8 +71,7 @@ function SourceGameLayout(): ReactNode {
 }
 
 function ImportPage(): ReactNode {
-  const [searchParams] = useSearchParams()
-  return searchParams.get('step') === 'preview' ? <ImportPreviewPage /> : <HudlImportPage />
+  return <HudlImportPage />
 }
 
 export const router = createHashRouter([

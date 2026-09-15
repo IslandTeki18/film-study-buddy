@@ -1,3 +1,4 @@
 import type { ReactNode } from 'react'
-import { RoutePlaceholder } from './route-placeholder'
-export function HudlImportPage(): ReactNode { return <RoutePlaceholder title="Hudl CSV Import / Mapping" /> }
+import { HudlImport } from '@/features/import/hudl-import'
+
+export function HudlImportPage(): ReactNode { return <HudlImport /> }
