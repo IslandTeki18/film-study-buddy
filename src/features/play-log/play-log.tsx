@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { useToast } from '@/components/ui/toast'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
 import { Eyebrow } from '@/components/ui/panel'
 import { PlayerNotes } from '../preview/charting-preview'
 import type { Mode } from '../preview/preview-data'
@@ -22,9 +23,12 @@ export function PlayLog(props: PlayLogProps): ReactNode {
 }
 
 function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
+  const navigate = useNavigate()
+  const [finishing, setFinishing] = useState(false)
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const tree = useQuery(api.templates.getFull, game ? { templateId: game.templateId } : 'skip')
   const snaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
+  const incomplete = useQuery(api.snaps.countIncomplete, game ? { sourceGameId: game._id } : 'skip')
   const terminology = useQuery(api.terminology.list, {})
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
   const [draft, setDraft] = useState<Draft>({})
@@ -94,6 +98,10 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
         <Segmented label="Opponent data section" value={dataTab} options={[['charting', 'Charting'], ['players', 'Player notes']]} onChange={setDataTab} />
         <Segmented label="Which side of the ball" value={mode} options={MODE_OPTIONS} onChange={setMode} accent />
         <span className="ml-auto"><PreviewBadge /></span>
+        <Button variant="outline" size="sm" disabled={incomplete === undefined || pending} onClick={() => {
+          if (incomplete === 0) navigate(`/w/${workspaceId}/games`)
+          else setFinishing(true)
+        }}>Finish study session</Button>
         {(snaps?.length ?? 0) > 0 && <Link className={buttonVariants({ variant: 'outline', size: 'sm' })}
           to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>}
       </div>
@@ -122,5 +130,15 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
           mode={mode} onOpenPlayers={() => setDataTab('players')} />
       </div> : <PlayerNotes mode={mode} />}
     </div>
+    <Dialog open={finishing} onOpenChange={setFinishing} aria-label="Completeness Warning">
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">{incomplete} {incomplete === 1 ? 'Snap contains' : 'Snaps contain'} unfinished Required fields</h2>
+        <p>This is informational. You can keep charting or finish now.</p>
+        <div className="flex justify-end gap-2">
+          <Button autoFocus variant="outline" onClick={() => setFinishing(false)}>Keep charting</Button>
+          <Button onClick={() => navigate(`/w/${workspaceId}/games`)}>Finish anyway</Button>
+        </div>
+      </div>
+    </Dialog>
   </main>
 }
