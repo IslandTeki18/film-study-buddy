@@ -9,6 +9,8 @@ import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
 import { sectionAppliesTo } from '@convex/domain/playSide'
 import { Button } from '@/components/ui/button'
+import { Chip, Meta } from '@/components/ui/panel'
+import { QuickNoteDialog } from '@/features/notes/quick-note-dialog'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { buildColumns } from './columns'
@@ -37,6 +39,9 @@ function DetailContent({ snap, tree, notes, terminology, base }: {
   readonly snap: Doc<'snaps'>; readonly tree: NonNullable<FunctionReturnType<typeof api.templates.getFull>>
   readonly notes: readonly Doc<'cellNotes'>[]; readonly terminology: readonly { list: TerminologyList; value: string }[]; readonly base: string
 }): ReactNode {
+  const quickNotes = useQuery(api.notes.listQuickNotes, { sourceGameId: snap.sourceGameId })
+  const snapQuickNotes = quickNotes?.filter((note) => note.snapId === snap._id)
+  const [noting, setNoting] = useState(false)
   const columns = buildColumns(tree)
   const saveNote = useSaveCellNote(snap.sourceGameId)
   const update = useUpdateSnapField(snap)
@@ -128,7 +133,13 @@ function DetailContent({ snap, tree, notes, terminology, base }: {
       </Select>
     </section>
     <section className="space-y-2" aria-label="Quick Notes">
-      <h2 className="font-semibold">Quick Notes</h2><Link className="underline" to={`${base}/notes?snap=${snap._id}`}>Quick Notes for this Snap</Link>
+      <h2 className="font-semibold">Quick Notes</h2>
+      {snapQuickNotes === undefined ? <p>Loading…</p> : snapQuickNotes.length === 0 ? <p>No Quick Notes for this Snap</p> : <ul className="space-y-3">{snapQuickNotes.map((note) => <li key={note._id} className="space-y-2">
+        <Meta>{new Date(note.createdAt).toLocaleString()}</Meta><p className="whitespace-pre-wrap">{note.text}</p>
+        <div className="flex flex-wrap gap-2">{note.tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}</div>
+      </li>)}</ul>}
+      <div className="flex items-center gap-3"><Button variant="outline" onClick={() => setNoting(true)}>Add Quick Note</Button><Link className="underline" to={`${base}/notes`}>All Quick Notes</Link></div>
+      <QuickNoteDialog open={noting} onOpenChange={setNoting} sourceGameId={snap.sourceGameId} snap={snap} />
     </section>
     <section className="space-y-2" aria-label="Play Diagram">
       <h2 className="font-semibold">Play Diagram</h2><Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Add / Edit Play Diagram</Link>
