@@ -7,6 +7,7 @@ import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
+import { QuickNoteDialog } from '@/features/notes/quick-note-dialog'
 import { useToast } from '@/components/ui/toast'
 
 export function RowActions({ snap, base, onDuplicated }: {
@@ -15,6 +16,7 @@ export function RowActions({ snap, base, onDuplicated }: {
   const navigate = useNavigate()
   const { show } = useToast()
   const label = snap.core.clipNumber ?? String(snap.order)
+  const [noting, setNoting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +49,7 @@ export function RowActions({ snap, base, onDuplicated }: {
   return <>
     <DropdownMenu label="⋯" triggerProps={{ variant: 'ghost', size: 'sm', className: 'h-7 px-2', 'aria-label': `Actions for Snap ${label}` }} items={[
       { label: 'Open Play Detail', onSelect: () => navigate(`${base}/snap/${snap._id}`) },
-      { label: 'Add Quick Note', onSelect: () => navigate(`${base}/notes?snap=${snap._id}`) },
+      { label: 'Add Quick Note', onSelect: () => setNoting(true) },
       { label: snap.mustReview ? 'Resolve Must Review' : 'Mark Must Review', onSelect: () => {
         void mark({ snapId: snap._id, mustReview: !snap.mustReview }).catch((error: unknown) => show({ message: `Could not update Must Review. ${error instanceof Error ? error.message : String(error)}` }))
       } },
@@ -60,6 +62,7 @@ export function RowActions({ snap, base, onDuplicated }: {
       } },
       { label: 'Delete Snap' , onSelect: () => { setError(''); setConfirming(true) } },
     ]} />
+    <QuickNoteDialog open={noting} onOpenChange={setNoting} sourceGameId={snap.sourceGameId} snap={snap} />
     <Dialog open={confirming} onOpenChange={setConfirming} aria-label={`Delete Snap ${label}`}>
       {confirming && <div className="space-y-4">
         <h2 className="text-lg font-semibold">Delete Snap {label}?</h2>
