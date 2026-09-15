@@ -28,7 +28,7 @@ export function QuickNotes({ workspaceId, sourceGameId }: { readonly workspaceId
   return <Page>
     <header className="flex flex-wrap items-center gap-3"><h1 className="text-lg font-semibold">Quick Notes</h1><Meta>{notes?.length ?? 0} Quick Notes</Meta><Button onClick={() => setCreating(true)}>New Quick Note</Button></header>
     <div role="group" aria-label="Filter by tag" className="flex flex-wrap gap-2">
-      {[null, ...vocabulary.filter((tag) => used.has(tag.toLowerCase()))].map((tag) => <Button key={tag ?? 'all'} variant={filter === tag ? 'default' : 'outline'} size="sm" aria-pressed={filter === tag} onClick={() => setFilter(tag)}>{tag ?? 'All'}</Button>)}
+      {[null, ...vocabulary.filter((tag) => used.has(tag.toLowerCase()))].map((tag) => <Button key={tag === null ? 'all' : `tag:${tag}`} variant={filter === tag ? 'default' : 'outline'} size="sm" aria-pressed={filter === tag} onClick={() => setFilter(tag)}>{tag ?? 'All'}</Button>)}
     </div>
     {visible.length === 0 ? <p>{filter ? `No Quick Notes tagged ${filter}` : 'No Quick Notes yet'}</p> : <ol className="space-y-4">{visible.map((note) => <li key={note._id} className="space-y-3 rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center gap-3"><Meta>{new Date(note.createdAt).toLocaleString()}</Meta>{note.snapId && (labels.has(note.snapId) ? <Link className="text-sm underline" to={`${base}/snap/${note.snapId}`}>Snap {labels.get(note.snapId)}</Link> : <Meta>Snap removed</Meta>)}</div>
