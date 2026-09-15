@@ -1,5 +1,6 @@
+import { inDialog, isShortcut, SHORTCUTS } from '@/lib/shortcuts'
 import { useSetMustReview } from './use-set-must-review'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
@@ -18,9 +19,10 @@ import { buildColumns } from './columns'
 import { Cell } from './cell'
 import { CellNoteEditor, FieldEditor, useSaveCellNote, useUpdateSnapField } from './cell-editors'
 
-export function PlayDetail({ workspaceId, sourceGameId, snapId }: {
-  readonly workspaceId: string; readonly sourceGameId: string; readonly snapId: string
+export function PlayDetail({ workspaceId, sourceGameId, snapId, embedded = false }: {
+  readonly workspaceId: string; readonly sourceGameId: string; readonly snapId: string; readonly embedded?: boolean
 }): ReactNode {
+  const Root = embedded ? 'div' : 'main'
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const snap = useQuery(api.snaps.get, { snapId })
   const tree = useQuery(api.templates.getFull, game ? { templateId: game.templateId } : 'skip')
@@ -28,21 +30,24 @@ export function PlayDetail({ workspaceId, sourceGameId, snapId }: {
   const terminology = useQuery(api.terminology.list, {})
   const base = `/w/${workspaceId}/games/${sourceGameId}`
   if (game === undefined || snap === undefined || terminology === undefined || (game && tree === undefined) || (snap && notes === undefined)) {
-    return <div role="status" aria-label="Loading Play Detail" className="m-6 h-32 animate-pulse rounded bg-muted" />
+    return <Root role="status" aria-label="Loading Play Detail" className="m-6 h-32 animate-pulse rounded bg-muted" />
   }
   if (!game || !snap || game.workspaceId !== workspaceId || snap.sourceGameId !== game._id || !tree) {
-    return <main className="space-y-3 p-6"><h1>Snap not found</h1><Link className="underline" to={base}>Back to Play Log</Link></main>
+    return <Root className="space-y-3 p-6"><h1>Snap not found</h1><Link className="underline" to={base}>Back to Play Log</Link></Root>
   }
-  return <DetailContent key={snap._id} snap={snap} tree={tree} notes={notes ?? []} terminology={terminology} base={base} />
+  return <DetailContent embedded={embedded} key={snap._id} snap={snap} tree={tree} notes={notes ?? []} terminology={terminology} base={base} />
 }
 
-function DetailContent({ snap, tree, notes, terminology, base }: {
+function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
+  readonly embedded: boolean
   readonly snap: Doc<'snaps'>; readonly tree: NonNullable<FunctionReturnType<typeof api.templates.getFull>>
   readonly notes: readonly Doc<'cellNotes'>[]; readonly terminology: readonly { list: TerminologyList; value: string }[]; readonly base: string
 }): ReactNode {
   const quickNotes = useQuery(api.notes.listQuickNotes, { sourceGameId: snap.sourceGameId })
   const snapQuickNotes = quickNotes?.filter((note) => note.snapId === snap._id)
   const [noting, setNoting] = useState(false)
+  const Root = embedded ? 'div' : 'main'
+  const markingRef = useRef(false)
   const columns = buildColumns(tree)
   const saveNote = useSaveCellNote(snap.sourceGameId)
   const update = useUpdateSnapField(snap)
@@ -71,16 +76,29 @@ function DetailContent({ snap, tree, notes, terminology, base }: {
     const current = store.getQuery(api.snaps.listBySourceGame, query)
     if (current) store.setQuery(api.snaps.listBySourceGame, query, current.map(update))
   })
-  return <main className="space-y-6 p-6">
+  function toggleMustReview(): void {
+    if (markingRef.current) return
+    markingRef.current = true
+    setMarking(true)
+    void mark({ snapId: snap._id, mustReview: !snap.mustReview })
+      .catch((error: unknown) => show({ message: `Could not update Must Review. ${error instanceof Error ? error.message : String(error)}` }))
+      .finally(() => { markingRef.current = false; setMarking(false) })
+  }
+  useEffect(() => {
+    if (embedded) return
+    function onKey(event: KeyboardEvent): void {
+      if (event.defaultPrevented || inDialog(event.target) || !isShortcut(event, 'toggleMustReview')) return
+      event.preventDefault()
+      toggleMustReview()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  })
+  return <Root className="space-y-6 p-6">
     <header className="flex flex-wrap items-center gap-4">
       <h1 className="text-lg font-semibold">Snap {snap.core.clipNumber ?? snap.order}</h1>
-      <Link className="underline" to={base}>Back to Play Log</Link>
-      <Button variant="outline" disabled={marking} onClick={() => {
-        setMarking(true)
-        void mark({ snapId: snap._id, mustReview: !snap.mustReview })
-          .catch((error: unknown) => show({ message: `Could not update Must Review. ${error instanceof Error ? error.message : String(error)}` }))
-          .finally(() => setMarking(false))
-      }}>{snap.mustReview ? 'Resolve Must Review' : 'Mark Must Review'}</Button>
+      {!embedded && <><Link className="underline" to={base}>Back to Play Log</Link>
+      <Button variant="outline" title={SHORTCUTS.toggleMustReview.label} disabled={marking} onClick={toggleMustReview}>{snap.mustReview ? 'Resolve Must Review' : 'Mark Must Review'}</Button></>}
     </header>
     <section className="space-y-3" aria-label="Core Snap Data">
       <h2 className="font-semibold">Core Snap Data</h2>
@@ -139,5 +157,5 @@ function DetailContent({ snap, tree, notes, terminology, base }: {
     <section className="space-y-2" aria-label="Play Diagram">
       <h2 className="font-semibold">Play Diagram</h2><Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Add / Edit Play Diagram</Link>
     </section>
-  </main>
+  </Root>
 }
