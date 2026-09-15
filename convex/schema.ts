@@ -48,7 +48,7 @@ const tendencyRowValidator = v.object({
 
 export default defineSchema({
   terminology: defineTable({
-    list: v.union(v.literal('formations'), v.literal('motions'), v.literal('playConcepts')),
+    list: v.union(v.literal('formations'), v.literal('motions'), v.literal('playConcepts'), v.literal('personnel')),
     value: v.string(), createdAt: v.number(),
   }).index('by_list', ['list', 'value']),
   settings: defineTable({

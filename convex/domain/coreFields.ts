@@ -1,5 +1,5 @@
 /** Fourteen charting fields; Play # remains a Hudl Reference outside this registry.
- * Clock/personnel stay plain text; number ranges belong to the cell editor.
+ * Clock stays plain text; number ranges belong to the cell editor.
  */
 import { formatYardLine, isValidYardLine, parseYardLine, type YardLine } from './fieldZone.ts'
 import type { TerminologyList } from './terminology.ts'
@@ -35,7 +35,7 @@ export const CORE_FIELDS = [
   { key: 'distance', label: 'Distance', input: { kind: 'number' } },
   { key: 'yardLine', label: 'Yard Line', input: { kind: 'fieldPosition' } },
   { key: 'hash', label: 'Hash', input: { kind: 'select', options: HASHES } },
-  { key: 'personnel', label: 'Personnel', input: { kind: 'shortText' } },
+  { key: 'personnel', label: 'Personnel', input: { kind: 'terminology', list: 'personnel' } },
   { key: 'formation', label: 'Formation', input: { kind: 'terminology', list: 'formations' } },
   { key: 'motion', label: 'Motion', input: { kind: 'terminology', list: 'motions' } },
   { key: 'playType', label: 'Play Type', input: { kind: 'select', options: PLAY_TYPES } },

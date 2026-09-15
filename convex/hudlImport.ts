@@ -99,7 +99,7 @@ export const commit = mutation({
     })
 
     const terminologyFields = [
-      ['formation', 'formations'], ['motion', 'motions'], ['playConcept', 'playConcepts'],
+      ['formation', 'formations'], ['motion', 'motions'], ['playConcept', 'playConcepts'], ['personnel', 'personnel'],
     ] as const
     for (const [key, list] of terminologyFields) {
       for (const raw of new Set(rows.map(({ core }) => core[key]).filter((value): value is string => typeof value === 'string'))) {
