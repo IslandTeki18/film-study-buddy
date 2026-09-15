@@ -3,6 +3,7 @@ import { CARRY_FORWARD_CORE_KEYS, normalizeCoreValue, type CoreValue } from '../
 import { isValidYardLine } from '../../../convex/domain/fieldZone.ts'
 import { hasAnalysisValue, normalizeAnalysisValue, type AnalysisValue, type ColumnKey } from '../../../convex/domain/templateFields.ts'
 import { builtInTerminology, type TerminologyList } from '../../../convex/domain/terminology.ts'
+import { sectionAppliesTo } from '../../../convex/domain/playSide.ts'
 import type { PlayLogColumn } from './columns'
 
 export type Draft = Readonly<Partial<Record<ColumnKey, unknown>>>
@@ -70,4 +71,11 @@ export function carryForwardDraft(
 
 export function hasAnyValue(draft: Draft): boolean {
   return Object.values(draft).some((value) => hasAnalysisValue(value) || isValidYardLine(value))
+}
+
+export function applicableColumns(columns: readonly PlayLogColumn[], tree: {
+  readonly sections: readonly { readonly _id: string; readonly name: string }[]
+}, draft: Draft): PlayLogColumn[] {
+  const names = new Map(tree.sections.map((section) => [section._id, section.name]))
+  return columns.filter((column) => column.kind === 'core' || sectionAppliesTo(names.get(column.field.sectionId) ?? '', draft['core:playType']))
 }

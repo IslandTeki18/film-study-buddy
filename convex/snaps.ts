@@ -6,6 +6,7 @@ import { collectSnapCascade } from './workspaces'
 import { softDeleteBatch } from './deletions'
 import { requireLiveSourceGame } from './sourceGames'
 import { CARRY_FORWARD_CORE_KEYS, getCoreField, isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
+import { sectionAppliesTo } from './domain/playSide.ts'
 import { restoredValueFor } from './domain/provenance.ts'
 import { normalizeAnalysisValue } from './domain/templateFields.ts'
 
@@ -119,6 +120,10 @@ export const create = mutation({
       const value = normalizeAnalysisValue(field, raw)
       if (value === null) delete analysis[fieldId]
       else analysis[fieldId] = value
+    }
+    const applicableSections = new Set(sections.filter((section) => sectionAppliesTo(section.name, core.playType)).map((section) => section._id))
+    for (const field of fields) {
+      if (!applicableSections.has(field.sectionId)) delete analysis[field._id]
     }
     return ctx.db.insert('snaps', {
       sourceGameId: game._id, order: (last?.order ?? 0) + 1, core, analysis, mustReview: args.mustReview ?? false, createdAt: Date.now(),

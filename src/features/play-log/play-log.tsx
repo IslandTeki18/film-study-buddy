@@ -10,7 +10,7 @@ import { PlayerNotes } from '../preview/charting-preview'
 import type { Mode } from '../preview/preview-data'
 import { MODE_OPTIONS, PreviewBadge, Segmented } from '../preview/preview-shared'
 import { buildColumns } from './columns'
-import { carryForwardDraft, hasAnyValue, toCreateArgs, type Draft } from './palette-model'
+import { applicableColumns, carryForwardDraft, hasAnyValue, toCreateArgs, type Draft } from './palette-model'
 import { SnapPalette } from './snap-palette'
 import { ChartedSnaps } from './charted-snaps'
 import { ChartingAside } from './charting-aside'
@@ -28,6 +28,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
   const terminology = useQuery(api.terminology.list, {})
   const columns = useMemo(() => tree ? buildColumns(tree) : [], [tree])
   const [draft, setDraft] = useState<Draft>({})
+  const visibleColumns = useMemo(() => tree ? applicableColumns(columns, tree, draft) : columns, [columns, tree, draft])
   const [mustReview, setMustReview] = useState(false)
   const [dataTab, setDataTab] = useState<'charting' | 'players'>('charting')
   const [mode, setMode] = useState<Mode>('off')
@@ -37,11 +38,11 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
   const { show } = useToast()
   const addTerminology = useMutation(api.terminology.add)
   const addFieldOption = useMutation(api.templates.addFieldOption)
-  function carriedValues(last: Doc<'snaps'> | undefined): Pick<Doc<'snaps'>, 'core' | 'analysis'> {
+  function carriedValues(last: Doc<'snaps'> | undefined, playType: unknown): Pick<Doc<'snaps'>, 'core' | 'analysis'> {
     const core: Doc<'snaps'>['core'] = {}
     const analysis: Doc<'snaps'>['analysis'] = {}
     const carried = last ? carryForwardDraft(last, columns) : {}
-    for (const column of columns) {
+    for (const column of tree ? applicableColumns(columns, tree, { 'core:playType': playType }) : columns) {
       if (carried[column.key] === undefined || !last) continue
       if (column.kind === 'core') Object.assign(core, { [column.field.key]: last.core[column.field.key] })
       else analysis[column.field._id] = last.analysis[column.field._id]!
@@ -53,7 +54,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
     const current = store.getQuery(api.snaps.listBySourceGame, queryArgs)
     if (!current || !tree) return
     const last = current.at(-1)
-    const carried = carriedValues(last)
+    const carried = carriedValues(last, args.core?.playType)
     const now = Date.now()
     store.setQuery(api.snaps.listBySourceGame, queryArgs, [...current, {
       _id: `optimistic-${now}` as Id<'snaps'>, _creationTime: now, sourceGameId: args.sourceGameId,
@@ -66,9 +67,9 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
     creating.current = true
     setPending(true)
     try {
-      const { core, analysis } = toCreateArgs(draft, columns)
+      const { core, analysis } = toCreateArgs(draft, visibleColumns)
       const last = snaps?.at(-1)
-      const carried = carriedValues(last)
+      const carried = carriedValues(last, core.playType)
       const id = await create({ sourceGameId: game._id, core, analysis, mustReview })
       setCreatedId(id)
       setDraft(carryForwardDraft({ core: { ...carried.core, ...core }, analysis: { ...carried.analysis, ...analysis } }, columns))
@@ -98,7 +99,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
       </div>
       {dataTab === 'charting' ? <div className="mt-3.5 flex flex-wrap items-stretch gap-px bg-border">
         <section className="min-w-0 flex-[1_1_620px] bg-background px-5 pt-4 pb-6">
-          <SnapPalette columns={columns} terminology={terminology ?? []} draft={draft} onDraftChange={setDraft}
+          <SnapPalette columns={visibleColumns} terminology={terminology ?? []} draft={draft} onDraftChange={setDraft}
             nextSnapNumber={(snaps?.length ?? 0) + 1} mustReview={mustReview} onMustReviewChange={setMustReview}
             saving={pending} onSave={() => { void save() }} onClear={() => { setDraft({}); setMustReview(false) }}
             onAddTerminology={async (list, value) => {

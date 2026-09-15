@@ -3,7 +3,7 @@ import test from 'node:test'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { CORE_FIELDS } from '../../../convex/domain/coreFields.ts'
 import type { PlayLogColumn } from './columns'
-import { carryForwardDraft, groupKind, hasAnyValue, toCreateArgs } from './palette-model.ts'
+import { applicableColumns, carryForwardDraft, groupKind, hasAnyValue, toCreateArgs } from './palette-model.ts'
 
 test('palette groups, normalizes, and carries only configured values', () => {
   const core: Extract<PlayLogColumn, { kind: 'core' }>[] = CORE_FIELDS.map((field) => ({ key: `core:${field.key}`, kind: 'core', label: field.label, field }))
@@ -44,4 +44,26 @@ test('palette groups, normalizes, and carries only configured values', () => {
   assert.equal(hasAnyValue({ 'core:clock': ' ', 'field:grade': [], 'core:yardLine': { side: 'own', yard: 0 } }), false)
   for (const value of [0, false, ['A'], 'X', { side: 'mid', yard: 50 }]) assert.equal(hasAnyValue({ 'field:grade': value }), true)
   assert.deepEqual(toCreateArgs({}, columns), { core: {}, analysis: {} })
+})
+
+test('Play Type filters Sections and saved analysis without changing the draft', () => {
+  const core: PlayLogColumn[] = CORE_FIELDS.map((field) => ({ key: `core:${field.key}`, kind: 'core', label: field.label, field }))
+  const tree = { sections: ['Run Game', 'Pass Game', 'Notes', 'Run/Pass Reads'].map((name) => ({ _id: name, name })) }
+  const template: PlayLogColumn[] = tree.sections.map((section) => ({
+    key: `field:${section._id}`, kind: 'template', label: section.name,
+    field: { _id: section._id as Id<'templateFields'>, _creationTime: 0, templateId: 'template' as Id<'templates'>,
+      sectionId: section._id as Id<'templateSections'>, name: section.name, type: 'shortText', options: [], required: false, carryForward: true, order: 0 },
+  }))
+  const columns = [...core, ...template]
+  const draft = { 'core:playType': 'Run', 'field:Run Game': 'A', 'field:Pass Game': 'B' } as const
+  const visible = applicableColumns(columns, tree, draft)
+  assert.equal(visible.length, columns.length - 1)
+  assert(visible.includes(template[0]!))
+  assert(!visible.includes(template[1]!))
+  assert.deepEqual(toCreateArgs(draft, visible), { core: { playType: 'Run' }, analysis: { 'Run Game': 'A' } })
+  assert.equal(draft['field:Pass Game'], 'B')
+  assert(!applicableColumns(columns, tree, { 'core:playType': 'Pass' }).includes(template[0]!))
+  for (const playType of ['RPO', 'Other', 'Special / Trick', undefined]) {
+    assert.deepEqual(applicableColumns(columns, tree, { 'core:playType': playType }), columns)
+  }
 })
