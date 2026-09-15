@@ -15,6 +15,7 @@ import type * as domain_coreFields from "../domain/coreFields.js";
 import type * as domain_csvMapping from "../domain/csvMapping.js";
 import type * as domain_fieldZone from "../domain/fieldZone.js";
 import type * as domain_names from "../domain/names.js";
+import type * as domain_playSide from "../domain/playSide.js";
 import type * as domain_provenance from "../domain/provenance.js";
 import type * as domain_situation from "../domain/situation.js";
 import type * as domain_starterTemplates from "../domain/starterTemplates.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "domain/csvMapping": typeof domain_csvMapping;
   "domain/fieldZone": typeof domain_fieldZone;
   "domain/names": typeof domain_names;
+  "domain/playSide": typeof domain_playSide;
   "domain/provenance": typeof domain_provenance;
   "domain/situation": typeof domain_situation;
   "domain/starterTemplates": typeof domain_starterTemplates;
