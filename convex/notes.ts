@@ -90,7 +90,7 @@ export const createQuickNote = mutation({
       if (snap.sourceGameId !== game._id) throw new Error('Snap belongs to a different Source Game')
     }
     return await ctx.db.insert('quickNotes', {
-      sourceGameId: game._id, snapId: args.snapId, text: requireNoteText(args.text),
+      sourceGameId: game._id, ...(args.snapId ? { snapId: args.snapId } : {}), text: requireNoteText(args.text),
       tags: normalizeQuickNoteTags(args.tags), createdAt: Date.now(),
     })
   },
