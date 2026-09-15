@@ -1,21 +1,27 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { useAutosave } from '@/lib/db/use-autosave'
 import { useToast } from '@/components/ui/toast'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
 
-export function CellNoteEditor({ label, note, onSave, onEscape }: {
+export function CellNoteEditor({ label, note, onSave, onEscape, onRemove }: {
   readonly label: string; readonly note: string; readonly onSave: (text: string) => Promise<void>
-  readonly onEscape?: () => void
+  readonly onEscape?: () => void; readonly onRemove?: () => void
 }): ReactNode {
-  const { draft, setDraft, flush, status } = useAutosave(note, onSave)
+  const { draft, setDraft, flush, discard, status } = useAutosave(note, onSave)
+  const [removing, setRemoving] = useState(false)
   return <div onKeyDown={(event) => {
     event.stopPropagation()
     if (event.key === 'Escape' && onEscape) { event.preventDefault(); flush(); onEscape() }
   }}>
     <Textarea aria-label={`Cell Note for ${label}`} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={flush} />
+    {onRemove && <Button variant="ghost" size="sm" aria-label={`Remove Cell Note for ${label}`} disabled={removing} onClick={() => {
+      setRemoving(true)
+      void discard().then(() => onSave('')).then(onRemove).catch(() => undefined).finally(() => setRemoving(false))
+    }}>Remove note</Button>}
     {status === 'error' && <p role="alert">Cell Note could not be saved. Edit or blur to retry.</p>}
   </div>
 }

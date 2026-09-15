@@ -11,6 +11,7 @@ export function useAutosave<T>(
   readonly draft: T
   readonly setDraft: (next: T) => void
   readonly flush: () => void
+  readonly discard: () => Promise<void>
   readonly status: AutosaveStatus
 } {
   const [draft, updateDraft] = useState(value)
@@ -23,6 +24,7 @@ export function useAutosave<T>(
   const queuedRef = useRef(false)
   const versionRef = useRef(0)
   const inFlightVersionRef = useRef(-1)
+  const inFlightRef = useRef<Promise<void> | null>(null)
   const mountedRef = useRef(true)
   const flushRef = useRef<() => void>(() => undefined)
   const delayMs = options?.delayMs ?? 400
@@ -55,7 +57,7 @@ export function useAutosave<T>(
     } catch (error) {
       result = Promise.reject(error)
     }
-    void Promise.resolve(result).then(() => {
+    const inFlight = Promise.resolve(result).then(() => {
       savingRef.current = false
       if (queuedRef.current) {
         flushRef.current()
@@ -72,6 +74,7 @@ export function useAutosave<T>(
         setStatus('error')
       }
     })
+    inFlightRef.current = inFlight
   }
 
   const setDraft = useCallback((next: T): void => {
@@ -83,6 +86,16 @@ export function useAutosave<T>(
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     timerRef.current = window.setTimeout(() => flushRef.current(), delayMs)
   }, [delayMs])
+
+  const discard = useCallback(async (): Promise<void> => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    dirtyRef.current = false
+    queuedRef.current = false
+    await inFlightRef.current
+  }, [])
 
   useEffect(() => {
     if (!dirtyRef.current) {
@@ -102,5 +115,5 @@ export function useAutosave<T>(
     }
   }, [])
 
-  return { draft, setDraft, flush, status }
+  return { draft, setDraft, flush, discard, status }
 }

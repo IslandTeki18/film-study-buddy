@@ -6,6 +6,7 @@ import { api } from '@convex/_generated/api'
 import type { Doc } from '@convex/_generated/dataModel'
 import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
+import { sectionAppliesTo } from '@convex/domain/playSide'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
@@ -68,7 +69,6 @@ function DetailContent({ snap, tree, notes, base }: {
     const current = store.getQuery(api.snaps.listBySourceGame, query)
     if (current) store.setQuery(api.snaps.listBySourceGame, query, current.map(update))
   })
-  // ponytail: read-only values; add inline editing here only if coaches chart from Detail.
   return <main className="space-y-6 p-6">
     <header className="flex flex-wrap items-center gap-4">
       <h1 className="text-lg font-semibold">Snap {snap.core.clipNumber ?? snap.order}</h1>
@@ -104,7 +104,7 @@ function DetailContent({ snap, tree, notes, base }: {
     </section>
     <section className="space-y-3" aria-label="Template Analysis Data">
       <h2 className="font-semibold">Template Analysis Data</h2>
-      {tree.sections.map((section) => <div key={section._id} className="space-y-2">
+      {tree.sections.filter((section) => sectionAppliesTo(section.name, snap.core.playType)).map((section) => <div key={section._id} className="space-y-2">
         <h3 className="text-sm font-semibold">{section.name}</h3>
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{columns.filter((column) => column.kind === 'template' && column.field.sectionId === section._id)
           .map((column) => <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt><dd>{displayValue(snap, column) || '—'}</dd></div>)}</dl>
@@ -115,7 +115,8 @@ function DetailContent({ snap, tree, notes, base }: {
       {columns.filter((column) => column.key === adding || notes.some((note) => note.fieldKey === column.key)).map((column) =>
         <div key={column.key} className="max-w-xl space-y-1"><h3 className="text-sm">{column.label}</h3>
           <CellNoteEditor label={column.label} note={notes.find((note) => note.fieldKey === column.key)?.text ?? ''}
-            onSave={(text) => saveNote({ snapId: snap._id, fieldKey: column.key, text })} />
+            onSave={(text) => saveNote({ snapId: snap._id, fieldKey: column.key, text })}
+            onRemove={() => { if (adding === column.key) setAdding('') }} />
         </div>)}
       <Select className="max-w-xs" aria-label="Add note to field" value={adding} onChange={(event) => setAdding(event.target.value)}>
         <option value="">Add note to field…</option>
