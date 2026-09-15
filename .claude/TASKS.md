@@ -206,26 +206,33 @@ Implementation and verification: [Phase 5 completion report](plans/phase-5-compl
 
 ## Phase 6 — Hudl CSV Import
 
-- [ ] **6.1 CSV mapping module.** `convex/domain/csv-mapping.ts`: header signature, Hudl header
+- [x] **6.1 CSV mapping module.** `convex/domain/csvMapping.ts`: header signature, Hudl header
       aliases, auto-map, per-field coercion that never guesses.
       *Verify:* unit tests over a real Hudl header row, a renamed-column row, and dirty cells
       (`"1st"` in Down, empty Distance, `"O25"` in Yard Line).
-- [ ] **6.2 Upload and parse.** File picker, Papa Parse, named errors for malformed input.
+      *Evidence:* Synthetic header/coercion/flag/duplicate assertions passed; real CSV unavailable; persistent tests deferred by approved plan.
+- [x] **6.2 Upload and parse.** File picker, Papa Parse, named errors for malformed input.
       *Verify:* a non-CSV file and an empty file both produce a clear message and no import.
-- [ ] **6.3 Mapping screen.** Detected columns, auto-mapped known fields, manual mapping for the
+      *Evidence:* Electron PNG, empty, one-column, and malformed errors passed; zero Snaps created.
+- [x] **6.3 Mapping screen.** Detected columns, auto-mapped known fields, manual mapping for the
       rest, Continue blocked while a required field is unmapped (SPEC §11).
-- [ ] **6.4 Remembered mappings.** Store on success by signature; reuse silently; reappear when
+      *Evidence:* Electron verified 11 mapped / 8 ignored columns and Play # / Clip # Continue gating.
+- [x] **6.4 Remembered mappings.** Store on success by signature; reuse silently; reappear when
       columns change, a required column disappears, or unknown columns appear (SPEC §11).
       *Verify:* second import of the same shape skips the mapping screen; a renamed column
       brings it back.
-- [ ] **6.5 Import Preview.** Parsed rows, per-row exclusion, auto-flagging of likely special
+      *Evidence:* Backend upsert and Electron reuse, renamed-header fallback, case/spacing reconciliation, and reload recovery passed.
+- [x] **6.5 Import Preview.** Parsed rows, per-row exclusion, auto-flagging of likely special
       teams and no-play rows without removing them (SPEC §12).
-- [ ] **6.6 Duplicate detection.** On import into a populated game, flag likely duplicates by
+      *Evidence:* Synthetic 135-row preview retained all rows; 115 default includes, 20 flags, rejected cells, toggles, and bounded scrolling passed.
+- [x] **6.6 Duplicate detection.** On import into a populated game, flag likely duplicates by
       clip #, then play #, then quarter and clock. Flagged, never blocked (SPEC §13).
       *Verify:* re-importing the same file flags every row.
-- [ ] **6.7 Commit.** One mutation writes the included rows as Snaps with `imported` populated
+      *Evidence:* After import, 115 matching rows showed duplicate flags and remained selected; Exclude duplicates disabled zero-row Import.
+- [x] **6.7 Commit.** One mutation writes the included rows as Snaps with `imported` populated
       and `order` assigned.
       *Verify:* a 90-row file imports once, lands in order, and every cell reads `Imported`.
+      *Evidence:* 115 synthetic Snaps imported in contiguous file order; append, atomic rejection, canonical provenance, UI Restore, and error-state retention passed.
 
 ---
 
