@@ -1,7 +1,21 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, shell, nativeTheme } from 'electron'
+import { app, BrowserWindow, Menu, shell, nativeTheme, type MenuItemConstructorOptions } from 'electron'
 
 const isDev = !app.isPackaged
+
+function installMenu(): void {
+  const template: MenuItemConstructorOptions[] = [
+    ...(process.platform === 'darwin' ? [{ role: 'appMenu' as const }] : []),
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    { label: 'View', submenu: [
+      ...(isDev ? [{ role: 'forceReload' as const }, { role: 'toggleDevTools' as const }, { type: 'separator' as const }] : []),
+      { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' },
+    ] },
+    { role: 'windowMenu' },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -36,6 +50,7 @@ function createWindow(): void {
 }
 
 void app.whenReady().then(() => {
+  installMenu()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
