@@ -1,3 +1,4 @@
+import { useSetMustReview } from './use-set-must-review'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { useMutation } from 'convex/react'
@@ -20,13 +21,7 @@ export function RowActions({ snap, base, onDuplicated }: {
   const [confirming, setConfirming] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
-  const mark = useMutation(api.snaps.setMustReview).withOptimisticUpdate((store, args) => {
-    const query = { sourceGameId: snap.sourceGameId }
-    const current = store.getQuery(api.snaps.listBySourceGame, query)
-    if (current) store.setQuery(api.snaps.listBySourceGame, query, current.map((item) => item._id === args.snapId ? { ...item, mustReview: args.mustReview } : item))
-    const detail = store.getQuery(api.snaps.get, { snapId: args.snapId })
-    if (detail) store.setQuery(api.snaps.get, { snapId: args.snapId }, { ...detail, mustReview: args.mustReview })
-  })
+  const mark = useSetMustReview(snap.sourceGameId)
   const remove = useMutation(api.snaps.remove).withOptimisticUpdate((store, args) => {
     const query = { sourceGameId: snap.sourceGameId }
     const current = store.getQuery(api.snaps.listBySourceGame, query)

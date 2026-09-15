@@ -1,3 +1,4 @@
+import { useSetMustReview } from './use-set-must-review'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
@@ -49,13 +50,7 @@ function DetailContent({ snap, tree, notes, terminology, base }: {
   const [restoring, setRestoring] = useState<string | null>(null)
   const [marking, setMarking] = useState(false)
   const { show } = useToast()
-  const mark = useMutation(api.snaps.setMustReview).withOptimisticUpdate((store, args) => {
-    const detail = store.getQuery(api.snaps.get, { snapId: args.snapId })
-    if (detail) store.setQuery(api.snaps.get, { snapId: args.snapId }, { ...detail, mustReview: args.mustReview })
-    const query = { sourceGameId: snap.sourceGameId }
-    const current = store.getQuery(api.snaps.listBySourceGame, query)
-    if (current) store.setQuery(api.snaps.listBySourceGame, query, current.map((item) => item._id === args.snapId ? { ...item, mustReview: args.mustReview } : item))
-  })
+  const mark = useSetMustReview(snap.sourceGameId)
   const restore = useMutation(api.snaps.restoreImportedValue).withOptimisticUpdate((store, args) => {
     if (!isCoreFieldKey(args.key)) return
     const key = args.key
