@@ -249,13 +249,9 @@ export function GroupInput({ column, value, disabled, onChange, onNext }: {
   readonly onChange: (value: unknown) => void; readonly onNext: () => void
 }): ReactNode {
   const [raw, setRaw] = useState(() => formatDraftValue(column, value))
-  const [spotDraft, setSpotDraft] = useState(value)
   const emitted = useRef(value)
   useEffect(() => {
-    if (value !== emitted.current) {
-      setRaw(formatDraftValue(column, value))
-      setSpotDraft(value)
-    }
+    if (value !== emitted.current) setRaw(formatDraftValue(column, value))
     emitted.current = value
   }, [value, column])
   function update(text: string): void {
@@ -271,7 +267,7 @@ export function GroupInput({ column, value, disabled, onChange, onNext }: {
   const numeric = column.kind === 'core' ? column.field.input.kind === 'number' : column.field.type === 'number'
   const key = column.kind === 'core' ? column.field.key : null
   const bounds = key === 'quarter' || key === 'down' || key === 'distance' || key === 'yards' ? CORE_NUMBER_BOUNDS[key] : undefined
-  const spot = typeof spotDraft === 'object' && spotDraft !== null && 'side' in spotDraft && 'yard' in spotDraft ? spotDraft : undefined
+  const spot = typeof value === 'object' && value !== null && 'side' in value && 'yard' in value ? value : undefined
   const side = spot && typeof spot.side === 'string' ? spot.side : ''
   return <div onKeyDown={(event) => {
     if (event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey) return
@@ -281,12 +277,11 @@ export function GroupInput({ column, value, disabled, onChange, onNext }: {
     {key === 'yardLine' ? <div className="flex gap-1">
       <Select {...props} aria-label="Yard Line side" value={side} onChange={(event) => {
         const nextSide = event.target.value
-        const next = nextSide ? { side: nextSide, yard: nextSide === 'mid' ? 50 : side === 'mid' ? '' : spot?.yard ?? '' } : undefined
-        setSpotDraft(next); emitted.current = next; onChange(next)
+        onChange(nextSide ? { side: nextSide, yard: nextSide === 'mid' ? 50 : side === 'mid' ? '' : spot?.yard ?? '' } : undefined)
       }}><option value="" /><option value="own">OWN</option><option value="mid">50</option><option value="opp">OPP</option></Select>
       <Input {...props} aria-label="Yard Line yard" type="number" min={1} max={49} step={1} disabled={disabled || !side || side === 'mid'}
-        aria-invalid={Boolean(side && !isValidYardLine(spotDraft))} value={side === 'mid' ? '' : typeof spot?.yard === 'number' || typeof spot?.yard === 'string' ? spot.yard : ''}
-        onChange={(event) => { const next = { side, yard: event.target.value === '' ? '' : Number(event.target.value) }; setSpotDraft(next); emitted.current = next; onChange(next) }} />
+        aria-invalid={Boolean(side && !isValidYardLine(value))} value={side === 'mid' ? '' : typeof spot?.yard === 'number' || typeof spot?.yard === 'string' ? spot.yard : ''}
+        onChange={(event) => onChange({ side, yard: event.target.value === '' ? '' : Number(event.target.value) })} />
     </div> : column.kind === 'template' && column.field.type === 'longText'
       ? <Textarea {...props} value={raw} onChange={(event) => update(event.target.value)} />
       : <Input {...props} type={numeric ? 'number' : 'text'} step={column.kind === 'core' ? 1 : 'any'} {...bounds}

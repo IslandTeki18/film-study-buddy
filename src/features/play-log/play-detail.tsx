@@ -4,6 +4,7 @@ import { useMutation, useQuery } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
 import { api } from '@convex/_generated/api'
 import type { Doc } from '@convex/_generated/dataModel'
+import type { TerminologyList } from '@convex/domain/terminology'
 import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
 import { sectionAppliesTo } from '@convex/domain/playSide'
@@ -34,7 +35,7 @@ export function PlayDetail({ workspaceId, sourceGameId, snapId }: {
 
 function DetailContent({ snap, tree, notes, terminology, base }: {
   readonly snap: Doc<'snaps'>; readonly tree: NonNullable<FunctionReturnType<typeof api.templates.getFull>>
-  readonly notes: readonly Doc<'cellNotes'>[]; readonly terminology: readonly { list: 'formations' | 'motions' | 'playConcepts' | 'personnel'; value: string }[]; readonly base: string
+  readonly notes: readonly Doc<'cellNotes'>[]; readonly terminology: readonly { list: TerminologyList; value: string }[]; readonly base: string
 }): ReactNode {
   const columns = buildColumns(tree)
   const saveNote = useSaveCellNote(snap.sourceGameId)

@@ -41,5 +41,7 @@ try {
   }))
   assert.match(fieldEditor(formation, '11'), /<option value="11" selected="">11<\/option>/)
   assert.match(fieldEditor(quarter, 9), /type="number"[^>]*max="9"/)
+  const legacyMulti = { kind: 'template', key: 'field:legacy', label: 'Legacy', field: { _id: 'legacy', type: 'multiSelect', options: ['A'] } }
+  assert.match(renderToStaticMarkup(createElement(FieldEditor, { column: legacyMulti, value: ['Retired'], terminology: [], onSave: async () => {} })), /<option value="Retired" selected="">Retired<\/option>/)
   console.log('SnapPalette SSR checks passed (all core controls, false/zero/multi values, saving and empty states).')
 } finally { await server.close() }

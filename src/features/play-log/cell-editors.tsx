@@ -24,7 +24,7 @@ export function CellNoteEditor({ label, note, onSave, onEscape, onRemove }: {
     event.stopPropagation()
     if (event.key === 'Escape' && onEscape) { event.preventDefault(); flush(); onEscape() }
   }}>
-    <Textarea aria-label={`Cell Note for ${label}`} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={flush} />
+    <Textarea aria-label={`Cell Note for ${label}`} value={draft} disabled={removing} onChange={(event) => setDraft(event.target.value)} onBlur={flush} />
     {onRemove && <Button variant="ghost" size="sm" aria-label={`Remove Cell Note for ${label}`} disabled={removing} onClick={() => {
       setRemoving(true)
       void discard().then(() => onSave('')).then(onRemove).catch(() => undefined).finally(() => setRemoving(false))
@@ -66,10 +66,10 @@ export function useUpdateSnapField(snap: Doc<'snaps'>): (column: PlayLogColumn, 
     try {
       if (column.kind === 'core') {
         const next = normalizeCoreValue(column.field.key, value)
-        await updateCore({ snapId: snap._id, key: column.field.key, value: next as never })
+        await updateCore(next === undefined ? { snapId: snap._id, key: column.field.key } : { snapId: snap._id, key: column.field.key, value: next })
       } else {
         const next = normalizeAnalysisValue(column.field, value)
-        await updateAnalysis({ snapId: snap._id, fieldId: column.field._id, value: next as never })
+        await updateAnalysis({ snapId: snap._id, fieldId: column.field._id, value: next })
       }
     } catch (error) {
       show({ message: `Could not update ${column.label}. ${error instanceof Error ? error.message : String(error)}` })
@@ -86,23 +86,29 @@ function DeferredInput({ column, value, disabled, onSave }: {
   readonly column: PlayLogColumn; readonly value: unknown; readonly disabled: boolean
   readonly onSave: (value: unknown) => Promise<void>
 }): ReactNode {
-  const wrapper = useRef<HTMLDivElement>(null)
-  const latest = useRef(value)
+  const [draft, setDraft] = useState(value)
+  const latest = useRef(draft)
   const saved = useRef(value)
   const pending = useRef(false)
   const [, rerender] = useState(0)
-  useEffect(() => { saved.current = value }, [value])
+  useEffect(() => {
+    if (!sameValue(value, saved.current)) {
+      saved.current = value
+      latest.current = value
+      setDraft(value)
+    }
+  }, [value])
   function commit(): void {
     if (pending.current || sameValue(latest.current, saved.current)) return
     pending.current = true; rerender((count) => count + 1)
     void onSave(latest.current).then(() => { saved.current = latest.current }).catch(() => undefined)
       .finally(() => { pending.current = false; rerender((count) => count + 1) })
   }
-  return <div ref={wrapper} onBlur={(event) => {
+  return <div onBlur={(event) => {
     if (!event.currentTarget.contains(event.relatedTarget)) commit()
   }}>
-    <GroupInput column={column} value={value} disabled={disabled || pending.current}
-      onChange={(next) => { latest.current = next }} onNext={commit} />
+    <GroupInput column={column} value={draft} disabled={disabled || pending.current}
+      onChange={(next) => { latest.current = next; setDraft(next) }} onNext={commit} />
   </div>
 }
 
@@ -123,7 +129,7 @@ export function FieldEditor({ column, value, terminology, onSave }: {
     const multi = kind.multi
     const current = Array.isArray(value) ? value.map(String) : value === undefined ? '' : typeof value === 'boolean' ? value ? 'Yes' : 'No' : String(value)
     const singleCurrent = Array.isArray(current) ? '' : current
-    const tags = !multi && singleCurrent && !kind.tags.includes(singleCurrent) ? [singleCurrent, ...kind.tags] : kind.tags
+    const tags = [...new Set([...kind.tags, ...(Array.isArray(current) ? current : singleCurrent ? [singleCurrent] : [])])]
     return <Select aria-label={column.label} multiple={multi} disabled={pending} className="font-mono text-[12px]"
       value={multi ? (Array.isArray(value) ? value.map(String) : []) : singleCurrent}
       onChange={(event) => {
