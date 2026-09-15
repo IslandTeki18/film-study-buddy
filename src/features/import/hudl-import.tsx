@@ -6,6 +6,7 @@ import { Page } from '@/components/ui/panel'
 import {
   autoMap,
   coerceRow,
+  findLikelyDuplicates,
   findOdkHeader,
   headerSignature,
   IMPORT_TARGETS,
@@ -39,9 +40,14 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   const initializedCsv = useRef<ParsedCsv | null>(null)
   const signature = csv ? headerSignature(csv.headers) : null
   const remembered = useQuery(api.hudlImport.getRememberedMapping, signature ? { signature } : 'skip')
+  const existingSnaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
   const rows = useMemo(() => csv && mapping
     ? csv.rows.map((row, index) => coerceRow(row, mapping, findOdkHeader(csv.headers), index))
     : [], [csv, mapping])
+  const duplicates = useMemo(
+    () => findLikelyDuplicates(existingSnaps ?? [], rows),
+    [existingSnaps, rows],
+  )
   const mappedTargets = useMemo(() => new Set(Object.values(mapping ?? {}).filter(
     (target): target is ImportTarget => target !== null,
   )), [mapping])
@@ -87,7 +93,9 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
     {step === 'mapping' && csv && mapping && <MappingStep csv={csv} mapping={mapping}
       onMappingChange={setMapping} onBack={() => { setStep('upload'); setSearchParams({}, { replace: true }) }}
       onContinue={() => { setUsingRemembered(false); setStep('preview'); setSearchParams({ step: 'preview' }) }} />}
-    {step === 'preview' && csv && mapping && <PreviewStep rows={rows} mappedTargets={mappedTargets}
+    {step === 'preview' && csv && mapping && existingSnaps === undefined
+      ? <div role="status" aria-label="Checking for duplicate Snaps" className="h-32 animate-pulse rounded bg-muted" />
+      : step === 'preview' && csv && mapping && <PreviewStep rows={rows} duplicates={duplicates} mappedTargets={mappedTargets}
       included={included} usingRemembered={usingRemembered} onIncludedChange={setIncluded}
       onBack={() => {
         setStep(usingRemembered ? 'upload' : 'mapping')

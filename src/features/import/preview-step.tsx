@@ -3,10 +3,22 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Chip, Panel } from '@/components/ui/panel'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { IMPORT_TARGETS, type CoercedRow, type ImportTarget } from '../../../convex/domain/csvMapping.ts'
+import {
+  IMPORT_TARGETS,
+  type CoercedRow,
+  type DuplicateReason,
+  type ImportTarget,
+} from '../../../convex/domain/csvMapping.ts'
 
-export function PreviewStep({ rows, mappedTargets, included, usingRemembered, onIncludedChange, onBack, onChangeMapping }: {
+const DUPLICATE_LABELS: Readonly<Record<DuplicateReason, string>> = {
+  playNumber: 'Likely duplicate (Play #)',
+  clipNumber: 'Likely duplicate (Clip #)',
+  quarterClock: 'Likely duplicate (Quarter + Clock)',
+}
+
+export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRemembered, onIncludedChange, onBack, onChangeMapping }: {
   readonly rows: readonly CoercedRow[]
+  readonly duplicates: ReadonlyMap<number, DuplicateReason>
   readonly mappedTargets: ReadonlySet<ImportTarget>
   readonly included: ReadonlySet<number>
   readonly usingRemembered: boolean
@@ -26,6 +38,9 @@ export function PreviewStep({ rows, mappedTargets, included, usingRemembered, on
       <div>
         <h1 className="text-2xl font-semibold">Preview import</h1>
         <p className="mt-1 text-sm text-muted-foreground">{included.size} of {rows.length} rows will import</p>
+        {duplicates.size > 0 && <p className="mt-1 text-sm text-muted-foreground">
+          {duplicates.size} rows look like Snaps already in this Source Game.
+        </p>}
         {usingRemembered && <p className="mt-1 text-sm text-muted-foreground">
           Using remembered mapping · <button type="button" className="underline" onClick={onChangeMapping}>Change mapping</button>
         </p>}
@@ -35,6 +50,9 @@ export function PreviewStep({ rows, mappedTargets, included, usingRemembered, on
         <Button type="button" variant="outline" onClick={() => onIncludedChange(new Set(
           [...included].filter((index) => rows[index]?.flag === null),
         ))}>Exclude flagged</Button>
+        <Button type="button" variant="outline" onClick={() => onIncludedChange(new Set(
+          [...included].filter((index) => !duplicates.has(index)),
+        ))}>Exclude duplicates</Button>
       </div>
     </div>
     <div className="max-h-[70vh] overflow-auto rounded-[10px] border border-border">
@@ -56,6 +74,7 @@ export function PreviewStep({ rows, mappedTargets, included, usingRemembered, on
             <TableCell><div className="flex min-w-44 flex-wrap gap-1">
               {row.flag === 'specialTeams' && <Chip>Likely special teams (ODK = {row.odk})</Chip>}
               {row.flag === 'noPlay' && <Chip>Likely no play</Chip>}
+              {duplicates.has(row.index) && <Chip>{DUPLICATE_LABELS[duplicates.get(row.index)!]}</Chip>}
               {row.rejected.map(({ target, label, raw }) => <Chip key={`${target}:${raw}`}>{label}: &quot;{raw}&quot; not imported</Chip>)}
             </div></TableCell>
           </TableRow>)}

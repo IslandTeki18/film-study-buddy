@@ -4,6 +4,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { useToast } from '@/components/ui/toast'
+import { buttonVariants } from '@/components/ui/button'
 import { Eyebrow } from '@/components/ui/panel'
 import { PlayerNotes } from '../preview/charting-preview'
 import type { Mode } from '../preview/preview-data'
@@ -92,6 +93,8 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
         <Segmented label="Opponent data section" value={dataTab} options={[['charting', 'Charting'], ['players', 'Player notes']]} onChange={setDataTab} />
         <Segmented label="Which side of the ball" value={mode} options={MODE_OPTIONS} onChange={setMode} accent />
         <span className="ml-auto"><PreviewBadge /></span>
+        {(snaps?.length ?? 0) > 0 && <Link className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>}
       </div>
       {dataTab === 'charting' ? <div className="mt-3.5 flex flex-wrap items-stretch gap-px bg-border">
         <section className="min-w-0 flex-[1_1_620px] bg-background px-5 pt-4 pb-6">
