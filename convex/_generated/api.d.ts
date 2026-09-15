@@ -17,6 +17,7 @@ import type * as domain_fieldZone from "../domain/fieldZone.js";
 import type * as domain_names from "../domain/names.js";
 import type * as domain_playSide from "../domain/playSide.js";
 import type * as domain_provenance from "../domain/provenance.js";
+import type * as domain_quickNoteTags from "../domain/quickNoteTags.js";
 import type * as domain_situation from "../domain/situation.js";
 import type * as domain_starterTemplates from "../domain/starterTemplates.js";
 import type * as domain_templateFields from "../domain/templateFields.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   "domain/names": typeof domain_names;
   "domain/playSide": typeof domain_playSide;
   "domain/provenance": typeof domain_provenance;
+  "domain/quickNoteTags": typeof domain_quickNoteTags;
   "domain/situation": typeof domain_situation;
   "domain/starterTemplates": typeof domain_starterTemplates;
   "domain/templateFields": typeof domain_templateFields;
