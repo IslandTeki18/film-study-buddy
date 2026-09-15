@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Eyebrow, Meta, Panel } from '@/components/ui/panel'
 import { cn } from '@/lib/utils'
+import { inDialog, isShortcut, SHORTCUTS } from '@/lib/shortcuts'
 import { Segmented } from '../preview/preview-shared'
 import type { PlayLogColumn } from './columns'
 import { groupKind, hasAnyValue, type Draft } from './palette-model'
@@ -114,6 +115,14 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
   }
   useEffect(() => {
     function onKey(event: KeyboardEvent): void {
+      if (!event.defaultPrevented && !inDialog(event.target) && isShortcut(event, 'toggleMustReview')) {
+        const target = event.target
+        if (target instanceof HTMLElement && (target === document.body || section.current?.contains(target))) {
+          event.preventDefault()
+          if (!saving && !pending.current) onMustReviewChange(!mustReview)
+        }
+        return
+      }
       if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return
       const target = event.target
       if (!(target instanceof HTMLElement)) return
@@ -220,7 +229,7 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
           <Eyebrow className="text-[10.5px] text-foreground/70">Snap {String(nextSnapNumber).padStart(2, '0')}</Eyebrow>
           <Meta>{columns.filter((column) => hasAnyValue({ [column.key]: draft[column.key] })).length} of {columns.length} fields</Meta>
           <div className="ml-auto flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" aria-pressed={mustReview} disabled={saving || adding} onClick={() => onMustReviewChange(!mustReview)}
+            <Button variant="outline" size="sm" aria-pressed={mustReview} title={SHORTCUTS.toggleMustReview.label} disabled={saving || adding} onClick={() => onMustReviewChange(!mustReview)}
               className={cn('h-8 bg-transparent', mustReview && 'border-warm bg-warm text-primary-foreground hover:bg-warm hover:text-primary-foreground')}>
               {mustReview ? '★' : '☆'} Must review
             </Button>
