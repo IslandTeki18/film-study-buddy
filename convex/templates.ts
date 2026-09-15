@@ -54,7 +54,7 @@ function requireName(value: string): string {
   return name
 }
 
-async function templateTree(ctx: ReadCtx, templateId: Id<'templates'>) {
+export async function templateTree(ctx: ReadCtx, templateId: Id<'templates'>) {
   const sections = await ctx.db.query('templateSections')
     .withIndex('by_template', (q) => q.eq('templateId', templateId)).collect()
   const fields = await ctx.db.query('templateFields')

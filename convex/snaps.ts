@@ -1,3 +1,5 @@
+import { countIncompleteSnaps } from './domain/completeness.ts'
+import { templateTree } from './templates'
 import { v } from 'convex/values'
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import schema, { analysisValueValidator } from './schema'
@@ -282,5 +284,21 @@ export const duplicate = mutation({
     return ctx.db.insert('snaps', { sourceGameId: snap.sourceGameId,
       order: (snap.order + (next?.order ?? snap.order + 1)) / 2,
       core: { ...snap.core }, analysis: { ...snap.analysis }, mustReview: false, createdAt: Date.now() })
+  },
+})
+
+export const countIncomplete = query({
+  args: { sourceGameId: v.id('sourceGames') }, returns: v.number(),
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.sourceGameId)
+    if (!game || game.deletedAt !== undefined) return 0
+    const workspace = await ctx.db.get(game.workspaceId)
+    if (!workspace || workspace.deletedAt !== undefined) return 0
+    const season = await ctx.db.get(workspace.seasonId)
+    if (!season || season.deletedAt !== undefined) return 0
+    const sections = await templateTree(ctx, game.templateId)
+    const snaps = (await ctx.db.query('snaps').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect())
+      .filter((snap) => snap.deletedAt === undefined)
+    return countIncompleteSnaps(sections, snaps)
   },
 })

@@ -11,6 +11,7 @@
 import type * as columnLayouts from "../columnLayouts.js";
 import type * as crons from "../crons.js";
 import type * as deletions from "../deletions.js";
+import type * as domain_completeness from "../domain/completeness.js";
 import type * as domain_coreFields from "../domain/coreFields.js";
 import type * as domain_csvMapping from "../domain/csvMapping.js";
 import type * as domain_fieldZone from "../domain/fieldZone.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   columnLayouts: typeof columnLayouts;
   crons: typeof crons;
   deletions: typeof deletions;
+  "domain/completeness": typeof domain_completeness;
   "domain/coreFields": typeof domain_coreFields;
   "domain/csvMapping": typeof domain_csvMapping;
   "domain/fieldZone": typeof domain_fieldZone;
