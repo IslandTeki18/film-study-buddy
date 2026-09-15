@@ -37,9 +37,9 @@ export function PreviewStep({ rows, mappedTargets, included, usingRemembered, on
         ))}>Exclude flagged</Button>
       </div>
     </div>
-    <div className="overflow-x-auto rounded-[10px] border border-border">
+    <div className="max-h-[70vh] overflow-auto rounded-[10px] border border-border">
       <Table>
-        <TableHeader>
+        <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
           <TableRow>
             <TableHead>Include</TableHead>
             <TableHead>#</TableHead>

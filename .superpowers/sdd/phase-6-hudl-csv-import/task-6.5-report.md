@@ -31,3 +31,7 @@ Implemented the Hudl CSV preview table and row inclusion controls.
 ## Limits
 
 The real 135-row Hudl fixture is unavailable per the phase ruling, so exact row counts and the named sample row numbers could not be verified. UI interaction was not run by this executor; the controller owns live UI verification. Duplicate chips are intentionally deferred to Step 6.6, and the import mutation/action is intentionally deferred to Step 6.7.
+
+## Review Fix
+
+Controller UI verification found that the horizontal scrollbar sat below all 135 rows and the offscreen Flags column was impractical to inspect. The table now scrolls on both axes within a viewport capped at 70% of the screen height, with sticky header cells. `npm run typecheck`, `npx convex dev --once`, and `git diff --check` passed after the fix.
