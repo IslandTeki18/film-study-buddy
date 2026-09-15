@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
-import { useQuery } from 'convex/react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { Page } from '@/components/ui/panel'
+import { useToast } from '@/components/ui/toast'
 import {
   autoMap,
   coerceRow,
@@ -28,7 +29,10 @@ export function HudlImport(): ReactNode {
 }
 
 function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string; readonly gameId: string }): ReactNode {
+  const navigate = useNavigate()
+  const { show } = useToast()
   const game = useQuery(api.sourceGames.get, { sourceGameId: gameId })
+  const commit = useMutation(api.hudlImport.commit)
   const [searchParams, setSearchParams] = useSearchParams()
   const [reloadMessage, setReloadMessage] = useState(() => searchParams.get('step') === 'preview'
     ? 'Pick the file again to continue.' : undefined)
@@ -37,6 +41,9 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   const [mapping, setMapping] = useState<ColumnMapping | null>(null)
   const [included, setIncluded] = useState<Set<number>>(new Set())
   const [usingRemembered, setUsingRemembered] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const committing = useRef(false)
   const initializedCsv = useRef<ParsedCsv | null>(null)
   const signature = csv ? headerSignature(csv.headers) : null
   const remembered = useQuery(api.hudlImport.getRememberedMapping, signature ? { signature } : 'skip')
@@ -51,6 +58,26 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   const mappedTargets = useMemo(() => new Set(Object.values(mapping ?? {}).filter(
     (target): target is ImportTarget => target !== null,
   )), [mapping])
+
+  async function importRows(): Promise<void> {
+    if (!game || !signature || !mapping || committing.current) return
+    committing.current = true
+    setPending(true)
+    setError(null)
+    try {
+      const result = await commit({
+        sourceGameId: game._id, signature, mapping,
+        rows: rows.filter(({ index }) => included.has(index)).map(({ core, imported }) => ({ core, imported })),
+      })
+      show({ message: `Imported ${result.inserted} Snaps` })
+      void navigate(`/w/${workspaceId}/games/${gameId}`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      committing.current = false
+      setPending(false)
+    }
+  }
 
   useEffect(() => {
     setIncluded(new Set(rows.filter(({ flag }) => flag === null).map(({ index }) => index)))
@@ -97,6 +124,7 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
       ? <div role="status" aria-label="Checking for duplicate Snaps" className="h-32 animate-pulse rounded bg-muted" />
       : step === 'preview' && csv && mapping && <PreviewStep rows={rows} duplicates={duplicates} mappedTargets={mappedTargets}
       included={included} usingRemembered={usingRemembered} onIncludedChange={setIncluded}
+      pending={pending} error={error} onImport={() => { void importRows() }}
       onBack={() => {
         setStep(usingRemembered ? 'upload' : 'mapping')
         setSearchParams({}, { replace: true })

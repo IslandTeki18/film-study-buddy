@@ -16,15 +16,18 @@ const DUPLICATE_LABELS: Readonly<Record<DuplicateReason, string>> = {
   quarterClock: 'Likely duplicate (Quarter + Clock)',
 }
 
-export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRemembered, onIncludedChange, onBack, onChangeMapping }: {
+export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRemembered, pending, error, onIncludedChange, onBack, onChangeMapping, onImport }: {
   readonly rows: readonly CoercedRow[]
   readonly duplicates: ReadonlyMap<number, DuplicateReason>
   readonly mappedTargets: ReadonlySet<ImportTarget>
   readonly included: ReadonlySet<number>
   readonly usingRemembered: boolean
+  readonly pending: boolean
+  readonly error: string | null
   readonly onIncludedChange: (included: Set<number>) => void
   readonly onBack: () => void
   readonly onChangeMapping: () => void
+  readonly onImport: () => void
 }): ReactNode {
   function setIncluded(index: number, include: boolean): void {
     const next = new Set(included)
@@ -42,15 +45,15 @@ export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRe
           {duplicates.size} rows look like Snaps already in this Source Game.
         </p>}
         {usingRemembered && <p className="mt-1 text-sm text-muted-foreground">
-          Using remembered mapping · <button type="button" className="underline" onClick={onChangeMapping}>Change mapping</button>
+          Using remembered mapping · <button type="button" className="underline" disabled={pending} onClick={onChangeMapping}>Change mapping</button>
         </p>}
       </div>
       <div className="flex gap-2">
-        <Button type="button" variant="outline" onClick={() => onIncludedChange(new Set(rows.map(({ index }) => index)))}>Include all</Button>
-        <Button type="button" variant="outline" onClick={() => onIncludedChange(new Set(
+        <Button type="button" variant="outline" disabled={pending} onClick={() => onIncludedChange(new Set(rows.map(({ index }) => index)))}>Include all</Button>
+        <Button type="button" variant="outline" disabled={pending} onClick={() => onIncludedChange(new Set(
           [...included].filter((index) => rows[index]?.flag === null),
         ))}>Exclude flagged</Button>
-        <Button type="button" variant="outline" onClick={() => onIncludedChange(new Set(
+        <Button type="button" variant="outline" disabled={pending} onClick={() => onIncludedChange(new Set(
           [...included].filter((index) => !duplicates.has(index)),
         ))}>Exclude duplicates</Button>
       </div>
@@ -68,7 +71,7 @@ export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRe
         <TableBody>
           {rows.map((row) => <TableRow key={row.index}>
             <TableCell><Checkbox aria-label={`Include row ${row.index + 1}`} label="" checked={included.has(row.index)}
-              onChange={(event) => setIncluded(row.index, event.currentTarget.checked)} /></TableCell>
+              disabled={pending} onChange={(event) => setIncluded(row.index, event.currentTarget.checked)} /></TableCell>
             <TableCell className="font-medium">{row.imported.playNumber ?? row.imported.clipNumber ?? ''}</TableCell>
             {IMPORT_TARGETS.filter(({ key }) => mappedTargets.has(key)).map(({ key }) => <TableCell key={key}>{row.imported[key] ?? ''}</TableCell>)}
             <TableCell><div className="flex min-w-44 flex-wrap gap-1">
@@ -81,9 +84,10 @@ export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRe
         </TableBody>
       </Table>
     </div>
+    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <div className="flex items-center justify-between gap-4">
-      <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-      <Button type="button" disabled>Import {included.size} Snaps</Button>
+      <Button type="button" variant="outline" disabled={pending} onClick={onBack}>Back</Button>
+      <Button type="button" disabled={pending} onClick={onImport}>Import {included.size} Snaps</Button>
     </div>
   </Panel>
 }
