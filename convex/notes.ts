@@ -1,28 +1,19 @@
 import { softDeleteBatch } from './deletions'
 import { normalizeQuickNoteTags, QUICK_NOTE_TEXT_MAX_LENGTH } from './domain/quickNoteTags.ts'
 import { v } from 'convex/values'
-import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
+import { mutation, query, type MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import schema from './schema'
 import { requireLiveSnap } from './snaps'
-import { requireLiveSourceGame } from './sourceGames'
+import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
 import { requireValidColumnSelection } from './templates'
 
 const noteValidator = v.object({ ...schema.tables.cellNotes.validator.fields, _id: v.id('cellNotes'), _creationTime: v.number() })
 
-async function isLiveGame(ctx: QueryCtx, sourceGameId: Id<'sourceGames'>): Promise<boolean> {
-  const game = await ctx.db.get(sourceGameId)
-  if (!game || game.deletedAt !== undefined) return false
-  const workspace = await ctx.db.get(game.workspaceId)
-  if (!workspace || workspace.deletedAt !== undefined) return false
-  const season = await ctx.db.get(workspace.seasonId)
-  return !!season && season.deletedAt === undefined
-}
-
 export const listCellNotesBySourceGame = query({
   args: { sourceGameId: v.id('sourceGames') }, returns: v.array(noteValidator),
   handler: async (ctx, args) => {
-    if (!await isLiveGame(ctx, args.sourceGameId)) return []
+    if (!await isLiveSourceGame(ctx, args.sourceGameId)) return []
     return (await ctx.db.query('cellNotes').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', args.sourceGameId)).collect())
       .filter((note) => note.deletedAt === undefined)
   },
@@ -32,7 +23,7 @@ export const listCellNotes = query({
   args: { snapId: v.id('snaps') }, returns: v.array(noteValidator),
   handler: async (ctx, args) => {
     const snap = await ctx.db.get(args.snapId)
-    if (!snap || snap.deletedAt !== undefined || !await isLiveGame(ctx, snap.sourceGameId)) return []
+    if (!snap || snap.deletedAt !== undefined || !await isLiveSourceGame(ctx, snap.sourceGameId)) return []
     return (await ctx.db.query('cellNotes').withIndex('by_snap', (q) => q.eq('snapId', args.snapId)).collect())
       .filter((note) => note.deletedAt === undefined)
   },
@@ -74,7 +65,7 @@ async function requireLiveQuickNote(ctx: MutationCtx, id: Id<'quickNotes'>): Pro
 export const listQuickNotes = query({
   args: { sourceGameId: v.id('sourceGames') }, returns: v.array(quickNoteValidator),
   handler: async (ctx, args) => {
-    if (!await isLiveGame(ctx, args.sourceGameId)) return []
+    if (!await isLiveSourceGame(ctx, args.sourceGameId)) return []
     const notes = (await ctx.db.query('quickNotes').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', args.sourceGameId)).collect())
       .filter((note) => note.deletedAt === undefined)
     const live = await Promise.all(notes.map(async (note) => {

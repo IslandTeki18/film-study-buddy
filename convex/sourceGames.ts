@@ -6,6 +6,15 @@ import { normalizeName } from './domain/names.ts'
 import { collectSourceGameCascade, requireLiveWorkspace } from './workspaces'
 import { softDeleteBatch } from './deletions'
 
+export async function isLiveSourceGame(ctx: QueryCtx, id: Id<'sourceGames'>): Promise<boolean> {
+  const game = await ctx.db.get(id)
+  if (!game || game.deletedAt !== undefined) return false
+  const workspace = await ctx.db.get(game.workspaceId)
+  if (!workspace || workspace.deletedAt !== undefined) return false
+  const season = await ctx.db.get(workspace.seasonId)
+  return !!season && season.deletedAt === undefined
+}
+
 export async function requireLiveSourceGame(
   ctx: QueryCtx | MutationCtx, id: Id<'sourceGames'>,
 ): Promise<Doc<'sourceGames'>> {
