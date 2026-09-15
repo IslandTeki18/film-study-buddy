@@ -87,7 +87,7 @@ export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRe
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <div className="flex items-center justify-between gap-4">
       <Button type="button" variant="outline" disabled={pending} onClick={onBack}>Back</Button>
-      <Button type="button" disabled={pending} onClick={onImport}>Import {included.size} Snaps</Button>
+      <Button type="button" disabled={pending || included.size === 0} onClick={onImport}>Import {included.size} Snaps</Button>
     </div>
   </Panel>
 }

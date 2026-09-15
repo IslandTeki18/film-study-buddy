@@ -92,6 +92,7 @@ export const commit = mutation({
     const last = await ctx.db.query('snaps').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id))
       .order('desc').filter((q) => q.eq(q.field('deletedAt'), undefined)).first()
     const start = (last?.order ?? 0) + 1
+    // ponytail: one transaction; chunk if Convex write limits appear.
     for (const [index, row] of rows.entries()) await ctx.db.insert('snaps', {
       sourceGameId: game._id, order: start + index, ...row,
       analysis: {}, mustReview: false, createdAt: Date.now(),
