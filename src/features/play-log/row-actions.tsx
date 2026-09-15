@@ -1,4 +1,3 @@
-import { useSetMustReview } from './use-set-must-review'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { useMutation } from 'convex/react'
@@ -10,6 +9,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { QuickNoteDialog } from '@/features/notes/quick-note-dialog'
 import { useToast } from '@/components/ui/toast'
+import { useSetMustReview } from './use-set-must-review'
 
 export function RowActions({ snap, base, onDuplicated }: {
   readonly snap: Doc<'snaps'>; readonly base: string; readonly onDuplicated: (id: Id<'snaps'>) => void

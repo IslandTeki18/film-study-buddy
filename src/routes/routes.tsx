@@ -106,7 +106,10 @@ export const router = createHashRouter([
                   { path: 'import', element: <ImportPage /> },
                   { path: 'snap/:snapId', element: <PlayDetailPage /> },
                   { path: 'notes', element: <QuickNotesPage /> },
-                  { path: 'review', element: <MustReviewPage /> },
+                  { path: 'review', children: [
+                    { index: true, element: <MustReviewPage /> },
+                    { path: ':snapId', element: <MustReviewPage /> },
+                  ] },
                   {
                     path: 'diagrams',
                     children: [

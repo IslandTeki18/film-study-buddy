@@ -7,7 +7,8 @@ import { Eyebrow, Meta } from '@/components/ui/panel'
 import { cn } from '@/lib/utils'
 import { RowActions } from './row-actions'
 
-const LOG_GRID = 'grid grid-cols-[52px_30px_100px_minmax(76px,1fr)_52px_minmax(100px,1fr)_minmax(108px,1.25fr)_88px_32px] items-center gap-2 px-3'
+export const LOG_GRID = 'grid grid-cols-[52px_30px_100px_minmax(76px,1fr)_52px_minmax(100px,1fr)_minmax(108px,1.25fr)_88px_32px] items-center gap-2 px-3'
+export const LOG_HEADERS = ['#', '★', 'D&D', 'Zone', 'Pers', 'Form', 'Call', 'Result']
 const cell = 'truncate font-mono text-[11.5px] text-foreground/80'
 
 export function ChartedSnaps({ snaps, freshId, base, onDuplicated }: {
@@ -37,7 +38,7 @@ export function ChartedSnaps({ snaps, freshId, base, onDuplicated }: {
       </div> : <div role="table" aria-label="Charted snaps" className="min-w-[740px]">
         <div role="rowgroup">
           <div role="row" className={cn(LOG_GRID, 'bg-muted py-2 font-mono text-[9.5px] tracking-[0.06em] text-muted-foreground uppercase')}>
-            {['#', '★', 'D&D', 'Zone', 'Pers', 'Form', 'Call', 'Result'].map((label, index) =>
+            {LOG_HEADERS.map((label, index) =>
               <div role="columnheader" key={label} className={cn(index === 1 && 'text-center', index === 7 && 'text-right')}>{label}</div>)}
             <div role="columnheader"><span className="sr-only">Snap actions</span></div>
           </div>
@@ -49,14 +50,7 @@ export function ChartedSnaps({ snaps, freshId, base, onDuplicated }: {
             return <div role="row" key={snap._id} className={cn(LOG_GRID, 'border-t border-border py-2', snap._id === freshId && 'bg-primary/10')}>
               <Link to={`${base}/snap/${snap._id}`} aria-label={`Open Play Detail for Snap ${label}`}
                 className="contents focus-visible:[&>div]:outline-2 focus-visible:[&>div]:outline-ring">
-                <div role="cell" className={cn(cell, 'text-muted-foreground')}>{label}</div>
-                <div role="cell" className={cn(cell, 'text-center text-warm')}>{snap.mustReview ? '★' : ''}</div>
-                <div role="cell" className={cell}>{[core.down, core.distance].filter((value) => value !== undefined).join(' & ')}</div>
-                <div role="cell" className={cn(cell, 'text-muted-foreground')}>{isValidYardLine(core.yardLine) ? fieldZoneOf(core.yardLine) : ''}</div>
-                <div role="cell" className={cell}>{core.personnel ?? ''}</div>
-                <div role="cell" className={cell}>{core.formation ?? ''}</div>
-                <div role="cell" className={cn(cell, 'text-foreground')}>{core.playConcept ?? ''}</div>
-                <div role="cell" className={cn(cell, 'text-right text-muted-foreground')}>{core.yards === undefined ? '' : `${core.yards > 0 ? '+' : ''}${core.yards}`}</div>
+                <SnapRowCells snap={snap} />
               </Link>
               <div role="cell"><RowActions snap={snap} base={base} onDuplicated={onDuplicated} /></div>
             </div>
@@ -65,4 +59,19 @@ export function ChartedSnaps({ snaps, freshId, base, onDuplicated }: {
       </div>}
     </div>
   </div>
+}
+
+export function SnapRowCells({ snap }: { readonly snap: Doc<'snaps'> }): ReactNode {
+  const { core } = snap
+  const label = core.clipNumber ?? snap.order
+  return <>
+                <div role="cell" className={cn(cell, 'text-muted-foreground')}>{label}</div>
+                <div role="cell" className={cn(cell, 'text-center text-warm')}>{snap.mustReview ? '★' : ''}</div>
+                <div role="cell" className={cell}>{[core.down, core.distance].filter((value) => value !== undefined).join(' & ')}</div>
+                <div role="cell" className={cn(cell, 'text-muted-foreground')}>{isValidYardLine(core.yardLine) ? fieldZoneOf(core.yardLine) : ''}</div>
+                <div role="cell" className={cell}>{core.personnel ?? ''}</div>
+                <div role="cell" className={cell}>{core.formation ?? ''}</div>
+                <div role="cell" className={cn(cell, 'text-foreground')}>{core.playConcept ?? ''}</div>
+                <div role="cell" className={cn(cell, 'text-right text-muted-foreground')}>{core.yards === undefined ? '' : `${core.yards > 0 ? '+' : ''}${core.yards}`}</div>
+  </>
 }
