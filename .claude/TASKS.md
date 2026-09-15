@@ -238,18 +238,20 @@ Implementation and verification: [Phase 5 completion report](plans/phase-5-compl
 
 ## Phase 7 — Observations and Must Review
 
-- [ ] **7.1 Quick Notes backend and list.** Chronological per Source Game, default tags plus
+Completion and evidence: [phase-7-completion.md](plans/phase-7-completion.md).
+
+- [x] **7.1 Quick Notes backend and list.** Chronological per Source Game, default tags plus
       custom tags, tag filtering (SPEC §46, §47, §105).
-- [ ] **7.2 Quick Note popup.** Create from the Play Log row menu without leaving the grid.
-- [ ] **7.3 Must Review flag.** Toggle from the row menu, Play Detail, and the keyboard shortcut
+- [x] **7.2 Quick Note popup.** Create from the Play Log row menu without leaving the grid.
+- [x] **7.3 Must Review flag.** Toggle from the row menu, Play Detail, and the keyboard shortcut
       (SPEC §48).
-- [ ] **7.4 Review Queue.** The flagged list for a Source Game.
-- [ ] **7.5 Focused Review Mode.** Previous, Next, Skip, Resolve; resolving advances and removes
+- [x] **7.4 Review Queue.** The flagged list for a Source Game.
+- [x] **7.5 Focused Review Mode.** Previous, Next, Skip, Resolve; resolving advances and removes
       from the queue; Quick Notes never enter it (SPEC §49).
-      *Verify:* a five-snap queue worked to empty using only the keyboard.
-- [ ] **7.6 Completeness warnings.** `countIncomplete` over Required fields; an informational,
+      *Evidence:* five-Snap keyboard-only walkthrough reached empty; active-edit save/failure regression passed.
+- [x] **7.6 Completeness warnings.** `countIncomplete` over Required fields; an informational,
       non-blocking warning when closing out a study session (SPEC §29, §103).
-      *Verify:* the warning names the right count and never blocks.
+      *Evidence:* exact count three, Keep charting/Finish anyway, and zero-count direct navigation passed in Electron.
 
 ---
 
