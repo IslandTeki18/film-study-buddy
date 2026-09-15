@@ -1,9 +1,17 @@
-import { useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { Page, Panel } from '@/components/ui/panel'
-import { autoMap, type ColumnMapping } from '../../../convex/domain/csvMapping.ts'
+import {
+  autoMap,
+  headerSignature,
+  IMPORT_TARGETS,
+  missingRequiredTargets,
+  normalizeHeader,
+  type ColumnMapping,
+  type ImportTarget,
+} from '../../../convex/domain/csvMapping.ts'
 import { MappingStep } from './mapping-step'
 import type { ParsedCsv } from './parse-csv'
 import { UploadStep } from './upload-step'
@@ -17,25 +25,83 @@ export function HudlImport(): ReactNode {
 
 function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string; readonly gameId: string }): ReactNode {
   const game = useQuery(api.sourceGames.get, { sourceGameId: gameId })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [reloadMessage, setReloadMessage] = useState(() => searchParams.get('step') === 'preview'
+    ? 'Pick the file again to continue.' : undefined)
   const [step, setStep] = useState<Step>('upload')
   const [csv, setCsv] = useState<ParsedCsv | null>(null)
   const [mapping, setMapping] = useState<ColumnMapping | null>(null)
+  const [usingRemembered, setUsingRemembered] = useState(false)
+  const initializedCsv = useRef<ParsedCsv | null>(null)
+  const signature = csv ? headerSignature(csv.headers) : null
+  const remembered = useQuery(api.hudlImport.getRememberedMapping, signature ? { signature } : 'skip')
+
+  useEffect(() => {
+    if (searchParams.get('step') === 'preview' && !csv) setSearchParams({}, { replace: true })
+  }, [csv, searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (!csv || remembered === undefined || initializedCsv.current === csv) return
+    initializedCsv.current = csv
+    const reconciled = remembered && reconcileRememberedMapping(csv.headers, remembered)
+    if (reconciled) {
+      setMapping(reconciled)
+      setUsingRemembered(true)
+      setStep('preview')
+      setSearchParams({ step: 'preview' }, { replace: true })
+    } else {
+      setMapping(autoMap(csv.headers))
+      setUsingRemembered(false)
+      setStep('mapping')
+      setSearchParams({}, { replace: true })
+    }
+  }, [csv, remembered, setSearchParams])
+
   if (game === undefined) return <div role="status" aria-label="Loading Hudl CSV Import" className="m-6 h-32 animate-pulse rounded bg-muted" />
   if (!game || game.workspaceId !== workspaceId) return <main className="space-y-3 p-6">
     <h1>Source Game not found</h1><Link className="underline" to={`/w/${workspaceId}/games`}>Source Games</Link>
   </main>
 
   return <Page>
-    {step === 'upload' && <UploadStep sourceGameLabel={game.label} onParsed={(parsed) => {
+    {step === 'upload' && <UploadStep sourceGameLabel={game.label} reloadMessage={reloadMessage} onParsed={(parsed) => {
       setCsv(parsed)
-      setMapping(autoMap(parsed.headers))
+      setMapping(null)
+      setReloadMessage(undefined)
       setStep('mapping')
     }} />}
+    {csv && remembered === undefined && <div role="status" aria-label="Loading saved column mapping" className="h-32 animate-pulse rounded bg-muted" />}
     {step === 'mapping' && csv && mapping && <MappingStep csv={csv} mapping={mapping}
-      onMappingChange={setMapping} onBack={() => setStep('upload')} onContinue={() => setStep('preview')} />}
+      onMappingChange={setMapping} onBack={() => { setStep('upload'); setSearchParams({}, { replace: true }) }}
+      onContinue={() => { setUsingRemembered(false); setStep('preview'); setSearchParams({ step: 'preview' }) }} />}
     {step === 'preview' && <Panel className="grid gap-2 p-6">
       <h1 className="text-2xl font-semibold">Preview import</h1>
       <p className="text-sm text-muted-foreground">Review the mapped rows before importing.</p>
+      {usingRemembered && <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <span>Using remembered mapping</span>
+        <button type="button" className="underline" onClick={() => {
+          setUsingRemembered(false)
+          setStep('mapping')
+          setSearchParams({}, { replace: true })
+        }}>Change mapping</button>
+      </div>}
     </Panel>}
   </Page>
+}
+
+function reconcileRememberedMapping(
+  headers: readonly string[], stored: Readonly<Record<string, string | null>>,
+): ColumnMapping | null {
+  const currentByNormalized = new Map(headers.map((header) => [normalizeHeader(header), header]))
+  if (currentByNormalized.size !== headers.length || Object.keys(stored).length !== headers.length) return null
+  const validTargets = new Set<string>(IMPORT_TARGETS.map(({ key }) => key))
+  const claimed = new Set<string>()
+  const reconciled: Record<string, ImportTarget | null> = {}
+  for (const [storedHeader, target] of Object.entries(stored)) {
+    const currentHeader = currentByNormalized.get(normalizeHeader(storedHeader))
+    if (!currentHeader || (target !== null && (!validTargets.has(target) || claimed.has(target)))) return null
+    if (target !== null) claimed.add(target)
+    reconciled[currentHeader] = target as ImportTarget | null
+  }
+  return Object.keys(reconciled).length === headers.length && !missingRequiredTargets(reconciled).length
+    ? reconciled : null
 }

@@ -9,8 +9,9 @@ function errorMessage(error: CsvParseError): string {
   return `Row ${error.row} could not be read: ${error.message}`
 }
 
-export function UploadStep({ sourceGameLabel, onParsed }: {
+export function UploadStep({ sourceGameLabel, reloadMessage, onParsed }: {
   readonly sourceGameLabel: string
+  readonly reloadMessage?: string | undefined
   readonly onParsed: (csv: ParsedCsv) => void
 }): ReactNode {
   const [error, setError] = useState<CsvParseError | null>(null)
@@ -32,6 +33,7 @@ export function UploadStep({ sourceGameLabel, onParsed }: {
       <p className="mt-1 text-sm text-muted-foreground">Source Game: {sourceGameLabel}</p>
     </div>
     <label htmlFor="hudl-csv" className="text-sm font-medium">Choose a Hudl CSV export</label>
+    {reloadMessage && <p role="status" className="text-sm text-muted-foreground">{reloadMessage}</p>}
     <Input id="hudl-csv" type="file" accept=".csv,text/csv" disabled={reading}
       onChange={(event) => { void selectFile(event) }} className="h-auto py-2" />
     {reading && <p role="status" className="text-sm text-muted-foreground">Reading CSV…</p>}
