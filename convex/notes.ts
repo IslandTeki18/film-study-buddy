@@ -67,6 +67,7 @@ async function requireLiveQuickNote(ctx: MutationCtx, id: Id<'quickNotes'>): Pro
   const note = await ctx.db.get(id)
   if (!note || note.deletedAt !== undefined) throw new Error('Quick Note not found')
   await requireLiveSourceGame(ctx, note.sourceGameId)
+  if (note.snapId) await requireLiveSnap(ctx, note.snapId)
   return note
 }
 
@@ -74,9 +75,14 @@ export const listQuickNotes = query({
   args: { sourceGameId: v.id('sourceGames') }, returns: v.array(quickNoteValidator),
   handler: async (ctx, args) => {
     if (!await isLiveGame(ctx, args.sourceGameId)) return []
-    return (await ctx.db.query('quickNotes').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', args.sourceGameId)).collect())
+    const notes = (await ctx.db.query('quickNotes').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', args.sourceGameId)).collect())
       .filter((note) => note.deletedAt === undefined)
-      .sort((a, b) => a.createdAt - b.createdAt)
+    const live = await Promise.all(notes.map(async (note) => {
+      if (!note.snapId) return note
+      const snap = await ctx.db.get(note.snapId)
+      return snap && snap.deletedAt === undefined ? note : null
+    }))
+    return live.filter((note) => note !== null).sort((a, b) => a.createdAt - b.createdAt)
   },
 })
 
