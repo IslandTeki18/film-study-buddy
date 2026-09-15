@@ -9,6 +9,7 @@ const server = await createServer({ root, configFile: false, optimizeDeps: { noD
   resolve: { alias: { '@': `${root}/src`, '@convex': `${root}/convex` } }, esbuild: { jsx: 'automatic' } })
 try {
   const { SnapPalette } = await server.ssrLoadModule('/src/features/play-log/snap-palette.tsx')
+  const { FieldEditor } = await server.ssrLoadModule('/src/features/play-log/cell-editors.tsx')
   const { CORE_FIELDS } = await server.ssrLoadModule('/convex/domain/coreFields.ts')
   const noop = () => {}
   const render = (columns, draft = {}, saving = false) => renderToStaticMarkup(createElement(SnapPalette, {
@@ -33,5 +34,12 @@ try {
     assert.match(render([column], { 'field:test': value }, true), /disabled=""[^>]*>Save snap/)
   }
   assert.match(render([]), /0 of 0 fields/)
+  const formation = CORE_FIELDS.find((field) => field.key === 'formation')
+  const quarter = CORE_FIELDS.find((field) => field.key === 'quarter')
+  const fieldEditor = (column, value) => renderToStaticMarkup(createElement(FieldEditor, {
+    column: { kind: 'core', key: `core:${column.key}`, label: column.label, field: column }, value, terminology: [], onSave: async () => {},
+  }))
+  assert.match(fieldEditor(formation, '11'), /<option value="11" selected="">11<\/option>/)
+  assert.match(fieldEditor(quarter, 9), /type="number"[^>]*max="9"/)
   console.log('SnapPalette SSR checks passed (all core controls, false/zero/multi values, saving and empty states).')
 } finally { await server.close() }

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { useAutosave } from '@/lib/db/use-autosave'
@@ -6,6 +6,13 @@ import { useToast } from '@/components/ui/toast'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
+import type { TerminologyList } from '@convex/domain/terminology'
+import { normalizeCoreValue } from '@convex/domain/coreFields'
+import { normalizeAnalysisValue } from '@convex/domain/templateFields'
+import type { PlayLogColumn } from './columns'
+import { groupKind } from './palette-model'
+import { GroupInput } from './snap-palette'
 
 export function CellNoteEditor({ label, note, onSave, onEscape, onRemove }: {
   readonly label: string; readonly note: string; readonly onSave: (text: string) => Promise<void>
@@ -48,4 +55,89 @@ export function useSaveCellNote(sourceGameId: Id<'sourceGames'>): (args: { snapI
       throw error
     }
   }
+}
+
+/** Saves one field of one Snap through the existing mutations. */
+export function useUpdateSnapField(snap: Doc<'snaps'>): (column: PlayLogColumn, value: unknown) => Promise<void> {
+  const { show } = useToast()
+  const updateCore = useMutation(api.snaps.updateCore)
+  const updateAnalysis = useMutation(api.snaps.updateAnalysis)
+  return async (column, value) => {
+    try {
+      if (column.kind === 'core') {
+        const next = normalizeCoreValue(column.field.key, value)
+        await updateCore({ snapId: snap._id, key: column.field.key, value: next as never })
+      } else {
+        const next = normalizeAnalysisValue(column.field, value)
+        await updateAnalysis({ snapId: snap._id, fieldId: column.field._id, value: next as never })
+      }
+    } catch (error) {
+      show({ message: `Could not update ${column.label}. ${error instanceof Error ? error.message : String(error)}` })
+      throw error
+    }
+  }
+}
+
+function sameValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function DeferredInput({ column, value, disabled, onSave }: {
+  readonly column: PlayLogColumn; readonly value: unknown; readonly disabled: boolean
+  readonly onSave: (value: unknown) => Promise<void>
+}): ReactNode {
+  const wrapper = useRef<HTMLDivElement>(null)
+  const latest = useRef(value)
+  const saved = useRef(value)
+  const pending = useRef(false)
+  const [, rerender] = useState(0)
+  useEffect(() => { saved.current = value }, [value])
+  function commit(): void {
+    if (pending.current || sameValue(latest.current, saved.current)) return
+    pending.current = true; rerender((count) => count + 1)
+    void onSave(latest.current).then(() => { saved.current = latest.current }).catch(() => undefined)
+      .finally(() => { pending.current = false; rerender((count) => count + 1) })
+  }
+  return <div ref={wrapper} onBlur={(event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) commit()
+  }}>
+    <GroupInput column={column} value={value} disabled={disabled || pending.current}
+      onChange={(next) => { latest.current = next }} onNext={commit} />
+  </div>
+}
+
+/** One editable Snap field for Play Detail. */
+export function FieldEditor({ column, value, terminology, onSave }: {
+  readonly column: PlayLogColumn; readonly value: unknown
+  readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly onSave: (value: unknown) => Promise<void>
+}): ReactNode {
+  const [pending, setPending] = useState(false)
+  const kind = column.kind === 'core' && column.field.key === 'quarter' ? { kind: 'input' as const } : groupKind(column, terminology)
+  function commit(next: unknown): void {
+    if (pending) return
+    setPending(true)
+    void onSave(next).catch(() => undefined).finally(() => setPending(false))
+  }
+  if (kind.kind === 'tags') {
+    const multi = kind.multi
+    const current = Array.isArray(value) ? value.map(String) : value === undefined ? '' : typeof value === 'boolean' ? value ? 'Yes' : 'No' : String(value)
+    const singleCurrent = Array.isArray(current) ? '' : current
+    const tags = !multi && singleCurrent && !kind.tags.includes(singleCurrent) ? [singleCurrent, ...kind.tags] : kind.tags
+    return <Select aria-label={column.label} multiple={multi} disabled={pending} className="font-mono text-[12px]"
+      value={multi ? (Array.isArray(value) ? value.map(String) : []) : singleCurrent}
+      onChange={(event) => {
+        if (multi) { commit([...event.target.selectedOptions].map((option) => option.value)); return }
+        const picked = event.target.value
+        if (!picked) { commit(undefined); return }
+        if (column.kind === 'template' && column.field.type === 'checkbox') { commit(picked === 'Yes'); return }
+        if (column.kind === 'template' && column.field.type === 'rating') { commit(Number(picked)); return }
+        if (column.kind === 'core' && column.field.input.kind === 'number') { commit(Number(picked)); return }
+        commit(picked)
+      }}>
+      {!multi && <option value="">—</option>}
+      {tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+    </Select>
+  }
+  return <DeferredInput column={column} value={value} disabled={pending} onSave={onSave} />
 }

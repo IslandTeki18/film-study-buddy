@@ -12,8 +12,7 @@ import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { buildColumns } from './columns'
 import { Cell } from './cell'
-import { displayValue } from './row-model'
-import { CellNoteEditor, useSaveCellNote } from './cell-editors'
+import { CellNoteEditor, FieldEditor, useSaveCellNote, useUpdateSnapField } from './cell-editors'
 
 export function PlayDetail({ workspaceId, sourceGameId, snapId }: {
   readonly workspaceId: string; readonly sourceGameId: string; readonly snapId: string
@@ -22,22 +21,24 @@ export function PlayDetail({ workspaceId, sourceGameId, snapId }: {
   const snap = useQuery(api.snaps.get, { snapId })
   const tree = useQuery(api.templates.getFull, game ? { templateId: game.templateId } : 'skip')
   const notes = useQuery(api.notes.listCellNotes, snap ? { snapId: snap._id } : 'skip')
+  const terminology = useQuery(api.terminology.list, {})
   const base = `/w/${workspaceId}/games/${sourceGameId}`
-  if (game === undefined || snap === undefined || (game && tree === undefined) || (snap && notes === undefined)) {
+  if (game === undefined || snap === undefined || terminology === undefined || (game && tree === undefined) || (snap && notes === undefined)) {
     return <div role="status" aria-label="Loading Play Detail" className="m-6 h-32 animate-pulse rounded bg-muted" />
   }
   if (!game || !snap || game.workspaceId !== workspaceId || snap.sourceGameId !== game._id || !tree) {
     return <main className="space-y-3 p-6"><h1>Snap not found</h1><Link className="underline" to={base}>Back to Play Log</Link></main>
   }
-  return <DetailContent key={snap._id} snap={snap} tree={tree} notes={notes ?? []} base={base} />
+  return <DetailContent key={snap._id} snap={snap} tree={tree} notes={notes ?? []} terminology={terminology} base={base} />
 }
 
-function DetailContent({ snap, tree, notes, base }: {
+function DetailContent({ snap, tree, notes, terminology, base }: {
   readonly snap: Doc<'snaps'>; readonly tree: NonNullable<FunctionReturnType<typeof api.templates.getFull>>
-  readonly notes: readonly Doc<'cellNotes'>[]; readonly base: string
+  readonly notes: readonly Doc<'cellNotes'>[]; readonly terminology: readonly { list: 'formations' | 'motions' | 'playConcepts' | 'personnel'; value: string }[]; readonly base: string
 }): ReactNode {
   const columns = buildColumns(tree)
   const saveNote = useSaveCellNote(snap.sourceGameId)
+  const update = useUpdateSnapField(snap)
   const [adding, setAdding] = useState('')
   const [restoring, setRestoring] = useState<string | null>(null)
   const [marking, setMarking] = useState(false)
@@ -86,7 +87,8 @@ function DetailContent({ snap, tree, notes, base }: {
         {columns.filter((column) => column.kind === 'core').map((column) => {
           const edited = provenanceOf(snap.imported, column.field.key, snap.core[column.field.key]) === 'Coach Edited'
           return <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt>
-            <dd><Cell snap={snap} column={column} />{!displayValue(snap, column) && '—'}
+            <dd><Cell snap={snap} column={column} />
+              <FieldEditor column={column} value={snap.core[column.field.key]} terminology={terminology} onSave={(value) => update(column, value)} />
               {edited && <div className="space-y-1 text-sm">
                 <p>Original Hudl value: {snap.imported?.[column.field.key]}</p>
                 <Button variant="outline" size="sm" disabled={restoring !== null} aria-label={`Restore original ${column.label}`}
@@ -107,7 +109,7 @@ function DetailContent({ snap, tree, notes, base }: {
       {tree.sections.filter((section) => sectionAppliesTo(section.name, snap.core.playType)).map((section) => <div key={section._id} className="space-y-2">
         <h3 className="text-sm font-semibold">{section.name}</h3>
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{columns.filter((column) => column.kind === 'template' && column.field.sectionId === section._id)
-          .map((column) => <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt><dd>{displayValue(snap, column) || '—'}</dd></div>)}</dl>
+          .map((column) => <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt><dd><FieldEditor column={column} value={column.kind === 'template' ? snap.analysis[column.field._id] : undefined} terminology={terminology} onSave={(value) => update(column, value)} /></dd></div>)}</dl>
       </div>)}
     </section>
     <section className="space-y-3" aria-label="Cell Notes">
