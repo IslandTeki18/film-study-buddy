@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { Page, Panel } from '@/components/ui/panel'
+import { Page } from '@/components/ui/panel'
 import {
   autoMap,
+  coerceRow,
+  findOdkHeader,
   headerSignature,
   IMPORT_TARGETS,
   missingRequiredTargets,
@@ -14,6 +16,7 @@ import {
 } from '../../../convex/domain/csvMapping.ts'
 import { MappingStep } from './mapping-step'
 import type { ParsedCsv } from './parse-csv'
+import { PreviewStep } from './preview-step'
 import { UploadStep } from './upload-step'
 
 type Step = 'upload' | 'mapping' | 'preview'
@@ -31,10 +34,21 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   const [step, setStep] = useState<Step>('upload')
   const [csv, setCsv] = useState<ParsedCsv | null>(null)
   const [mapping, setMapping] = useState<ColumnMapping | null>(null)
+  const [included, setIncluded] = useState<Set<number>>(new Set())
   const [usingRemembered, setUsingRemembered] = useState(false)
   const initializedCsv = useRef<ParsedCsv | null>(null)
   const signature = csv ? headerSignature(csv.headers) : null
   const remembered = useQuery(api.hudlImport.getRememberedMapping, signature ? { signature } : 'skip')
+  const rows = useMemo(() => csv && mapping
+    ? csv.rows.map((row, index) => coerceRow(row, mapping, findOdkHeader(csv.headers), index))
+    : [], [csv, mapping])
+  const mappedTargets = useMemo(() => new Set(Object.values(mapping ?? {}).filter(
+    (target): target is ImportTarget => target !== null,
+  )), [mapping])
+
+  useEffect(() => {
+    setIncluded(new Set(rows.filter(({ flag }) => flag === null).map(({ index }) => index)))
+  }, [rows])
 
   useEffect(() => {
     if (searchParams.get('step') === 'preview' && !csv) setSearchParams({}, { replace: true })
@@ -73,18 +87,16 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
     {step === 'mapping' && csv && mapping && <MappingStep csv={csv} mapping={mapping}
       onMappingChange={setMapping} onBack={() => { setStep('upload'); setSearchParams({}, { replace: true }) }}
       onContinue={() => { setUsingRemembered(false); setStep('preview'); setSearchParams({ step: 'preview' }) }} />}
-    {step === 'preview' && <Panel className="grid gap-2 p-6">
-      <h1 className="text-2xl font-semibold">Preview import</h1>
-      <p className="text-sm text-muted-foreground">Review the mapped rows before importing.</p>
-      {usingRemembered && <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <span>Using remembered mapping</span>
-        <button type="button" className="underline" onClick={() => {
+    {step === 'preview' && csv && mapping && <PreviewStep rows={rows} mappedTargets={mappedTargets}
+      included={included} usingRemembered={usingRemembered} onIncludedChange={setIncluded}
+      onBack={() => {
+        setStep(usingRemembered ? 'upload' : 'mapping')
+        setSearchParams({}, { replace: true })
+      }} onChangeMapping={() => {
           setUsingRemembered(false)
           setStep('mapping')
           setSearchParams({}, { replace: true })
-        }}>Change mapping</button>
-      </div>}
-    </Panel>}
+        }} />}
   </Page>
 }
 
