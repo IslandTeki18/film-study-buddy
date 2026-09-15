@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { useAutosave } from '@/lib/db/use-autosave'
@@ -82,6 +82,8 @@ function sameValue(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
+export const PendingFieldEdits = createContext<Set<() => Promise<void>> | null>(null)
+
 function DeferredInput({ column, value, disabled, onSave }: {
   readonly column: PlayLogColumn; readonly value: unknown; readonly disabled: boolean
   readonly onSave: (value: unknown) => Promise<void>
@@ -89,7 +91,8 @@ function DeferredInput({ column, value, disabled, onSave }: {
   const [draft, setDraft] = useState(value)
   const latest = useRef(draft)
   const saved = useRef(value)
-  const pending = useRef(false)
+  const pending = useRef<Promise<void> | null>(null)
+  const edits = useContext(PendingFieldEdits)
   const [, rerender] = useState(0)
   useEffect(() => {
     if (!sameValue(value, saved.current)) {
@@ -98,17 +101,25 @@ function DeferredInput({ column, value, disabled, onSave }: {
       setDraft(value)
     }
   }, [value])
-  function commit(): void {
-    if (pending.current || sameValue(latest.current, saved.current)) return
-    pending.current = true; rerender((count) => count + 1)
-    void onSave(latest.current).then(() => { saved.current = latest.current }).catch(() => undefined)
-      .finally(() => { pending.current = false; rerender((count) => count + 1) })
+  function commit(): Promise<void> {
+    if (pending.current) return pending.current
+    if (sameValue(latest.current, saved.current)) return Promise.resolve()
+    const next = latest.current
+    pending.current = onSave(next).then(() => { saved.current = next })
+      .finally(() => { pending.current = null; rerender((count) => count + 1) })
+    rerender((count) => count + 1)
+    return pending.current
   }
+  useEffect(() => {
+    edits?.add(commit)
+    return () => { edits?.delete(commit) }
+  })
+  function save(): void { void commit().catch(() => undefined) }
   return <div onBlur={(event) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) commit()
+    if (!event.currentTarget.contains(event.relatedTarget)) save()
   }}>
-    <GroupInput column={column} value={draft} disabled={disabled || pending.current}
-      onChange={(next) => { latest.current = next; setDraft(next) }} onNext={commit} />
+    <GroupInput column={column} value={draft} disabled={disabled || pending.current !== null}
+      onChange={(next) => { latest.current = next; setDraft(next) }} onNext={save} />
   </div>
 }
 

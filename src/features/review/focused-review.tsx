@@ -6,6 +6,7 @@ import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
 import { Meta } from '@/components/ui/panel'
 import { useToast } from '@/components/ui/toast'
+import { PendingFieldEdits } from '@/features/play-log/cell-editors'
 import { PlayDetail } from '@/features/play-log/play-detail'
 import { useSetMustReview } from '@/features/play-log/use-set-must-review'
 import { inDialog, isShortcut, SHORTCUTS } from '@/lib/shortcuts'
@@ -29,6 +30,7 @@ function ReviewContent({ workspaceId, sourceGameId, snapId }: {
   // ponytail: skip order lasts for this visit; persist it if coaches need cross-session skips.
   const [deferred, setDeferred] = useState<Id<'snaps'>[]>([])
   const [resolving, setResolving] = useState<Doc<'snaps'>[] | null>(null)
+  const edits = useRef(new Set<() => Promise<void>>())
   const pending = useRef(false)
   const active = useRef(true)
   const currentId = useRef(snapId)
@@ -39,26 +41,30 @@ function ReviewContent({ workspaceId, sourceGameId, snapId }: {
   const current = walk[index]
   const base = `/w/${workspaceId}/games/${sourceGameId}`
   function goTo(target: Doc<'snaps'> | undefined): void {
-    if (!pending.current && target) navigate(`${base}/review/${target._id}`, { replace: true })
+    if (target) void advance(target)
   }
   function skip(): void {
-    if (!current || pending.current || walk.length < 2) return
+    if (!current || walk.length < 2) return
     const target = walk[index + 1] ?? walk.find((snap) => snap._id !== current._id)
-    setDeferred([...deferred.filter((id) => id !== current._id), current._id])
-    goTo(target)
+    void advance(target, false, true)
   }
-  async function resolve(): Promise<void> {
+  function resolve(): Promise<void> {
+    return advance(walk[index + 1] ?? walk[index - 1], true)
+  }
+  async function advance(target: Doc<'snaps'> | undefined, resolve = false, defer = false): Promise<void> {
     if (!current || pending.current) return
-    const target = walk[index + 1] ?? walk[index - 1]
     pending.current = true
     setResolving(walk)
     try {
-      await mark({ snapId: current._id, mustReview: false })
+      await Promise.all([...edits.current].map((commit) => commit()))
+      if (!active.current || currentId.current !== current._id) return
+      if (resolve) await mark({ snapId: current._id, mustReview: false })
       if (active.current && currentId.current === current._id) {
+        if (defer) setDeferred([...deferred.filter((id) => id !== current._id), current._id])
         navigate(target ? `${base}/review/${target._id}` : `${base}/review`, { replace: true })
       }
     } catch (error) {
-      show({ message: `Could not resolve Must Review. ${error instanceof Error ? error.message : String(error)}` })
+      show({ message: `Could not advance review. ${error instanceof Error ? error.message : String(error)}` })
     } finally { pending.current = false; setResolving(null) }
   }
   useEffect(() => {
@@ -89,9 +95,15 @@ function ReviewContent({ workspaceId, sourceGameId, snapId }: {
       <Button variant="outline" title={SHORTCUTS.reviewNext.label} disabled={!!resolving || index === walk.length - 1} onClick={() => goTo(walk[index + 1])}>Next</Button>
       <Button variant="outline" disabled={!!resolving || walk.length < 2} onClick={skip}>Skip</Button>
       <Button autoFocus title={SHORTCUTS.toggleMustReview.label} disabled={!!resolving} onClick={() => { void resolve() }}>Resolve</Button>
-      <Link className="underline" to={`${base}/review`}>Back to Review Queue</Link>
+      <Link className="underline" to={`${base}/review`} onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        event.preventDefault()
+        void advance(undefined)
+      }}>Back to Review Queue</Link>
     </header>
-    <PlayDetail embedded workspaceId={workspaceId} sourceGameId={sourceGameId} snapId={snapId} />
+    <PendingFieldEdits value={edits.current}>
+      <PlayDetail embedded workspaceId={workspaceId} sourceGameId={sourceGameId} snapId={snapId} />
+    </PendingFieldEdits>
   </main>
 }
 
