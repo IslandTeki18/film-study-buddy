@@ -26,6 +26,7 @@
   --brand: oklch(0.55 0.17 255);
   --warm: oklch(0.6 0.15 75);
   --positive: oklch(0.55 0.15 145);
+  --defense: oklch(0.6 0.15 40);
 }
 
 .dark {
@@ -44,6 +45,7 @@
   --brand: oklch(0.75 0.13 255);
   --warm: oklch(0.72 0.15 75);
   --positive: oklch(0.72 0.15 145);
+  --defense: oklch(0.72 0.14 40);
 }
 
 @theme inline {
@@ -64,6 +66,7 @@
   --color-brand: var(--brand);
   --color-warm: var(--warm);
   --color-positive: var(--positive);
+  --color-defense: var(--defense);
 }
 
 @layer base {

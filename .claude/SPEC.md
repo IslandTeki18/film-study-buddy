@@ -1062,57 +1062,32 @@ Shortcuts should cover common high-speed actions such as:
 
 ## 51. Play Designer
 
-The Play Designer should remain deliberately simple.
+Revised 2026-09-15 to match the "Play Designer" design (claude.ai/design, concept 3a "Call sheet +
+drawing"). The designer is a call sheet with drawing on top: pick a formation, pick each man's job
+from a visible menu, then drag men and route points to what was seen on film.
 
-Every diagram starts from scratch.
-
-Do not provide:
-
-- Formation presets
-- Saved play templates
-- Reusable player arrangements
+- Start from: four built-in offensive formations (Gun Trips, Gun Spread, Gun Empty, Pistol Ace),
+  each loaded with a base 4-3 defense.
+- The coach can save the current offensive alignment as a named formation and forget it later.
+- Snap-to-grid (1 yd = 10 px) toggle; the field strip shows 5-yard lines, hashes, and the line of scrimmage.
+- Offense / Defense side toggle; the other side fades or can be hidden.
 
 ## 52. Player Objects
 
-The coach can place basic player objects on a football canvas.
+Each man carries: side, canvas position, position group (QB, WR, OL, DE, LB…), optional label
+shown under the marker (e.g. `#7 Ortiz`), and an assignment (job). Offensive linemen render as
+boxes, everyone else as circles. Men can be added per position group and removed.
 
-Each player supports:
+## 53. Assignments and Drawing
 
-- Offense / Defense
-- Canvas position
-- Optional position label
-- Optional jersey number
+Routes belong to men. Stamping a job draws its route relative to the man; clicking the field
+appends a point to the selected man's route; points drag and double-click to delete. Segment
+lengths read in yards. Blocking jobs end in a bar, everything else in an arrowhead.
 
-**Examples**
+Defense adds Zone (a draggable, resizable ellipse) and Man (click the offensive man to cover).
 
-```text
-LT
-LG
-C
-RG
-RT
-TE #84
-RB #2
-3T
-5T
-MIKE
-S #7
-```
-
-## 53. Drawing Tools
-
-V1 provides a fixed drawing toolbar.
-
-Tools:
-
-- Straight Arrow
-- Curved Arrow
-- Blocking Line / Bar
-- Dashed Line
-- Freehand Line
-- Erase / Delete
-
-Do not build configurable drawing types.
+The legacy free-drawn shapes (arrow, curve, block, dashed, freehand) still render in existing
+diagrams but are no longer authored.
 
 ---
 

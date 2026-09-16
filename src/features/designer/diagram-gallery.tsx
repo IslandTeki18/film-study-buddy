@@ -105,7 +105,7 @@ function DiagramCard({ diagram, base, snapLabels, availableSnaps }: {
   }
   return <li><Panel className="grid gap-3 p-4">
     <Link to={`${base}/diagrams/${diagram._id}`} aria-label={editLabel} className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <DiagramSvg diagram={diagram} title={editLabel} className="rounded-xl border border-border" />
+      <DiagramSvg diagram={diagram} title={editLabel} className="rounded-xl border border-border" {...(diagram.hiddenSide ? { hideSide: diagram.hiddenSide } : {})} />
     </Link>
     <div>
       {diagram.snapId

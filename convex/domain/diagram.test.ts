@@ -20,3 +20,20 @@ test('diagram normalization clamps valid geometry and rejects a malformed shape 
     note: 'Counter read',
   })
 })
+
+test('assignments: routes clamp, empty routes drop, zones keep a minimum size, dangling man coverage is dropped', () => {
+  const normalized = normalizeDiagram({
+    players: [
+      { id: 'X', side: 'offense', kind: 'WR', x: 0.1, y: 0.6, job: 'Post', route: [0.1, 0.4, 1.5, -0.2] },
+      { id: 'dC', side: 'defense', kind: 'CB', x: 0.1, y: 0.4, job: 'Man', coversId: 'X', route: [] },
+      { id: 'dS', side: 'defense', kind: 'SS', x: 0.5, y: 0.3, job: 'Zone', zone: { x: 0.5, y: 0.2, rx: 0, ry: 2 }, coversId: 'gone' },
+    ],
+    shapes: [],
+  })
+  assert.deepEqual(normalized.players, [
+    { id: 'X', side: 'offense', kind: 'WR', x: 0.1, y: 0.6, job: 'Post', route: [0.1, 0.4, 1, 0] },
+    { id: 'dC', side: 'defense', kind: 'CB', x: 0.1, y: 0.4, job: 'Man', coversId: 'X' },
+    { id: 'dS', side: 'defense', kind: 'SS', x: 0.5, y: 0.3, job: 'Zone', zone: { x: 0.5, y: 0.2, rx: 0.01, ry: 1 } },
+  ])
+  assert.throws(() => normalizeDiagram({ players: [{ id: 'X', side: 'offense', x: 0, y: 0, route: [0.1] }], shapes: [] }), /even number/)
+})

@@ -160,7 +160,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
       <h2 className="font-semibold">Play Diagram</h2>
       {diagram === undefined ? <p>Loading…</p> : diagram ? <div className="max-w-md space-y-2">
         <Link className="block" to={`${base}/diagrams/${diagram._id}`} aria-label="Edit Play Diagram">
-          <DiagramSvg diagram={diagram} title="Play Diagram" className="rounded-xl border border-border" />
+          <DiagramSvg diagram={diagram} title="Play Diagram" className="rounded-xl border border-border" {...(diagram.hiddenSide ? { hideSide: diagram.hiddenSide } : {})} />
         </Link>
         <Link className="underline" to={`${base}/diagrams/${diagram._id}`}>Edit Play Diagram</Link>
         {diagram.note && <p className="whitespace-pre-wrap">{diagram.note}</p>}

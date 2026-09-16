@@ -21,8 +21,13 @@ const playerValidator = v.object({
   side: v.union(v.literal('offense'), v.literal('defense')),
   x: v.number(),
   y: v.number(),
+  kind: v.optional(v.string()),
   label: v.optional(v.string()),
   jersey: v.optional(v.string()),
+  job: v.optional(v.string()),
+  route: v.optional(v.array(v.number())),
+  zone: v.optional(v.object({ x: v.number(), y: v.number(), rx: v.number(), ry: v.number() })),
+  coversId: v.optional(v.string()),
 })
 const shapeValidator = v.object({
   id: v.string(),
@@ -192,6 +197,8 @@ export default defineSchema({
     snapId: v.optional(v.id('snaps')),
     name: v.optional(v.string()),
     note: v.optional(v.string()),
+    // Side the coach hid in the designer; the gallery and Play Detail hide it too.
+    hiddenSide: v.optional(v.union(v.literal('offense'), v.literal('defense'))),
     // Coordinates are normalized to 0–1.
     players: v.array(playerValidator),
     shapes: v.array(shapeValidator),
@@ -200,6 +207,12 @@ export default defineSchema({
   })
     .index('by_sourceGame', ['sourceGameId'])
     .index('by_snap', ['snapId']),
+  // Coach-saved offensive alignments for the Play Designer "Start from" strip. Offense players only.
+  formations: defineTable({
+    name: v.string(),
+    players: v.array(playerValidator),
+    createdAt: v.number(),
+  }).index('by_name', ['name']),
 
   tendencyCategories: defineTable({
     name: v.string(),

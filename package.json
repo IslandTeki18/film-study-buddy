@@ -10,7 +10,7 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "convex:dev": "convex dev",
-    "test": "node --experimental-strip-types --test convex/domain/*.test.ts src/lib/shortcuts.test.ts src/features/theme-settings/theme.test.ts src/features/play-log/palette-model.test.ts"
+    "test": "node --experimental-strip-types --test convex/domain/*.test.ts src/lib/shortcuts.test.ts src/features/theme-settings/theme.test.ts src/features/play-log/palette-model.test.ts src/features/designer/geometry.test.ts"
   },
   "dependencies": {
     "@fontsource/archivo": "^5.3.0",
