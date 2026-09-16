@@ -2,7 +2,9 @@ import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { DEFAULT_GROUP_BY, formatAvgYards, formatFrequency } from '@convex/domain/aggregate'
+import { DEFAULT_GROUP_BY, formatAvgYards, formatFrequency, type AggregateRow } from '@convex/domain/aggregate'
+import { CreateTendencyDialog } from './create-tendency-dialog'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Meta, Page } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
@@ -17,6 +19,7 @@ export function OpponentData({ workspaceId }: { readonly workspaceId: string }):
   const fields = useQuery(api.opponentData.listGroupingFields, { workspaceId })
   const [groupBy, setGroupBy] = useState<string>(DEFAULT_GROUP_BY)
   const [groupBy2, setGroupBy2] = useState('')
+  const [creating, setCreating] = useState<{ row: AggregateRow; groupBy: string; groupBy2: string; groupLabels: string[] } | null>(null)
   const resolved = fields?.some((field) => field.key === groupBy) && (!groupBy2 || fields.some((field) => field.key === groupBy2) && groupBy2 !== groupBy)
   const result = useQuery(api.opponentData.aggregate, resolved ? { workspaceId, groupBy, ...(groupBy2 ? { groupBy2 } : {}) } : 'skip')
   const setIncluded = useMutation(api.sourceGames.setIncluded).withOptimisticUpdate((store, args) => {
@@ -45,11 +48,12 @@ export function OpponentData({ workspaceId }: { readonly workspaceId: string }):
     {!resolved || result === null ? <p>Choose a Group By.</p> : result === undefined ? <div role="status" aria-label="Loading results" className="h-32 animate-pulse rounded bg-muted" /> : result.totalSnaps === 0 ? <p>No Snaps in the included Source Games. Include a game above or chart Snaps in the Play Log.</p> : <>
       <div className="overflow-x-auto rounded-xl border border-border"><Table>
         <caption className="sr-only">Snaps grouped by {result.groupLabels.join(' and ')}</caption>
-        <TableHeader><TableRow>{result.groupLabels.map((label, index) => <TableHead key={index} scope="col">{label}</TableHead>)}{['Snaps', 'Frequency', 'Avg. Yards'].map((label) => <TableHead key={label} scope="col" className="text-right">{label}</TableHead>)}</TableRow></TableHeader>
-        <TableBody>{result.rows.map((row) => <TableRow key={JSON.stringify(row.values)}>{row.values.map((value, index) => <TableCell key={index}>{value}</TableCell>)}<TableCell className="text-right font-mono">{row.snaps}</TableCell><TableCell className="text-right font-mono">{formatFrequency(row.frequency)}</TableCell><TableCell className="text-right font-mono">{formatAvgYards(row.avgYards)}</TableCell></TableRow>)}</TableBody>
+        <TableHeader><TableRow>{result.groupLabels.map((label, index) => <TableHead key={index} scope="col">{label}</TableHead>)}{['Snaps', 'Frequency', 'Avg. Yards'].map((label) => <TableHead key={label} scope="col" className="text-right">{label}</TableHead>)}<TableHead scope="col"><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+        <TableBody>{result.rows.map((row) => <TableRow key={JSON.stringify(row.values)}>{row.values.map((value, index) => <TableCell key={index}>{value}</TableCell>)}<TableCell className="text-right font-mono">{row.snaps}</TableCell><TableCell className="text-right font-mono">{formatFrequency(row.frequency)}</TableCell><TableCell className="text-right font-mono">{formatAvgYards(row.avgYards)}</TableCell><TableCell><Button variant="outline" size="sm" aria-label={`Create Tendency / Alert from ${row.values.join(', ')}`} onClick={() => setCreating({ row, groupBy, groupBy2, groupLabels: result.groupLabels })}>Create Tendency / Alert</Button></TableCell></TableRow>)}</TableBody>
       </Table></div>
       <Meta>{result.totalSnaps} Snaps in scope</Meta>
       {result.overlapping && <p className="text-sm text-muted-foreground">Multi-value fields count a Snap under each value, so frequencies can total more than 100%.</p>}
     </>}
+    {creating && <CreateTendencyDialog open onOpenChange={(open) => { if (!open) setCreating(null) }} workspaceId={workspace._id} groupBy={creating.groupBy} {...(creating.groupBy2 ? { groupBy2: creating.groupBy2 } : {})} groupLabels={creating.groupLabels} row={creating.row} />}
   </Page>
 }

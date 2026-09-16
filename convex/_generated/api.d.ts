@@ -25,6 +25,7 @@ import type * as domain_quickNoteTags from "../domain/quickNoteTags.js";
 import type * as domain_situation from "../domain/situation.js";
 import type * as domain_starterTemplates from "../domain/starterTemplates.js";
 import type * as domain_templateFields from "../domain/templateFields.js";
+import type * as domain_tendencyCategories from "../domain/tendencyCategories.js";
 import type * as domain_terminology from "../domain/terminology.js";
 import type * as formations from "../formations.js";
 import type * as hudlImport from "../hudlImport.js";
@@ -35,6 +36,7 @@ import type * as settings from "../settings.js";
 import type * as snaps from "../snaps.js";
 import type * as sourceGames from "../sourceGames.js";
 import type * as templates from "../templates.js";
+import type * as tendencies from "../tendencies.js";
 import type * as terminology from "../terminology.js";
 import type * as workspaces from "../workspaces.js";
 
@@ -62,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "domain/situation": typeof domain_situation;
   "domain/starterTemplates": typeof domain_starterTemplates;
   "domain/templateFields": typeof domain_templateFields;
+  "domain/tendencyCategories": typeof domain_tendencyCategories;
   "domain/terminology": typeof domain_terminology;
   formations: typeof formations;
   hudlImport: typeof hudlImport;
@@ -72,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   snaps: typeof snaps;
   sourceGames: typeof sourceGames;
   templates: typeof templates;
+  tendencies: typeof tendencies;
   terminology: typeof terminology;
   workspaces: typeof workspaces;
 }>;
