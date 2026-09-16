@@ -288,7 +288,7 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
       selected games (SPEC §57).
 - [~] **9.3 Opponent Data screen.** Game selection defaulting to all, Group By, optional second
       Group By, results table; statistics recalculate on selection change (SPEC §58, §106).
-- [ ] **9.4 Derived situational grouping.** Down and Distance Situation and Field Zone available
+- [~] **9.4 Derived situational grouping.** Down and Distance Situation and Field Zone available
       as grouping fields with no manual classification (SPEC §60, §22).
 - [ ] **9.5 Tendency creation.** Create Tendency / Alert from a selected result row, freezing the
       snapshot. No freehand creation path exists (SPEC §61, §64, §65).

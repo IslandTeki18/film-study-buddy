@@ -1,15 +1,19 @@
 import { formatCoreValue, getCoreField, type CoreFieldKey } from './coreFields.ts'
 import { hasAnalysisValue, type TemplateFieldType } from './templateFields.ts'
-import type { YardLine } from './fieldZone.ts'
+import { fieldZoneOf, isValidYardLine, type YardLine } from './fieldZone.ts'
+import { downDistanceSituationOf } from './situation.ts'
 
 export const NONE_GROUP = '(none)'
 export const CORE_GROUPING_KEYS = [
   'personnel', 'formation', 'motion', 'playType', 'playConcept', 'direction', 'hash',
 ] as const satisfies readonly CoreFieldKey[]
 export type CoreGroupingKey = (typeof CORE_GROUPING_KEYS)[number]
+export const DERIVED_GROUPING_KEYS = ['downDistanceSituation', 'fieldZone'] as const
+export type DerivedGroupingKey = (typeof DERIVED_GROUPING_KEYS)[number]
 export const GROUPABLE_TEMPLATE_TYPES = ['select', 'multiSelect', 'checkbox', 'rating', 'tags'] as const
 export type GroupableTemplateType = (typeof GROUPABLE_TEMPLATE_TYPES)[number]
 export type GroupingField =
+  | { readonly key: `derived:${DerivedGroupingKey}`; readonly kind: 'derived'; readonly label: string; readonly derivedKey: DerivedGroupingKey }
   | { readonly key: `core:${CoreGroupingKey}`; readonly kind: 'core'; readonly label: string; readonly coreKey: CoreGroupingKey }
   | { readonly key: `field:${GroupableTemplateType}:${string}`; readonly kind: 'template'; readonly label: string; readonly type: GroupableTemplateType }
 export const DEFAULT_GROUP_BY = 'core:formation'
@@ -29,6 +33,10 @@ export function groupingFieldsFor(templates: readonly (readonly TemplateFieldLik
   const fields: GroupingField[] = CORE_GROUPING_KEYS.map((coreKey) => ({
     key: `core:${coreKey}`, kind: 'core', label: getCoreField(coreKey).label, coreKey,
   }))
+  fields.push(
+    { key: 'derived:downDistanceSituation', kind: 'derived', label: 'Down and Distance Situation', derivedKey: 'downDistanceSituation' },
+    { key: 'derived:fieldZone', kind: 'derived', label: 'Field Zone', derivedKey: 'fieldZone' },
+  )
   const seen = new Set<string>()
   for (const template of templates) for (const field of template) {
     const type = GROUPABLE_TEMPLATE_TYPES.find((type) => type === field.type)
@@ -41,6 +49,9 @@ export function groupingFieldsFor(templates: readonly (readonly TemplateFieldLik
 }
 
 export function groupingValuesOf(snap: GroupableSnap, field: GroupingField, templateFieldId: string | undefined): string[] {
+  if (field.kind === 'derived') return [field.derivedKey === 'downDistanceSituation'
+    ? downDistanceSituationOf(snap.core.down, snap.core.distance) ?? NONE_GROUP
+    : isValidYardLine(snap.core.yardLine) ? fieldZoneOf(snap.core.yardLine) : NONE_GROUP]
   if (field.kind === 'core') {
     const value = formatCoreValue(field.coreKey, snap.core[field.coreKey])
     return [value.trim() ? value : NONE_GROUP]
