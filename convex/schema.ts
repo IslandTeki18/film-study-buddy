@@ -38,6 +38,7 @@ const shapeValidator = v.object({
   points: v.array(v.number()),
 })
 const diagramSnapshotValidator = v.object({
+  hiddenSide: v.optional(v.union(v.literal('offense'), v.literal('defense'))),
   name: v.optional(v.string()),
   note: v.optional(v.string()),
   players: v.array(playerValidator),
@@ -253,6 +254,8 @@ export default defineSchema({
       v.object({
         id: v.string(),
         type: v.literal('tendency'),
+        groupBy: v.string(),
+        groupBy2: v.optional(v.string()),
         title: v.string(),
         category: v.string(),
         note: v.string(),
