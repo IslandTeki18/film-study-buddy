@@ -1,7 +1,7 @@
 import { CORE_FIELDS, formatCoreValue } from './domain/coreFields.ts'
 import { analysisValueText, columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
 import { formatAvgYards, formatFrequency } from './domain/aggregate.ts'
-import { REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
+import { HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
 import { computeResult } from './opponentData'
 import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
 import { templateTree } from './templates'
@@ -171,5 +171,72 @@ export const insertBlock = mutation({
     requireSize(blocks)
     await ctx.db.patch(reportId, { blocks, updatedAt: Date.now() })
     return id
+  },
+})
+
+const blockValidator = schema.tables.reports.validator.fields.blocks.element
+
+function requireTextLimit(block: ReportBlock): void {
+  const value = block.type === 'heading' || block.type === 'text' ? block.text : block.type === 'diagram' ? block.caption ?? '' : block.type === 'dataTable' ? block.title : ''
+  const max = block.type === 'heading' ? HEADING_MAX_LENGTH : block.type === 'text' ? TEXT_BLOCK_MAX_LENGTH : block.type === 'diagram' ? CAPTION_MAX_LENGTH : TABLE_TITLE_MAX_LENGTH
+  if (value.length > max) throw new Error(`Block text must be at most ${max} characters`)
+}
+
+export const updateBlockText = mutation({
+  args: { reportId: v.id('reports'), blockId: v.string(), value: v.string() }, returns: v.null(),
+  handler: async (ctx, { reportId, blockId, value }) => {
+    const report = await requireLiveReport(ctx, reportId)
+    const block = report.blocks.find((block) => block.id === blockId)
+    if (!block) throw new Error('Block not found')
+    let updated: ReportBlock
+    switch (block.type) {
+      case 'heading': case 'text': updated = { ...block, text: value }; break
+      case 'diagram':
+        updated = { ...block, caption: value }
+        if (!value) delete updated.caption
+        break
+      case 'dataTable': updated = { ...block, title: value }; break
+      default: throw new Error("This block's content is a snapshot and cannot be edited")
+    }
+    requireTextLimit(updated)
+    const blocks = report.blocks.map((block) => block.id === blockId ? updated : block)
+    requireSize(blocks)
+    await ctx.db.patch(reportId, { blocks, updatedAt: Date.now() })
+    return null
+  },
+})
+export const reorderBlocks = mutation({
+  args: { reportId: v.id('reports'), blockIds: v.array(v.string()) }, returns: v.null(),
+  handler: async (ctx, { reportId, blockIds }) => {
+    const report = await requireLiveReport(ctx, reportId)
+    const byId = new Map(report.blocks.map((block) => [block.id, block]))
+    if (blockIds.length !== report.blocks.length || new Set(blockIds).size !== blockIds.length || blockIds.some((id) => !byId.has(id))) throw new Error('Report changed. Try again.')
+    await ctx.db.patch(reportId, { blocks: blockIds.map((id) => byId.get(id)!), updatedAt: Date.now() })
+    return null
+  },
+})
+export const removeBlock = mutation({
+  args: { reportId: v.id('reports'), blockId: v.string() }, returns: v.object({ block: blockValidator, index: v.number() }),
+  handler: async (ctx, { reportId, blockId }) => {
+    const report = await requireLiveReport(ctx, reportId)
+    const index = report.blocks.findIndex((block) => block.id === blockId)
+    const block = report.blocks[index]
+    if (!block) throw new Error('Block not found')
+    await ctx.db.patch(reportId, { blocks: report.blocks.filter((block) => block.id !== blockId), updatedAt: Date.now() })
+    return { block, index }
+  },
+})
+export const restoreBlock = mutation({
+  args: { reportId: v.id('reports'), block: blockValidator, index: v.number() }, returns: v.null(),
+  handler: async (ctx, { reportId, block, index }) => {
+    const report = await requireLiveReport(ctx, reportId)
+    if (report.blocks.some((item) => item.id === block.id)) throw new Error('Block already exists')
+    if (!Number.isSafeInteger(index)) throw new Error('Invalid block position')
+    requireTextLimit(block)
+    const blocks = [...report.blocks]
+    blocks.splice(Math.max(0, Math.min(index, blocks.length)), 0, block)
+    requireSize(blocks)
+    await ctx.db.patch(reportId, { blocks, updatedAt: Date.now() })
+    return null
   },
 })

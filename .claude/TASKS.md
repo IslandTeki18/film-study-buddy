@@ -319,8 +319,9 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
       Tendency, Play Diagram, Selected Plays, and Quick Notes blocks through pickers that copy a
       snapshot at insertion (SPEC §71).
       *Evidence:* live snapshots stayed byte-identical across edits to every source type, game exclusion and deletion/Undo; invalid source/column/count/scope calls rejected without changes. Typecheck and Convex sync passed.
-- [ ] **10.4 Block ordering and editing.** Drag plus keyboard reorder, inline edit, delete
+- [x] **10.4 Block ordering and editing.** Drag plus keyboard reorder, inline edit, delete
       (SPEC §80). Autosaved.
+      *Evidence:* native mouse drag and keyboard reorder persisted; all four autosaves, trailing spaces, failed-draft Retry/recovery, exact block Undo, stale reorder rejection and concurrent text/reorder passed. Typecheck/Convex sync passed.
 - [ ] **10.5 Duplicate as Player Report.** Deep copy, independent thereafter; clip references
       hideable (SPEC §70, §81).
       *Verify:* edit the player report; the coach report is untouched.
