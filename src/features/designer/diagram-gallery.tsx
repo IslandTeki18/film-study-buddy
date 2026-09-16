@@ -86,6 +86,7 @@ function DiagramCard({ diagram, base, snapLabels, availableSnaps }: {
   readonly availableSnaps: readonly Doc<'snaps'>[]
 }): ReactNode {
   const attach = useMutation(api.diagrams.attach)
+  const detach = useMutation(api.diagrams.detach)
   const remove = useMutation(api.diagrams.remove).withOptimisticUpdate((store, args) => {
     const query = { sourceGameId: diagram.sourceGameId }
     const current = store.getQuery(api.diagrams.listBySourceGame, query)
@@ -118,7 +119,7 @@ function DiagramCard({ diagram, base, snapLabels, availableSnaps }: {
     <div className="flex flex-wrap items-center gap-2">
       <Link className={buttonVariants({ variant: 'outline', size: 'sm' })} to={`${base}/diagrams/${diagram._id}`}>Edit</Link>
       {diagram.snapId
-        ? <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => attach({ diagramId: diagram._id, snapId: null }), 'detach')}>Detach</Button>
+        ? <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => detach({ diagramId: diagram._id, snapId: diagram.snapId! }), 'detach')}>Detach</Button>
         : <Select
             aria-label="Attach Play Diagram to Snap"
             className="w-auto"

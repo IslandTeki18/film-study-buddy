@@ -64,7 +64,7 @@ export const create = mutation({
       if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id)) throw new Error('This Snap already has a Play Diagram')
     }
     return ctx.db.insert('diagrams', {
-      sourceGameId: game._id, ...(args.snapId ? { snapId: args.snapId } : {}),
+      sourceGameId: game._id, snapIds: args.snapId ? [args.snapId] : [],
       players: [], shapes: [], updatedAt: Date.now(),
     })
   },
@@ -85,6 +85,7 @@ export const save = mutation({
       ...(args.hiddenSide !== undefined ? { hiddenSide: args.hiddenSide } : {}),
     })
     await ctx.db.patch(diagram._id, {
+      snapIds: attachedSnapIds(diagram), snapId: undefined,
       players: normalized.players, shapes: normalized.shapes, note: normalized.note, hiddenSide: normalized.hiddenSide, updatedAt: Date.now(),
     })
     return null
@@ -92,15 +93,26 @@ export const save = mutation({
 })
 
 export const attach = mutation({
-  args: { diagramId: v.id('diagrams'), snapId: v.union(v.id('snaps'), v.null()) }, returns: v.null(),
+  args: { diagramId: v.id('diagrams'), snapId: v.id('snaps') }, returns: v.null(),
   handler: async (ctx, args) => {
     const diagram = await requireLiveDiagram(ctx, args.diagramId)
-    if (args.snapId) {
-      const snap = await requireLiveSnap(ctx, args.snapId)
-      if (snap.sourceGameId !== diagram.sourceGameId) throw new Error('Snap belongs to a different Source Game')
-      if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id, diagram._id)) throw new Error('This Snap already has a Play Diagram')
-    }
-    await ctx.db.patch(diagram._id, { snapId: args.snapId ?? undefined, updatedAt: Date.now() })
+    const snap = await requireLiveSnap(ctx, args.snapId)
+    if (snap.sourceGameId !== diagram.sourceGameId) throw new Error('Snap belongs to a different Source Game')
+    if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id, diagram._id)) throw new Error('This Snap already has a Play Diagram')
+    await ctx.db.patch(diagram._id, {
+      snapIds: [...new Set([...attachedSnapIds(diagram), snap._id])], snapId: undefined, updatedAt: Date.now(),
+    })
+    return null
+  },
+})
+
+export const detach = mutation({
+  args: { diagramId: v.id('diagrams'), snapId: v.id('snaps') }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const diagram = await requireLiveDiagram(ctx, args.diagramId)
+    await ctx.db.patch(diagram._id, {
+      snapIds: attachedSnapIds(diagram).filter((id) => id !== args.snapId), snapId: undefined, updatedAt: Date.now(),
+    })
     return null
   },
 })
