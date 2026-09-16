@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
-import { DIAGRAM_NOTE_MAX_LENGTH, FORMATION_NAME_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, YARD_PX, type DiagramDoc, type DiagramPlayer, type PlayerSide } from '@convex/domain/diagram'
+import { attachedSnapIds, DIAGRAM_NOTE_MAX_LENGTH, FORMATION_NAME_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, YARD_PX, type DiagramDoc, type DiagramPlayer, type PlayerSide } from '@convex/domain/diagram'
 import { DiagramSvg } from '@/components/diagram-svg'
 import { Button } from '@/components/ui/button'
 import { Eyebrow, Meta, Page, Panel } from '@/components/ui/panel'
@@ -47,13 +47,14 @@ export function PlayDesigner({ workspaceId, sourceGameId, diagramId }: {
 
 function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
   readonly workspaceId: string; readonly sourceGameId: Id<'sourceGames'>; readonly opponentName: string
-  readonly diagram: Pick<Doc<'diagrams'>, '_id' | 'updatedAt' | 'players' | 'shapes' | 'note' | 'snapId' | 'hiddenSide'>
+  readonly diagram: Pick<Doc<'diagrams'>, '_id' | 'updatedAt' | 'players' | 'shapes' | 'note' | 'snapId' | 'snapIds' | 'hiddenSide'>
 }): ReactNode {
   const save = useMutation(api.diagrams.save)
   const saveFormation = useMutation(api.formations.save)
   const removeFormation = useMutation(api.formations.remove)
   const customs = useQuery(api.formations.list) ?? []
-  const snap = useQuery(api.snaps.get, diagram.snapId ? { snapId: diagram.snapId } : 'skip')
+  const snaps = useQuery(api.snaps.listBySourceGame, { sourceGameId })
+  const snapIds = attachedSnapIds(diagram)
   const { show } = useToast()
   const serverDoc = useMemo<DiagramDoc>(() => ({ players: diagram.players, shapes: diagram.shapes, ...(diagram.note ? { note: diagram.note } : {}), ...(diagram.hiddenSide ? { hiddenSide: diagram.hiddenSide } : {}) }), [diagram.updatedAt])
   const { draft, setDraft, flush, status } = useAutosave(serverDoc, async (next) => {
@@ -278,7 +279,10 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
       <header className="flex flex-wrap items-center gap-3 border-b border-border bg-accent/60 px-4 py-3">
         <Eyebrow>Play designer</Eyebrow>
         <span className="text-border-strong">/</span>
-        <span className="text-[13px] font-semibold">{opponentName} — {diagram.snapId ? (snap ? `Snap ${snap.core.clipNumber ?? snap.order}` : 'Snap') : 'new play'}</span>
+        <span className="text-[13px] font-semibold">{opponentName} — {snapIds.length ? <>Attached to Snap {snapIds.map((id, index) => {
+          const snap = snaps?.find((item) => item._id === id)
+          return <span key={id}>{index > 0 && ', '}<Link className="underline" to={`${base}/snap/${id}`}>{snap ? snap.core.clipNumber ?? snap.order : 'removed'}</Link></span>
+        })}</> : 'new play'}</span>
         <div role="radiogroup" aria-label="Side" className="ml-2 flex gap-1.5">
           {(['offense', 'defense'] as const).map((entry) => <button key={entry} type="button" role="radio" aria-checked={side === entry} className={chip(side === entry, entry)}
             onClick={() => { setSide(entry); setPicking(undefined); setSelectedId(players.find((player) => player.side === entry)?.id) }}>{entry === 'offense' ? 'Offense' : 'Defense'}</button>)}

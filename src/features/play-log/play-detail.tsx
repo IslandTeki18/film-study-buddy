@@ -164,7 +164,10 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
         </Link>
         <Link className="underline" to={`${base}/diagrams/${diagram._id}`}>Edit Play Diagram</Link>
         {diagram.note && <p className="whitespace-pre-wrap">{diagram.note}</p>}
-      </div> : <Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Add Play Diagram</Link>}
+      </div> : <div className="flex flex-wrap gap-3">
+        <Link className="underline" to={`${base}/diagrams?snap=${snap._id}&new=1`}>Add Play Diagram</Link>
+        <Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Use existing Play Diagram</Link>
+      </div>}
     </section>
   </Root>
 }
