@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc } from '@convex/_generated/dataModel'
-import { REPORT_INTENTS, REPORT_INTENT_LABEL, type ReportIntent } from '@convex/domain/reportBlocks'
+import { playerReportName, REPORT_INTENTS, REPORT_INTENT_LABEL, type ReportIntent } from '@convex/domain/reportBlocks'
 import { NameDialog } from '@/components/name-dialog'
 import { Button } from '@/components/ui/button'
 import { Chip, Meta, Page } from '@/components/ui/panel'
@@ -14,6 +14,7 @@ import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
 export function ReportList({ workspaceId }: { readonly workspaceId: string }): ReactNode {
   const workspace = useQuery(api.workspaces.get, { workspaceId })
   const reports = useQuery(api.reports.listByWorkspace, { workspaceId })
+  const duplicate = useMutation(api.reports.duplicateAsPlayerReport)
   const create = useMutation(api.reports.create)
   const update = useMutation(api.reports.update)
   const remove = useMutation(api.reports.remove).withOptimisticUpdate((store, args) => {
@@ -41,6 +42,9 @@ export function ReportList({ workspaceId }: { readonly workspaceId: string }): R
         <DropdownMenu label="Actions" triggerProps={{ 'aria-label': `Actions for ${report.name}`, variant: 'outline' }} items={[
           { label: 'Open', onSelect: () => { void navigate(`/w/${workspaceId}/reports/${report._id}`) } },
           { label: 'Preview', onSelect: () => { void navigate(`/w/${workspaceId}/reports/${report._id}/preview`) } },
+          ...(report.intent === 'coach' ? [{ label: 'Duplicate as Player Report', onSelect: () => {
+            void duplicate({ reportId: report._id }).then((id) => { show({ message: `Created ${playerReportName(report.name)}` }); void navigate(`/w/${workspaceId}/reports/${id}`) }).catch((error: unknown) => failure('duplicate', error))
+          } }] : []),
           { label: 'Rename', onSelect: () => setDialog(report) },
           { label: 'Delete', onSelect: () => { void deleteReport(report).catch((error: unknown) => failure('delete', error)) } },
         ]} />

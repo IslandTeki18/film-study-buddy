@@ -322,9 +322,9 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 - [x] **10.4 Block ordering and editing.** Drag plus keyboard reorder, inline edit, delete
       (SPEC §80). Autosaved.
       *Evidence:* native mouse drag and keyboard reorder persisted; all four autosaves, trailing spaces, failed-draft Retry/recovery, exact block Undo, stale reorder rejection and concurrent text/reorder passed. Typecheck/Convex sync passed.
-- [ ] **10.5 Duplicate as Player Report.** Deep copy, independent thereafter; clip references
+- [x] **10.5 Duplicate as Player Report.** Deep copy, independent thereafter; clip references
       hideable (SPEC §70, §81).
-      *Verify:* edit the player report; the coach report is untouched.
+      *Evidence:* Electron/Convex verified independent duplication, editing/removal/reorder, clip toggle, unchanged Coach Report, and absent/rejected Player duplication. Typecheck/Convex sync passed.
 - [ ] **10.6 Report Preview.** Paginated print layout: clean page breaks, no split table rows or
       diagrams, consistent spacing, no theming (SPEC §82, §83).
 - [ ] **10.7 PDF export.** IPC to `webContents.printToPDF` against the preview route, with a save

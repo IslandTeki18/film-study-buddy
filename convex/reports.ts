@@ -1,7 +1,7 @@
 import { CORE_FIELDS, formatCoreValue } from './domain/coreFields.ts'
 import { analysisValueText, columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
 import { formatAvgYards, formatFrequency } from './domain/aggregate.ts'
-import { HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
+import { playerReportName, HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
 import { computeResult } from './opponentData'
 import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
 import { templateTree } from './templates'
@@ -238,5 +238,14 @@ export const restoreBlock = mutation({
     requireSize(blocks)
     await ctx.db.patch(reportId, { blocks, updatedAt: Date.now() })
     return null
+  },
+})
+
+export const duplicateAsPlayerReport = mutation({
+  args: { reportId: v.id('reports') }, returns: v.id('reports'),
+  handler: async (ctx, { reportId }) => {
+    const report = await requireLiveReport(ctx, reportId)
+    if (report.intent !== 'coach') throw new Error('Only a Coach Report can be duplicated as a Player Report')
+    return ctx.db.insert('reports', { workspaceId: report.workspaceId, name: playerReportName(report.name), intent: 'player', showClipReferences: false, blocks: structuredClone(report.blocks), updatedAt: Date.now() })
   },
 })

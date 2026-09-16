@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc } from '@convex/_generated/dataModel'
-import { HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, TABLE_TITLE_MAX_LENGTH, BLOCK_TYPE_LABEL, REPORT_INTENT_LABEL, type BlockType } from '@convex/domain/reportBlocks'
+import { HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, TABLE_TITLE_MAX_LENGTH, playerReportName, BLOCK_TYPE_LABEL, REPORT_INTENT_LABEL, type BlockType } from '@convex/domain/reportBlocks'
 import { Chip, Meta, Page, Panel } from '@/components/ui/panel'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/components/ui/toast'
 import { DataTableDialog, TendencyDialog, DiagramDialog, SelectedPlaysDialog, QuickNotesDialog } from './insert-block-dialogs'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,6 +18,10 @@ import { ReportBlockView, type ReportBlock } from './report-block-view'
 
 export function ReportBuilder({ workspaceId, reportId }: { readonly workspaceId: string; readonly reportId: string }): ReactNode {
   const { show } = useToast()
+  const navigate = useNavigate()
+  const duplicate = useMutation(api.reports.duplicateAsPlayerReport)
+  const updateReport = useMutation(api.reports.update)
+  const [duplicating, setDuplicating] = useState(false)
   const insert = useMutation(api.reports.insertBlock)
   const [picker, setPicker] = useState<BlockType | null>(null)
   const [pending, setPending] = useState(false)
@@ -65,7 +70,13 @@ export function ReportBuilder({ workspaceId, reportId }: { readonly workspaceId:
   if (workspace === undefined || report === undefined) return <div role="status" aria-label="Loading Report" className="m-6 h-32 animate-pulse rounded bg-muted" />
   if (!workspace || !report) return <div className="space-y-3 p-6"><h1>Report not found</h1><Link className="underline" to={`/w/${workspaceId}/reports`}>Reports</Link></div>
   return <Page width="max-w-[900px]">
-    <header className="flex flex-wrap items-center gap-3"><Link className="underline" to={`/w/${workspaceId}/reports`}>Reports</Link><h1 className="text-xl font-bold">{report.name}</h1><Chip>{REPORT_INTENT_LABEL[report.intent]}</Chip><Link className="underline" to={`/w/${workspaceId}/reports/${reportId}/preview`}>Preview</Link></header>
+    <header className="flex flex-wrap items-center gap-3"><Link className="underline" to={`/w/${workspaceId}/reports`}>Reports</Link><h1 className="text-xl font-bold">{report.name}</h1><Chip>{REPORT_INTENT_LABEL[report.intent]}</Chip><Link className="underline" to={`/w/${workspaceId}/reports/${reportId}/preview`}>Preview</Link>
+      {report.intent === 'coach' && <Button variant="outline" disabled={duplicating} onClick={() => {
+        setDuplicating(true)
+        void duplicate({ reportId: report._id }).then((id) => { show({ message: `Created ${playerReportName(report.name)}` }); void navigate(`/w/${workspaceId}/reports/${id}`) }).catch(failure).finally(() => setDuplicating(false))
+      }}>Duplicate as Player Report</Button>}
+      <Checkbox label="Show clip references" checked={report.showClipReferences} onChange={(event) => { void updateReport({ reportId: report._id, showClipReferences: event.target.checked }).catch(failure) }} />
+    </header>
     <DropdownMenu label="Add block" triggerProps={{ disabled: pending }} items={(Object.keys(BLOCK_TYPE_LABEL) as BlockType[]).map((type) => ({ label: BLOCK_TYPE_LABEL[type], onSelect: () => {
       if (type !== 'heading' && type !== 'text') { setPicker(type); return }
       setPending(true)
