@@ -1,10 +1,12 @@
 import { v } from 'convex/values'
-import { mutation, query, type QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
+import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import { normalizeName } from './domain/names.ts'
-import { categoryVocabulary, resolveCategory, TENDENCY_NOTE_MAX_LENGTH } from './domain/tendencyCategories.ts'
+import { categoryVocabulary, normalizeCategoryName, resolveCategory, TENDENCY_NOTE_MAX_LENGTH } from './domain/tendencyCategories.ts'
 import { computeResult } from './opponentData'
 import schema from './schema'
 import { requireLiveWorkspace } from './workspaces'
+import { isLiveSourceGame } from './sourceGames'
 
 const tendencyValidator = v.object({ ...schema.tables.tendencies.validator.fields, _id: v.id('tendencies'), _creationTime: v.number() })
 
@@ -59,5 +61,48 @@ export const create = mutation({
       workspaceId: args.workspaceId, title, note, category, includeInReport: true, createdAt: Date.now(),
       snapshot: { gameIds: computed.gameIds, groupBy: computed.groupLabels[0]!, ...(computed.groupLabels[1] ? { groupBy2: computed.groupLabels[1] } : {}), rows: [row] },
     })
+  },
+})
+
+async function requireLiveTendency(ctx: MutationCtx, id: Id<'tendencies'>): Promise<Doc<'tendencies'>> {
+  const tendency = await ctx.db.get(id)
+  if (!tendency || tendency.deletedAt !== undefined) throw new Error('Tendency / Alert not found')
+  await requireLiveWorkspace(ctx, tendency.workspaceId)
+  return tendency
+}
+
+export const createCategory = mutation({
+  args: { name: v.string() }, returns: v.string(),
+  handler: async (ctx, args) => {
+    const name = normalizeCategoryName(args.name)
+    if (!name) throw new Error('Category must be 1–80 characters')
+    const existing = resolveCategory(await vocabulary(ctx), name)
+    if (existing) return existing
+    await ctx.db.insert('tendencyCategories', { name, isDefault: false })
+    return name
+  },
+})
+
+export const update = mutation({
+  args: {
+    tendencyId: v.id('tendencies'), title: v.optional(v.string()), category: v.optional(v.string()),
+    note: v.optional(v.string()), diagramId: v.optional(v.union(v.id('diagrams'), v.null())),
+    includeInReport: v.optional(v.boolean()),
+  }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const tendency = await requireLiveTendency(ctx, args.tendencyId)
+    if (args.diagramId) {
+      const diagram = await ctx.db.get(args.diagramId)
+      const game = diagram ? await ctx.db.get(diagram.sourceGameId) : null
+      if (!diagram || diagram.deletedAt !== undefined || !game || game.workspaceId !== tendency.workspaceId || !await isLiveSourceGame(ctx, game._id)) throw new Error('Play Diagram not found')
+    }
+    await ctx.db.patch(tendency._id, {
+      ...(args.title !== undefined ? { title: requireTitle(args.title) } : {}),
+      ...(args.category !== undefined ? { category: await requireCategory(ctx, args.category) } : {}),
+      ...(args.note !== undefined ? { note: requireNote(args.note) } : {}),
+      ...(args.diagramId !== undefined ? { diagramId: args.diagramId ?? undefined } : {}),
+      ...(args.includeInReport !== undefined ? { includeInReport: args.includeInReport } : {}),
+    })
+    return null
   },
 })

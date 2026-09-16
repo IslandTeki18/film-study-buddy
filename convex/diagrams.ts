@@ -124,3 +124,21 @@ export const remove = mutation({
     return softDeleteBatch(ctx, { kind: 'diagram', label: 'Play Diagram', records: [{ table: 'diagrams', id: diagram._id }] })
   },
 })
+
+export const listByWorkspace = query({
+  args: { workspaceId: v.string() },
+  returns: v.array(v.object({ ...diagramValidator.fields, sourceGameLabel: v.string() })),
+  handler: async (ctx, args) => {
+    const id = ctx.db.normalizeId('workspaces', args.workspaceId)
+    const workspace = id ? await ctx.db.get(id) : null
+    if (!workspace || workspace.deletedAt !== undefined) return []
+    const season = await ctx.db.get(workspace.seasonId)
+    if (!season || season.deletedAt !== undefined) return []
+    const games = (await ctx.db.query('sourceGames').withIndex('by_workspace', (q) => q.eq('workspaceId', workspace._id)).collect())
+      .filter((game) => game.deletedAt === undefined)
+    const diagrams = await Promise.all(games.map(async (game) =>
+      (await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect())
+        .filter((diagram) => diagram.deletedAt === undefined).map((diagram) => ({ ...diagram, sourceGameLabel: game.label }))))
+    return diagrams.flat().sort((a, b) => b.updatedAt - a.updatedAt)
+  },
+})
