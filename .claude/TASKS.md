@@ -280,7 +280,7 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
 
 ## Phase 9 — Opponent Data and Tendencies
 
-- [ ] **9.1 Aggregation function.** `convex/domain/aggregate.ts`: group Snaps by one or two
+- [~] **9.1 Aggregation function.** `convex/domain/aggregate.ts`: group Snaps by one or two
       fields into snap count, frequency, percentage, and average yards. Blank values become a
       distinct `(none)` group; average yards is `null` when no snap has yards (SPEC §56, §59).
       *Verify:* unit tests over a fixture including blanks, missing yards, and an empty scope.
