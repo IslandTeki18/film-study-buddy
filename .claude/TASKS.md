@@ -324,7 +324,7 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
       *Evidence:* native mouse drag and keyboard reorder persisted; all four autosaves, trailing spaces, failed-draft Retry/recovery, exact block Undo, stale reorder rejection and concurrent text/reorder passed. Typecheck/Convex sync passed.
 - [x] **10.5 Duplicate as Player Report.** Deep copy, independent thereafter; clip references
       hideable (SPEC §70, §81).
-      *Evidence:* Electron/Convex verified independent duplication, editing/removal/reorder, clip toggle, unchanged Coach Report, and absent/rejected Player duplication. Typecheck/Convex sync passed.
+      *Evidence:* Electron/Convex verified independent duplication, editing/removal/reorder, clip toggle, unchanged Coach Report, and absent/rejected Player duplication. Same-named Template Fields cannot hide or expose the Core clip column; the live collision regression passed. Typecheck/Convex sync passed.
 - [x] **10.6 Report Preview.** Paginated print layout: clean page breaks, no split table rows or
       diagrams, consistent spacing, no theming (SPEC §82, §83).
       *Evidence:* Electron preview checks and nine-page native PDF inspection passed: white margins, repeating headers, intact rows/diagrams, no app chrome; light/dark page images were byte-identical.
