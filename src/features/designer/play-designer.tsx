@@ -205,9 +205,10 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
       return
     }
     if (job === 'Man') {
-      patch(selected.id, (player) => ({ ...strip(player, ['route', 'zone', 'coversId']), job }))
+      const { hiddenSide: _previous, ...current } = draftRef.current
+      setDraft({ ...current, players: current.players.map((player) => player.id === selected.id
+        ? { ...strip(player, ['route', 'zone', 'coversId']), job } : player) })
       setPicking(selected.id)
-      setHideOther(false)
       return
     }
     const route = stampRoute(side, job, at)
