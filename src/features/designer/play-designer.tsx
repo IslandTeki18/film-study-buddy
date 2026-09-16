@@ -3,14 +3,14 @@ import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
-import { PLAYER_JERSEY_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, type DiagramDoc, type DiagramPlayer, type DiagramTool, type PlayerSide } from '@convex/domain/diagram'
+import { DIAGRAM_ASPECT, PLAYER_JERSEY_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, type DiagramDoc, type DiagramPlayer, type DiagramShape, type DiagramTool, type PlayerSide } from '@convex/domain/diagram'
 import { DiagramSvg } from '@/components/diagram-svg'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Meta, Page, Panel } from '@/components/ui/panel'
 import { useAutosave } from '@/lib/db/use-autosave'
 import { inDialog } from '@/lib/shortcuts'
-import { hitTestPlayer, hitTestShape, nudge, toNormalized } from './geometry'
+import { curveControl, hitTestPlayer, hitTestShape, nudge, simplifyFreehand, toNormalized } from './geometry'
 
 type Tool = 'select' | 'offense' | 'defense' | DiagramTool | 'erase'
 
@@ -50,9 +50,21 @@ function DesignerContent({ workspaceId, sourceGameId, diagram }: {
   const [tool, setTool] = useState<Tool>('select')
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined)
   const [previewPlayer, setPreviewPlayer] = useState<{ id: string; x: number; y: number } | undefined>(undefined)
-  const dragging = useRef<{ playerId: string; offsetX: number; offsetY: number; x: number; y: number } | undefined>(undefined)
+  const [previewShape, setPreviewShape] = useState<DiagramShape | undefined>(undefined)
+  const drawing = useRef<{ shape: DiagramShape } | undefined>(undefined)
+  const dragging = useRef<
+    { kind: 'player'; playerId: string; offsetX: number; offsetY: number; x: number; y: number }
+    | { kind: 'control'; shapeId: string; points: number[] }
+    | undefined
+  >(undefined)
   const base = `/w/${workspaceId}/games/${sourceGameId}/diagrams`
-  const display = previewPlayer ? { ...draft, players: draft.players.map((player) => player.id === previewPlayer.id ? { ...player, x: previewPlayer.x, y: previewPlayer.y } : player) } : draft
+  const display = {
+    ...draft,
+    players: previewPlayer ? draft.players.map((player) => player.id === previewPlayer.id ? { ...player, x: previewPlayer.x, y: previewPlayer.y } : player) : draft.players,
+    shapes: previewShape
+      ? drawing.current ? [...draft.shapes, previewShape] : draft.shapes.map((shape) => shape.id === previewShape.id ? previewShape : shape)
+      : draft.shapes,
+  }
 
   const removeSelected = useCallback((): void => {
     if (!selectedId) return
@@ -82,6 +94,15 @@ function DesignerContent({ workspaceId, sourceGameId, diagram }: {
       setSelectedId(id)
       return
     }
+    if (tool !== 'select' && tool !== 'erase') {
+      const id = crypto.randomUUID()
+      const points = tool === 'free' ? [point.x, point.y] : [point.x, point.y, point.x, point.y]
+      const shape: DiagramShape = { id, tool, points }
+      drawing.current = { shape }
+      setPreviewShape(shape)
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
     const player = hitTestPlayer(draft.players, point.x, point.y)
     const shape = hitTestShape(draft.shapes, point.x, point.y)
     if (tool === 'erase') {
@@ -93,37 +114,84 @@ function DesignerContent({ workspaceId, sourceGameId, diagram }: {
       return
     }
     if (tool !== 'select') return
+    const selectedCurve = draft.shapes.find((entry) => entry.id === selectedId && entry.tool === 'curve')
+    if (selectedCurve && Math.hypot((selectedCurve.points[2] ?? 0) - point.x, (selectedCurve.points[3] ?? 0) - point.y) <= 0.025) {
+      dragging.current = { kind: 'control', shapeId: selectedCurve.id, points: [...selectedCurve.points] }
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
     if (player) {
-      dragging.current = { playerId: player.id, offsetX: player.x - point.x, offsetY: player.y - point.y, x: player.x, y: player.y }
+      dragging.current = { kind: 'player', playerId: player.id, offsetX: player.x - point.x, offsetY: player.y - point.y, x: player.x, y: player.y }
       event.currentTarget.setPointerCapture(event.pointerId)
       setSelectedId(player.id)
     } else setSelectedId(shape?.id)
   }
 
   function onPointerMove(event: PointerEvent<SVGSVGElement>): void {
+    const point = toNormalized(event, event.currentTarget)
+    const activeDrawing = drawing.current
+    if (activeDrawing) {
+      const [x1 = point.x, y1 = point.y] = activeDrawing.shape.points
+      const points = activeDrawing.shape.tool === 'free'
+        ? [...activeDrawing.shape.points, point.x, point.y]
+        : activeDrawing.shape.tool === 'curve'
+          ? [x1, y1, curveControl(x1, y1, point.x, point.y).cx, curveControl(x1, y1, point.x, point.y).cy, point.x, point.y]
+          : [x1, y1, point.x, point.y]
+      activeDrawing.shape = { ...activeDrawing.shape, points }
+      setPreviewShape(activeDrawing.shape)
+      return
+    }
     const drag = dragging.current
     if (!drag) return
-    const point = toNormalized(event, event.currentTarget)
+    if (drag.kind === 'control') {
+      drag.points[2] = point.x
+      drag.points[3] = point.y
+      const shape = draftRef.current.shapes.find((entry) => entry.id === drag.shapeId)
+      if (shape) setPreviewShape({ ...shape, points: [...drag.points] })
+      return
+    }
     drag.x = nudge(point.x, drag.offsetX)
     drag.y = nudge(point.y, drag.offsetY)
     setPreviewPlayer({ id: drag.playerId, x: drag.x, y: drag.y })
   }
 
-  function finishDrag(): void {
+  function finishInteraction(event: PointerEvent<SVGSVGElement>): void {
+    if (drawing.current) {
+      onPointerMove(event)
+      const shape = drawing.current.shape
+      drawing.current = undefined
+      setPreviewShape(undefined)
+      const points = shape.tool === 'free' ? simplifyFreehand(shape.points) : shape.points
+      const end = shape.tool === 'curve' ? 4 : points.length - 2
+      const length = shape.tool === 'free'
+        ? Math.max(...Array.from({ length: points.length / 2 - 1 }, (_, index) => Math.hypot((points[index * 2 + 2] ?? 0) - (points[0] ?? 0), (points[index * 2 + 3] ?? 0) - (points[1] ?? 0))), 0)
+        : Math.hypot((points[end] ?? 0) - (points[0] ?? 0), (points[end + 1] ?? 0) - (points[1] ?? 0))
+      if (points.length >= 4 && length > 0.01) {
+        const committed = { ...shape, points }
+        setDraft({ ...draftRef.current, shapes: [...draftRef.current.shapes, committed] })
+        if (shape.tool === 'curve') setSelectedId(shape.id)
+      }
+      return
+    }
     const drag = dragging.current
     dragging.current = undefined
     setPreviewPlayer(undefined)
     if (!drag) return
-    setDraft({ ...draftRef.current, players: draftRef.current.players.map((player) => player.id === drag.playerId ? { ...player, x: drag.x, y: drag.y } : player) })
+    setPreviewShape(undefined)
+    if (drag.kind === 'control') {
+      setDraft({ ...draftRef.current, shapes: draftRef.current.shapes.map((shape) => shape.id === drag.shapeId ? { ...shape, points: drag.points } : shape) })
+    } else {
+      setDraft({ ...draftRef.current, players: draftRef.current.players.map((player) => player.id === drag.playerId ? { ...player, x: drag.x, y: drag.y } : player) })
+    }
   }
 
-  function cancelDrag(): void { dragging.current = undefined; setPreviewPlayer(undefined) }
+  function cancelInteraction(): void { drawing.current = undefined; dragging.current = undefined; setPreviewPlayer(undefined); setPreviewShape(undefined) }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     const target = event.target
     if (event.defaultPrevented || inDialog(target) || (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable="true"]')))) return
     if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); removeSelected(); return }
-    if (event.key === 'Escape') { event.preventDefault(); cancelDrag(); setSelectedId(undefined); setTool('select'); return }
+    if (event.key === 'Escape') { event.preventDefault(); cancelInteraction(); setSelectedId(undefined); setTool('select'); return }
     const selected = draftRef.current.players.find((player) => player.id === selectedId)
     const delta = event.shiftKey ? 0.05 : 0.01
     const directions: Record<string, readonly [number, number]> = { ArrowUp: [0, -delta], ArrowDown: [0, delta], ArrowLeft: [-delta, 0], ArrowRight: [delta, 0] }
@@ -154,8 +222,10 @@ function DesignerContent({ workspaceId, sourceGameId, diagram }: {
         <div role="radiogroup" aria-label="Tools" className="flex flex-wrap gap-2">
           {tools.map((entry) => <Button key={entry.tool} variant="outline" role="radio" aria-checked={tool === entry.tool} title={`${entry.label} (${entry.key})`} onClick={() => setTool(entry.tool)}>{entry.label} <kbd className="text-[10px]">{entry.key}</kbd></Button>)}
         </div>
-        <div tabIndex={0} aria-label="Play Designer canvas" className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring" onKeyDown={onKeyDown} onPointerCancel={cancelDrag}>
-          <DiagramSvg diagram={display} {...(selectedId !== undefined ? { selectedId } : {})} className="w-full rounded-xl border border-border" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={finishDrag} />
+        <div tabIndex={0} aria-label="Play Designer canvas" className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring" onKeyDown={onKeyDown} onPointerCancel={cancelInteraction}>
+          <DiagramSvg diagram={display} {...(selectedId !== undefined ? { selectedId } : {})} className="w-full rounded-xl border border-border touch-none" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={finishInteraction}>
+            {selectedShape?.tool === 'curve' && <circle cx={(previewShape?.points[2] ?? selectedShape.points[2] ?? 0) * DIAGRAM_ASPECT.width} cy={(previewShape?.points[3] ?? selectedShape.points[3] ?? 0) * DIAGRAM_ASPECT.height} r="10" className="fill-background stroke-primary" strokeWidth="4" />}
+          </DiagramSvg>
         </div>
         <div className="flex items-center gap-3"><Meta>{statusText}</Meta>{status === 'error' && <Button size="sm" variant="outline" onClick={flush}>Retry</Button>}</div>
       </div>
