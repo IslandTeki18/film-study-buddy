@@ -280,22 +280,31 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
 
 ## Phase 9 — Opponent Data and Tendencies
 
-- [~] **9.1 Aggregation function.** `convex/domain/aggregate.ts`: group Snaps by one or two
+Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
+
+- [x] **9.1 Aggregation function.** `convex/domain/aggregate.ts`: group Snaps by one or two
       fields into snap count, frequency, percentage, and average yards. Blank values become a
       distinct `(none)` group; average yards is `null` when no snap has yards (SPEC §56, §59).
       *Verify:* unit tests over a fixture including blanks, missing yards, and an empty scope.
-- [~] **9.2 Grouping field list.** Core Snap fields plus the structured template fields of the
+      *Evidence:* persistent tests excluded by approved plan; verified by live queries over the §7 fixture and one-off Node checks (blanks, missing yards, empty scope, multi-value deduplication).
+- [x] **9.2 Grouping field list.** Core Snap fields plus the structured template fields of the
       selected games (SPEC §57).
-- [~] **9.3 Opponent Data screen.** Game selection defaulting to all, Group By, optional second
+      *Evidence:* live catalog merges Coverage/Pressure across template copies; text and number fields excluded; deleted templates preserve Core Snaps.
+- [x] **9.3 Opponent Data screen.** Game selection defaulting to all, Group By, optional second
       Group By, results table; statistics recalculate on selection change (SPEC §58, §106).
-- [~] **9.4 Derived situational grouping.** Down and Distance Situation and Field Zone available
+      *Evidence:* Electron fixture tables, persisted game toggles, empty scope, overlap note, keyboard-only flow, and both themes passed.
+- [x] **9.4 Derived situational grouping.** Down and Distance Situation and Field Zone available
       as grouping fields with no manual classification (SPEC §60, §22).
-- [~] **9.5 Tendency creation.** Create Tendency / Alert from a selected result row, freezing the
+      *Evidence:* Electron Field Zone and Down/Distance tables match §7.2, using existing derived helpers.
+- [x] **9.5 Tendency creation.** Create Tendency / Alert from a selected result row, freezing the
       snapshot. No freehand creation path exists (SPEC §61, §64, §65).
       *Verify:* import another game; the existing tendency's numbers do not move.
-- [~] **9.6 Tendency fields and categories.** Title, category (defaults plus custom),
+      *Evidence:* persistent tests excluded by approved plan; verified by live queries over the §7 fixture: new game/source edits leave the snapshot identical; invalid row/key/category/title rejected.
+- [x] **9.6 Tendency fields and categories.** Title, category (defaults plus custom),
       explanation, optional diagram, report-inclusion flag (SPEC §62, §63).
-- [~] **9.7 Tendencies screen.** List by category, edit, delete with Undo.
+      *Evidence:* Electron autosave/reload, failed draft/Retry/recovery, custom category, diagram attach/clear/delete/Undo, and report flag passed; cross-workspace diagrams rejected.
+- [x] **9.7 Tendencies screen.** List by category, edit, delete with Undo.
+      *Evidence:* category order, newest-first cards, exact delete/Undo restoration, Overview counts, empty state, and unsaved-draft category guard passed; final build passed all 15 existing tests.
 
 ---
 
