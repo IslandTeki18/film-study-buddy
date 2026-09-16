@@ -1,3 +1,10 @@
+import { CORE_FIELDS, formatCoreValue } from './domain/coreFields.ts'
+import { analysisValueText, columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
+import { formatAvgYards, formatFrequency } from './domain/aggregate.ts'
+import { REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
+import { computeResult } from './opponentData'
+import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
+import { templateTree } from './templates'
 import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
@@ -66,5 +73,103 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const report = await requireLiveReport(ctx, args.reportId)
     return softDeleteBatch(ctx, { kind: 'report', label: report.name, records: [{ table: 'reports', id: report._id }] })
+  },
+})
+
+type ReportBlock = Doc<'reports'>['blocks'][number]
+
+function requireSize(blocks: ReportBlock[]): void {
+  // ponytail: inline blocks stop at 800 KB; move blocks to their own table for larger reports.
+  if (new TextEncoder().encode(JSON.stringify(blocks)).length > REPORT_BLOCKS_MAX_BYTES) throw new Error('Report is too large. Split it into another report.')
+}
+function requireSelection(values: readonly string[], max: number, label: string): void {
+  if (values.length < 1 || values.length > max || new Set(values).size !== values.length) throw new Error(`Select 1–${max} unique ${label}`)
+}
+function diagramSnapshot(diagram: Doc<'diagrams'>) {
+  const { name, note, players, shapes, updatedAt, hiddenSide } = diagram
+  return { players, shapes, updatedAt, ...(name !== undefined ? { name } : {}), ...(note !== undefined ? { note } : {}), ...(hiddenSide ? { hiddenSide } : {}) }
+}
+async function liveDiagram(ctx: QueryCtx, id: Id<'diagrams'>, workspaceId: Id<'workspaces'>) {
+  const diagram = await ctx.db.get(id)
+  const game = diagram ? await ctx.db.get(diagram.sourceGameId) : null
+  return diagram && diagram.deletedAt === undefined && game?.workspaceId === workspaceId && await isLiveSourceGame(ctx, game._id) ? diagram : null
+}
+
+export const insertBlock = mutation({
+  args: { reportId: v.id('reports'), source: v.union(
+    v.object({ type: v.literal('heading') }), v.object({ type: v.literal('text') }),
+    v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string() }),
+    v.object({ type: v.literal('tendency'), tendencyId: v.id('tendencies') }),
+    v.object({ type: v.literal('diagram'), diagramId: v.id('diagrams') }),
+    v.object({ type: v.literal('selectedPlays'), sourceGameId: v.id('sourceGames'), snapIds: v.array(v.id('snaps')), columnKeys: v.array(v.string()) }),
+    v.object({ type: v.literal('quickNotes'), noteIds: v.array(v.id('quickNotes')) }),
+  ) }, returns: v.string(),
+  handler: async (ctx, { reportId, source }) => {
+    const report = await requireLiveReport(ctx, reportId)
+    const id = crypto.randomUUID()
+    let block: ReportBlock
+    switch (source.type) {
+      case 'heading': case 'text': block = { id, type: source.type, text: '' }; break
+      case 'dataTable': {
+        if (source.title.length > TABLE_TITLE_MAX_LENGTH) throw new Error(`Title must be at most ${TABLE_TITLE_MAX_LENGTH} characters`)
+        const computed = await computeResult(ctx, { workspaceId: report.workspaceId, groupBy: source.groupBy, ...(source.groupBy2 ? { groupBy2: source.groupBy2 } : {}) })
+        if (!computed) throw new Error('Grouping Field not available')
+        if (!computed.result.totalSnaps) throw new Error('No Snaps in the included Source Games')
+        block = { id, type: source.type, title: source.title || computed.groupLabels.join(' + ').slice(0, TABLE_TITLE_MAX_LENGTH), columns: [...computed.groupLabels, 'Snaps', 'Frequency', 'Avg. Yards'], rows: computed.result.rows.map((row) => [...row.values, String(row.snaps), formatFrequency(row.frequency), formatAvgYards(row.avgYards)]) }
+        break
+      }
+      case 'tendency': {
+        const tendency = await ctx.db.get(source.tendencyId)
+        if (!tendency || tendency.deletedAt !== undefined || tendency.workspaceId !== report.workspaceId) throw new Error('Tendency / Alert not found')
+        const diagram = tendency.diagramId ? await liveDiagram(ctx, tendency.diagramId, report.workspaceId) : null
+        block = { id, type: source.type, title: tendency.title, category: tendency.category, note: tendency.note, groupBy: tendency.snapshot.groupBy, ...(tendency.snapshot.groupBy2 ? { groupBy2: tendency.snapshot.groupBy2 } : {}), rows: tendency.snapshot.rows, ...(diagram ? { diagram: diagramSnapshot(diagram) } : {}) }
+        break
+      }
+      case 'diagram': {
+        const diagram = await liveDiagram(ctx, source.diagramId, report.workspaceId)
+        if (!diagram) throw new Error('Play Diagram not found')
+        block = { id, type: source.type, diagram: diagramSnapshot(diagram), ...(diagram.name ? { caption: diagram.name } : {}) }
+        break
+      }
+      case 'selectedPlays': {
+        const game = await requireLiveSourceGame(ctx, source.sourceGameId)
+        if (game.workspaceId !== report.workspaceId) throw new Error('Source Game not found')
+        requireSelection(source.snapIds, SELECTED_PLAYS_MAX_SNAPS, 'Snaps')
+        requireSelection(source.columnKeys, SELECTED_PLAYS_MAX_COLUMNS, 'columns')
+        const template = await ctx.db.get(game.templateId)
+        const fields = template && template.deletedAt === undefined ? (await templateTree(ctx, game.templateId)).flatMap((section) => section.fields) : []
+        const catalog = new Set<string>(columnCatalog(fields.map((field) => field._id)))
+        if (source.columnKeys.some((key) => !catalog.has(key))) throw new Error('Unknown column')
+        const columns = source.columnKeys.map((key) => {
+          const core = CORE_FIELDS.find((field) => coreColumnKey(field.key) === key)
+          const field = fields.find((field) => fieldColumnKey(field._id) === key)
+          return { core, field, label: core?.label ?? field!.name }
+        })
+        const labels = uniqueLabels(columns.map((column) => column.label))
+        const snaps = await Promise.all(source.snapIds.map(async (snapId) => {
+          const snap = await ctx.db.get(snapId)
+          if (!snap || snap.deletedAt !== undefined || snap.sourceGameId !== game._id) throw new Error('Snap not found')
+          return snap
+        }))
+        block = { id, type: source.type, fields: labels, rows: snaps.sort((a, b) => a.order - b.order).map((snap) => Object.fromEntries(columns.map((column, index) => [labels[index]!, column.core ? formatCoreValue(column.core.key, snap.core[column.core.key]) : analysisValueText(snap.analysis[column.field!._id])])) ) }
+        break
+      }
+      case 'quickNotes': {
+        requireSelection(source.noteIds, QUICK_NOTES_BLOCK_MAX_NOTES, 'Quick Notes')
+        const notes = await Promise.all(source.noteIds.map(async (noteId) => {
+          const note = await ctx.db.get(noteId)
+          const game = note ? await ctx.db.get(note.sourceGameId) : null
+          const snap = note?.snapId ? await ctx.db.get(note.snapId) : null
+          if (!note || note.deletedAt !== undefined || !game || game.workspaceId !== report.workspaceId || !await isLiveSourceGame(ctx, game._id) || (note.snapId && (!snap || snap.deletedAt !== undefined))) throw new Error('Quick Note not found')
+          return note
+        }))
+        block = { id, type: source.type, notes: notes.sort((a, b) => a.createdAt - b.createdAt).map(({ text, tags }) => ({ text, tags })) }
+        break
+      }
+    }
+    const blocks = [...report.blocks, block]
+    requireSize(blocks)
+    await ctx.db.patch(reportId, { blocks, updatedAt: Date.now() })
+    return id
   },
 })

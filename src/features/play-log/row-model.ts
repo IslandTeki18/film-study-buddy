@@ -1,6 +1,7 @@
 import type { Doc } from '@convex/_generated/dataModel'
 import { formatCoreValue } from '@convex/domain/coreFields'
 import { fieldZoneOf, isValidYardLine } from '@convex/domain/fieldZone'
+import { analysisValueText } from '@convex/domain/templateFields'
 import type { PlayLogColumn } from './columns'
 
 export function displayValue(snap: Doc<'snaps'>, column: PlayLogColumn): string {
@@ -9,6 +10,5 @@ export function displayValue(snap: Doc<'snaps'>, column: PlayLogColumn): string 
     const text = formatCoreValue(column.field.key, value)
     return column.field.key === 'yardLine' && isValidYardLine(value) ? `${text}\n${fieldZoneOf(value)}` : text
   }
-  const value = snap.analysis[column.field._id]
-  return Array.isArray(value) ? value.join(', ') : typeof value === 'boolean' ? value ? 'Yes' : 'No' : String(value ?? '')
+  return analysisValueText(snap.analysis[column.field._id])
 }

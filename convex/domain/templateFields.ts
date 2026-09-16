@@ -93,3 +93,7 @@ export function normalizeAnalysisValue(
   }
   throw new Error(`Invalid ${TEMPLATE_FIELD_TYPE_LABELS[field.type]} value`)
 }
+
+export function analysisValueText(value: string | number | boolean | readonly string[] | undefined): string {
+  return Array.isArray(value) ? value.join(', ') : typeof value === 'boolean' ? value ? 'Yes' : 'No' : String(value ?? '')
+}

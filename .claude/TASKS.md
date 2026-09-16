@@ -312,12 +312,13 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 
 - [x] **10.1 Report CRUD.** List, create as Coach or Player intent, rename, delete with Undo.
       *Evidence:* typecheck/Convex sync, live defaults/validation/Undo/Overview counts, and Electron keyboard create/rename/delete/Undo and invalid Workspace checks passed.
-- [~] **10.2 Block model and renderer.** All seven block types rendered from their stored
+- [x] **10.2 Block model and renderer.** All seven block types rendered from their stored
       snapshots (SPEC §72–§79).
-- [ ] **10.3 Block insertion.** Add a Heading or Text block directly; add Opponent Data Table,
+      *Evidence:* Electron inserted and rendered all seven types, preserved hidden diagram sides, and retained identical content after reload.
+- [x] **10.3 Block insertion.** Add a Heading or Text block directly; add Opponent Data Table,
       Tendency, Play Diagram, Selected Plays, and Quick Notes blocks through pickers that copy a
       snapshot at insertion (SPEC §71).
-      *Verify:* edit the source after inserting; the block does not change.
+      *Evidence:* live snapshots stayed byte-identical across edits to every source type, game exclusion and deletion/Undo; invalid source/column/count/scope calls rejected without changes. Typecheck and Convex sync passed.
 - [ ] **10.4 Block ordering and editing.** Drag plus keyboard reorder, inline edit, delete
       (SPEC §80). Autosaved.
 - [ ] **10.5 Duplicate as Player Report.** Deep copy, independent thereafter; clip references
