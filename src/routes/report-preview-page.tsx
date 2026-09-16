@@ -1,3 +1,9 @@
 import type { ReactNode } from 'react'
-import { RoutePlaceholder } from './route-placeholder'
-export function ReportPreviewPage(): ReactNode { return <RoutePlaceholder title="Report Preview" /> }
+import { useParams } from 'react-router'
+import { isConvexConfigured } from '@/convex-client'
+import { ReportPreview } from '@/features/reports/report-preview'
+
+export function ReportPreviewPage(): ReactNode {
+  const { workspaceId = '', reportId = '' } = useParams()
+  return isConvexConfigured ? <ReportPreview workspaceId={workspaceId} reportId={reportId} /> : <p className="p-6">Convex is not configured</p>
+}

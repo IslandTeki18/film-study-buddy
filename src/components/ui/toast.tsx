@@ -75,7 +75,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className="fixed right-4 bottom-4 z-50"
+        className="fixed right-4 bottom-4 z-50 print:hidden"
         onMouseEnter={pause}
         onMouseLeave={resume}
         onFocusCapture={pause}

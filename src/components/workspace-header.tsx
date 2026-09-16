@@ -22,7 +22,7 @@ export function WorkspaceHeader({ workspaceId }: { readonly workspaceId: string 
   const seasons = useQuery(api.seasons.list, isConvexConfigured ? {} : 'skip')
   const season = seasons?.find((item) => item._id === workspace?.seasonId)
   const base = `/w/${workspaceId}`
-  return <header className="app-drag-region flex flex-col gap-3 border-b border-border bg-card px-5 pt-3 pl-24">
+  return <header className="print:hidden app-drag-region flex flex-col gap-3 border-b border-border bg-card px-5 pt-3 pl-24">
     <div className="flex flex-wrap items-center gap-4">
       <Link className={buttonVariants({ variant: 'outline', size: 'sm' })} to={season ? `/seasons/${season._id}` : '/'}>← {season?.name ?? 'Home'}</Link>
       <div className="flex min-w-0 items-baseline gap-2.5">

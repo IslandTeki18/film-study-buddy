@@ -19,7 +19,7 @@ function FirstLaunchGate(): ReactNode {
 /** Each screen renders its own header (AppHeader or the workspace header), so the shell is just the scroll container. */
 function AppShell(): ReactNode {
   return (
-    <main className="flex h-screen w-screen flex-col overflow-y-auto">
+    <main className="flex h-screen w-screen flex-col overflow-y-auto print:h-auto print:w-auto print:overflow-visible">
       {!isConvexConfigured && (
         <p className="border-b border-border bg-muted px-4 py-2 font-mono text-xs">
           Convex is not configured. Set <code>VITE_CONVEX_URL</code> in <code>.env</code> and

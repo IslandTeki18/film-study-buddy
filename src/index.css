@@ -99,3 +99,36 @@
 .app-drag-region input {
   -webkit-app-region: no-drag;
 }
+
+.report-sheet {
+  --background: oklch(0.985 0.003 255);
+  --foreground: oklch(0.2 0.02 260);
+  --card: oklch(1 0 0);
+  --muted: oklch(0.95 0.006 255);
+  --muted-foreground: oklch(0.5 0.025 260);
+  --accent: oklch(0.93 0.008 255);
+  --accent-foreground: oklch(0.2 0.02 260);
+  --primary: oklch(0.55 0.17 255);
+  --primary-foreground: oklch(0.99 0 0);
+  --border: oklch(0.88 0.01 255);
+  --border-strong: oklch(0.8 0.015 255);
+  --ring: oklch(0.55 0.17 255);
+  --brand: oklch(0.55 0.17 255);
+  --warm: oklch(0.6 0.15 75);
+  --positive: oklch(0.55 0.15 145);
+  --defense: oklch(0.6 0.15 40);
+  color-scheme: light;
+  background: white;
+  color: var(--foreground);
+}
+
+.report-avoid-break, .report-sheet tr { break-inside: avoid; }
+.report-heading { break-after: avoid; }
+.report-sheet thead { display: table-header-group; }
+
+@page { size: letter; margin: 0.5in; }
+
+@media print {
+  html, body { overflow: visible; height: auto; background: white; }
+  .report-sheet { print-color-adjust: exact; }
+}

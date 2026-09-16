@@ -325,8 +325,9 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 - [x] **10.5 Duplicate as Player Report.** Deep copy, independent thereafter; clip references
       hideable (SPEC §70, §81).
       *Evidence:* Electron/Convex verified independent duplication, editing/removal/reorder, clip toggle, unchanged Coach Report, and absent/rejected Player duplication. Typecheck/Convex sync passed.
-- [ ] **10.6 Report Preview.** Paginated print layout: clean page breaks, no split table rows or
+- [~] **10.6 Report Preview.** Paginated print layout: clean page breaks, no split table rows or
       diagrams, consistent spacing, no theming (SPEC §82, §83).
+      *Evidence:* Electron header/empty/clip checks, identical light/dark sheet colors, print chrome hiding and unclipping passed; PDF pagination inspection follows in 10.7.
 - [ ] **10.7 PDF export.** IPC to `webContents.printToPDF` against the preview route, with a save
       dialog and a surfaced error path.
       *Verify:* a multi-page report with tables and diagrams exports and prints legibly.
