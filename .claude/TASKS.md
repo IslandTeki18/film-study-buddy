@@ -284,7 +284,7 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
       fields into snap count, frequency, percentage, and average yards. Blank values become a
       distinct `(none)` group; average yards is `null` when no snap has yards (SPEC §56, §59).
       *Verify:* unit tests over a fixture including blanks, missing yards, and an empty scope.
-- [ ] **9.2 Grouping field list.** Core Snap fields plus the structured template fields of the
+- [~] **9.2 Grouping field list.** Core Snap fields plus the structured template fields of the
       selected games (SPEC §57).
 - [ ] **9.3 Opponent Data screen.** Game selection defaulting to all, Group By, optional second
       Group By, results table; statistics recalculate on selection change (SPEC §58, §106).
