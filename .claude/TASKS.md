@@ -334,6 +334,23 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 
 ---
 
+## Phase 10B — Bulk Snap Removal and Player Notes
+
+Not in SPEC. Owner decisions and assumptions:
+[Phase 10B plan](plans/phase-10b-player-notes-bulk-snap-removal.md).
+
+- [ ] **10B.1 Bulk Snap removal backend.** `snaps.removeMany`: one soft-delete batch, all-or-nothing, 500 cap.
+- [ ] **10B.2 Charting selection and bulk delete.** Row checkboxes, select all, Shift+click range, confirmation, one Undo.
+- [ ] **10B.3 Select import.** Select every Snap from one Hudl CSV Import in one action.
+- [ ] **10B.4 Player Notes data model.** `opponentPlayers`, `playerNotes`, domain constants, soft-delete and Workspace cascade.
+- [ ] **10B.5 Player Notes backend.** List with resolved Snap links, player CRUD, Player Note CRUD.
+- [ ] **10B.6 Player notes tab.** Real groups by side, add player, autosaved profile card, delete with Undo.
+- [ ] **10B.7 Player Note entries.** Create, edit, delete; link Snaps; clip count; Play Detail links.
+- [ ] **10B.8 Note a player from Charting.** Aside lists real players and opens the Player Note dialog with the latest Snap linked.
+- [ ] **10B.9 Docs and completion report.** Glossary, BLUEPRINT, completion report.
+
+---
+
 ## Phase 11 — Hardening and Acceptance
 
 - [ ] **11.1 Keyboard shortcut pass.** Every shortcut in BLUEPRINT §7.5 implemented and listed on
