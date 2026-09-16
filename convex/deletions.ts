@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { attachedSnapIds } from './domain/diagram.ts'
 import type { Id } from './_generated/dataModel'
 import {
   internalMutation,
@@ -94,12 +95,12 @@ async function restoreTable(ctx: MutationCtx, table: SoftDeleteTable, batchId: s
       .filter((query) => query.eq(query.field('deleteBatchId'), batchId))
       .collect()
     for (const diagram of diagrams) {
-      const attached = diagram.snapId
-        ? await ctx.db.query('diagrams').withIndex('by_snap', (query) => query.eq('snapId', diagram.snapId)).collect()
-        : []
-      const occupied = attached.some((other) => other._id !== diagram._id && other.deletedAt === undefined)
+      const attached = await ctx.db.query('diagrams')
+        .withIndex('by_sourceGame', (query) => query.eq('sourceGameId', diagram.sourceGameId)).collect()
+      const occupied = new Set(attached.filter((other) => other._id !== diagram._id && other.deletedAt === undefined).flatMap(attachedSnapIds))
       await ctx.db.patch(diagram._id, {
-        deletedAt: undefined, deleteBatchId: undefined, ...(occupied ? { snapId: undefined } : {}),
+        deletedAt: undefined, deleteBatchId: undefined,
+        snapIds: attachedSnapIds(diagram).filter((id) => !occupied.has(id)), snapId: undefined,
       })
     }
     return
