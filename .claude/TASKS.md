@@ -257,17 +257,24 @@ Completion and evidence: [phase-7-completion.md](plans/phase-7-completion.md).
 
 ## Phase 8 — Play Designer and Diagrams
 
-- [ ] **8.1 Diagram document and SVG renderer.** Normalized 0–1 coordinates; one read-only
+Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md).
+
+- [x] **8.1 Diagram document and SVG renderer.** Normalized 0–1 coordinates; one read-only
       renderer reused by the gallery, Play Detail, reports, and the PDF.
-- [ ] **8.2 Canvas and player objects.** Place, drag, and delete offense/defense markers with
+      *Evidence:* normalization tests and shared renderer checks passed; identical normalized SVG markup was confirmed in the designer, gallery, and Play Detail. PDF verification is deferred to 10.7.
+- [x] **8.2 Canvas and player objects.** Place, drag, and delete offense/defense markers with
       optional label and jersey; clamped to bounds (SPEC §52).
-- [ ] **8.3 Drawing tools.** Straight arrow, curved arrow, blocking bar, dashed line, freehand,
+      *Evidence:* Electron verified placement, drag, delete, labels, jerseys, side changes, four-edge clamping, reload persistence, and keyboard nudging.
+- [x] **8.3 Drawing tools.** Straight arrow, curved arrow, blocking bar, dashed line, freehand,
       erase. Fixed toolbar, nothing configurable (SPEC §53).
-- [ ] **8.4 Diagram note and autosave.** The single note field; the whole diagram autosaves
+      *Evidence:* Electron verified all five shapes, curve control, erase, selection deletion, zero-length rejection, Escape, persistence, and all nine local tool keys.
+- [x] **8.4 Diagram note and autosave.** The single note field; the whole diagram autosaves
       (SPEC §54).
-- [ ] **8.5 Gallery.** Per Source Game: view, edit, delete with Undo, and attachment to a Snap
+      *Evidence:* blur/reload persistence, retained failed drafts, Retry, correction recovery, and input keyboard guards passed in Electron.
+- [x] **8.5 Gallery.** Per Source Game: view, edit, delete with Undo, and attachment to a Snap
       (SPEC §55).
       *Verify:* a diagram drawn in the designer renders identically in the gallery and in a PDF.
+      *Evidence:* Electron verified create/open, attach/detach, delete/Undo, invalid Snap handling, row-link reuse, and gallery/detail identity; PDF identity remains deferred to 10.7.
 
 ---
 
