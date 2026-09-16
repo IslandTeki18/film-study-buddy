@@ -10,7 +10,7 @@ import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
 import { sectionAppliesTo } from '@convex/domain/playSide'
 import { Button } from '@/components/ui/button'
 import { DiagramSvg } from '@/components/diagram-svg'
-import { Chip, Meta } from '@/components/ui/panel'
+import { Chip, Eyebrow, Meta, Panel } from '@/components/ui/panel'
 import { QuickNoteDialog } from '@/features/notes/quick-note-dialog'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
@@ -102,8 +102,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
       {!embedded && <><Link className="underline" to={base}>Back to Play Log</Link>
       <Button variant="outline" title={SHORTCUTS.toggleMustReview.label} disabled={marking} onClick={toggleMustReview}>{snap.mustReview ? 'Resolve Must Review' : 'Mark Must Review'}</Button></>}
     </header>
-    <section className="space-y-3" aria-label="Core Snap Data">
-      <h2 className="font-semibold">Core Snap Data</h2>
+    <SectionPanel title="Core Snap Data">
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {columns.filter((column) => column.kind === 'core').map((column) => {
           const edited = provenanceOf(snap.imported, column.field.key, snap.core[column.field.key]) === 'Coach Edited'
@@ -124,7 +123,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
           </div>
         })}
       </dl>
-    </section>
+    </SectionPanel>
     <section className="space-y-3" aria-label="Template Analysis Data">
       <h2 className="font-semibold">Template Analysis Data</h2>
       {tree.sections.filter((section) => sectionAppliesTo(section.name, snap.core.playType)).map((section) => <div key={section._id} className="space-y-2">
@@ -133,8 +132,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
           .map((column) => <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt><dd><FieldEditor column={column} value={column.kind === 'template' ? snap.analysis[column.field._id] : undefined} terminology={terminology} onSave={(value) => update(column, value)} /></dd></div>)}</dl>
       </div>)}
     </section>
-    <section className="space-y-3" aria-label="Cell Notes">
-      <h2 className="font-semibold">Cell Notes</h2>
+    <SectionPanel title="Cell Notes">
       {columns.filter((column) => column.key === adding || notes.some((note) => note.fieldKey === column.key)).map((column) =>
         <div key={column.key} className="max-w-xl space-y-1"><h3 className="text-sm">{column.label}</h3>
           <CellNoteEditor label={column.label} note={notes.find((note) => note.fieldKey === column.key)?.text ?? ''}
@@ -146,18 +144,16 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
         {columns.filter((column) => column.key === adding || !notes.some((note) => note.fieldKey === column.key))
           .map((column) => <option key={column.key} value={column.key}>{column.label}</option>)}
       </Select>
-    </section>
-    <section className="space-y-2" aria-label="Quick Notes">
-      <h2 className="font-semibold">Quick Notes</h2>
+    </SectionPanel>
+    <SectionPanel title="Quick Notes">
       {snapQuickNotes === undefined ? <p>Loading…</p> : snapQuickNotes.length === 0 ? <p>No Quick Notes for this Snap</p> : <ul className="space-y-3">{snapQuickNotes.map((note) => <li key={note._id} className="space-y-2">
         <Meta>{new Date(note.createdAt).toLocaleString()}</Meta><p className="whitespace-pre-wrap">{note.text}</p>
         <div className="flex flex-wrap gap-2">{note.tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}</div>
       </li>)}</ul>}
       <div className="flex items-center gap-3"><Button variant="outline" onClick={() => setNoting(true)}>Add Quick Note</Button><Link className="underline" to={`${base}/notes`}>All Quick Notes</Link></div>
       <QuickNoteDialog open={noting} onOpenChange={setNoting} sourceGameId={snap.sourceGameId} snap={snap} />
-    </section>
-    <section className="space-y-2" aria-label="Play Diagram">
-      <h2 className="font-semibold">Play Diagram</h2>
+    </SectionPanel>
+    <SectionPanel title="Play Diagram">
       {diagram === undefined ? <p>Loading…</p> : diagram ? <div className="max-w-md space-y-2">
         <Link className="block" to={`${base}/diagrams/${diagram._id}`} aria-label="Edit Play Diagram">
           <DiagramSvg diagram={diagram} title="Play Diagram" className="rounded-xl border border-border" {...(diagram.hiddenSide ? { hideSide: diagram.hiddenSide } : {})} />
@@ -168,6 +164,20 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
         <Link className="underline" to={`${base}/diagrams?snap=${snap._id}&new=1`}>Add Play Diagram</Link>
         <Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Use existing Play Diagram</Link>
       </div>}
-    </section>
+    </SectionPanel>
   </Root>
+}
+
+function SectionPanel({ title, editing, onToggle, children }: {
+  readonly title: string; readonly editing?: boolean; readonly onToggle?: () => void; readonly children: ReactNode
+}): ReactNode {
+  return <section aria-label={title}>
+    <Panel className="grid gap-4 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2><Eyebrow>{title}</Eyebrow></h2>
+        {onToggle && <Button variant="outline" size="sm" aria-pressed={editing} aria-label={`${editing ? 'Finish editing' : 'Edit'} ${title}`} onClick={onToggle}>{editing ? 'Done' : 'Edit'}</Button>}
+      </div>
+      {children}
+    </Panel>
+  </section>
 }
