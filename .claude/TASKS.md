@@ -310,7 +310,8 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 
 ## Phase 10 — Reports and PDF
 
-- [ ] **10.1 Report CRUD.** List, create as Coach or Player intent, rename, delete with Undo.
+- [x] **10.1 Report CRUD.** List, create as Coach or Player intent, rename, delete with Undo.
+      *Evidence:* typecheck/Convex sync, live defaults/validation/Undo/Overview counts, and Electron keyboard create/rename/delete/Undo and invalid Workspace checks passed.
 - [ ] **10.2 Block model and renderer.** All seven block types rendered from their stored
       snapshots (SPEC §72–§79).
 - [ ] **10.3 Block insertion.** Add a Heading or Text block directly; add Opponent Data Table,
