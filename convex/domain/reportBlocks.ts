@@ -39,3 +39,8 @@ export function uniqueLabels(labels: readonly string[]): string[] {
     return candidate
   })
 }
+
+export function pdfFileName({ opponentName, week, reportName }: { opponentName: string; week: number; reportName: string }): string {
+  const name = `${opponentName} Week ${week} - ${reportName}`.replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120).trim()
+  return `${name || 'Report'}.pdf`
+}

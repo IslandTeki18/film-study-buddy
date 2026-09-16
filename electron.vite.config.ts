@@ -10,6 +10,13 @@ export default defineConfig({
       lib: { entry: resolve(__dirname, 'electron/main.ts') },
     },
   },
+  preload: {
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      lib: { entry: resolve(__dirname, 'electron/preload.ts') },
+      rollupOptions: { output: { format: 'cjs', entryFileNames: '[name].cjs' } },
+    },
+  },
   renderer: {
     root: resolve(__dirname, 'src'),
     resolve: { alias: { '@': resolve(__dirname, 'src'), '@convex': resolve(__dirname, 'convex') } },

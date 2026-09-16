@@ -261,7 +261,7 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
 
 - [x] **8.1 Diagram document and SVG renderer.** Normalized 0–1 coordinates; one read-only
       renderer reused by the gallery, Play Detail, reports, and the PDF.
-      *Evidence:* normalization tests and shared renderer checks passed; identical normalized SVG markup was confirmed in the designer, gallery, and Play Detail. PDF verification is deferred to 10.7.
+      *Evidence:* normalization tests and shared renderer checks passed; identical normalized SVG markup was confirmed in the designer, gallery, and Play Detail. PDF identity verified in 10.7 with matching gallery/report SVG and inspected native export.
 - [x] **8.2 Canvas and player objects.** Place, drag, and delete offense/defense markers with
       optional label and jersey; clamped to bounds (SPEC §52).
       *Evidence:* Electron verified placement, drag, delete, labels, jerseys, side changes, four-edge clamping, reload persistence, and keyboard nudging.
@@ -274,7 +274,7 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
 - [x] **8.5 Gallery.** Per Source Game: view, edit, delete with Undo, and attachment to a Snap
       (SPEC §55).
       *Verify:* a diagram drawn in the designer renders identically in the gallery and in a PDF.
-      *Evidence:* Electron verified create/open, attach/detach, delete/Undo, invalid Snap handling, row-link reuse, and gallery/detail identity; PDF identity remains deferred to 10.7.
+      *Evidence:* Electron verified create/open, attach/detach, delete/Undo, invalid Snap handling, row-link reuse, and gallery/detail identity; PDF identity passed in 10.7 with matching gallery/report SVG and inspected native export.
 
 ---
 
@@ -325,12 +325,12 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 - [x] **10.5 Duplicate as Player Report.** Deep copy, independent thereafter; clip references
       hideable (SPEC §70, §81).
       *Evidence:* Electron/Convex verified independent duplication, editing/removal/reorder, clip toggle, unchanged Coach Report, and absent/rejected Player duplication. Typecheck/Convex sync passed.
-- [~] **10.6 Report Preview.** Paginated print layout: clean page breaks, no split table rows or
+- [x] **10.6 Report Preview.** Paginated print layout: clean page breaks, no split table rows or
       diagrams, consistent spacing, no theming (SPEC §82, §83).
-      *Evidence:* Electron header/empty/clip checks, identical light/dark sheet colors, print chrome hiding and unclipping passed; PDF pagination inspection follows in 10.7.
-- [ ] **10.7 PDF export.** IPC to `webContents.printToPDF` against the preview route, with a save
+      *Evidence:* Electron preview checks and nine-page native PDF inspection passed: white margins, repeating headers, intact rows/diagrams, no app chrome; light/dark page images were byte-identical.
+- [x] **10.7 PDF export.** IPC to `webContents.printToPDF` against the preview route, with a save
       dialog and a surfaced error path.
-      *Verify:* a multi-page report with tables and diagrams exports and prints legibly.
+      *Evidence:* native Save/Cancel, saved-path toast, Player/empty exports, built-renderer export, bridge isolation, missing-bridge message, and real unwritable-path error with unchanged report passed.
 
 ---
 
