@@ -3,11 +3,12 @@ import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
-import { DIAGRAM_ASPECT, PLAYER_JERSEY_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, type DiagramDoc, type DiagramPlayer, type DiagramShape, type DiagramTool, type PlayerSide } from '@convex/domain/diagram'
+import { DIAGRAM_ASPECT, DIAGRAM_NOTE_MAX_LENGTH, PLAYER_JERSEY_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, type DiagramDoc, type DiagramPlayer, type DiagramShape, type DiagramTool, type PlayerSide } from '@convex/domain/diagram'
 import { DiagramSvg } from '@/components/diagram-svg'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Meta, Page, Panel } from '@/components/ui/panel'
+import { Textarea } from '@/components/ui/textarea'
 import { useAutosave } from '@/lib/db/use-autosave'
 import { inDialog } from '@/lib/shortcuts'
 import { curveControl, hitTestPlayer, hitTestShape, nudge, simplifyFreehand, toNormalized } from './geometry'
@@ -227,6 +228,9 @@ function DesignerContent({ workspaceId, sourceGameId, diagram }: {
             {selectedShape?.tool === 'curve' && <circle cx={(previewShape?.points[2] ?? selectedShape.points[2] ?? 0) * DIAGRAM_ASPECT.width} cy={(previewShape?.points[3] ?? selectedShape.points[3] ?? 0) * DIAGRAM_ASPECT.height} r="10" className="fill-background stroke-primary" strokeWidth="4" />}
           </DiagramSvg>
         </div>
+        <label className="grid gap-1 text-sm">Diagram Note
+          <Textarea value={draft.note ?? ''} maxLength={DIAGRAM_NOTE_MAX_LENGTH} onChange={(event) => setDraft({ ...draftRef.current, note: event.target.value })} onBlur={flush} />
+        </label>
         <div className="flex items-center gap-3"><Meta>{statusText}</Meta>{status === 'error' && <Button size="sm" variant="outline" onClick={flush}>Retry</Button>}</div>
       </div>
       <Panel className="h-fit space-y-3 p-4" aria-label="Selection inspector">
