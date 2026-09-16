@@ -88,6 +88,22 @@ export const listRecent = internalQuery({
 })
 
 async function restoreTable(ctx: MutationCtx, table: SoftDeleteTable, batchId: string) {
+  if (table === 'diagrams') {
+    const diagrams = await ctx.db
+      .query('diagrams')
+      .filter((query) => query.eq(query.field('deleteBatchId'), batchId))
+      .collect()
+    for (const diagram of diagrams) {
+      const attached = diagram.snapId
+        ? await ctx.db.query('diagrams').withIndex('by_snap', (query) => query.eq('snapId', diagram.snapId)).collect()
+        : []
+      const occupied = attached.some((other) => other._id !== diagram._id && other.deletedAt === undefined)
+      await ctx.db.patch(diagram._id, {
+        deletedAt: undefined, deleteBatchId: undefined, ...(occupied ? { snapId: undefined } : {}),
+      })
+    }
+    return
+  }
   const records = await ctx.db
     .query(table)
     .filter((query) => query.eq(query.field('deleteBatchId'), batchId))
