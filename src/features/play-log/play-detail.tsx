@@ -18,6 +18,7 @@ import { inDialog, isShortcut, SHORTCUTS } from '@/lib/shortcuts'
 import { useSetMustReview } from './use-set-must-review'
 import { buildColumns } from './columns'
 import { Cell } from './cell'
+import { displayValue } from './row-model'
 import { CellNoteEditor, FieldEditor, useSaveCellNote, useUpdateSnapField } from './cell-editors'
 
 export function PlayDetail({ workspaceId, sourceGameId, snapId, embedded = false }: {
@@ -51,6 +52,9 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
   const Root = embedded ? 'div' : 'main'
   const markingRef = useRef(false)
   const columns = buildColumns(tree)
+  const sections = tree.sections.filter((section) => sectionAppliesTo(section.name, snap.core.playType))
+  const [editing, setEditing] = useState<ReadonlySet<string>>(new Set())
+  function toggleEditing(key: string): void { setEditing((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next }) }
   const saveNote = useSaveCellNote(snap.sourceGameId)
   const update = useUpdateSnapField(snap)
   const [adding, setAdding] = useState('')
@@ -96,18 +100,21 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   })
-  return <Root className="space-y-6 p-6">
-    <header className="flex flex-wrap items-center gap-4">
-      <h1 className="text-lg font-semibold">Snap {snap.core.clipNumber ?? snap.order}</h1>
-      {!embedded && <><Link className="underline" to={base}>Back to Play Log</Link>
-      <Button variant="outline" title={SHORTCUTS.toggleMustReview.label} disabled={marking} onClick={toggleMustReview}>{snap.mustReview ? 'Resolve Must Review' : 'Mark Must Review'}</Button></>}
+  return <Root className={embedded ? 'grid gap-6 p-6' : 'mx-auto grid w-full max-w-6xl gap-6 px-6 pt-8 pb-12'}>
+    <header className="flex flex-wrap items-end justify-between gap-4">
+      <div><Eyebrow>Play Detail</Eyebrow><div className="flex items-center gap-3"><h1 className="text-lg font-semibold">Snap {snap.core.clipNumber ?? snap.order}</h1>{snap.mustReview && <Chip>Must Review</Chip>}</div></div>
+      {!embedded && <div className="flex flex-wrap items-center gap-3"><Link className="underline" to={base}>Back to Play Log</Link>
+      <Button variant="outline" title={SHORTCUTS.toggleMustReview.label} disabled={marking} onClick={toggleMustReview}>{snap.mustReview ? 'Resolve Must Review' : 'Mark Must Review'}</Button></div>}
     </header>
-    <SectionPanel title="Core Snap Data">
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid min-w-0 content-start gap-6">
+    <SectionPanel title="Core Snap Data" editing={editing.has('core')} onToggle={() => toggleEditing('core')}>
+      <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
         {columns.filter((column) => column.kind === 'core').map((column) => {
           const edited = provenanceOf(snap.imported, column.field.key, snap.core[column.field.key]) === 'Coach Edited'
           return <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt>
-            <dd><Cell snap={snap} column={column} />
+            <dd><div hidden={editing.has('core')}>{displayValue(snap, column) === '' ? <Meta>—</Meta> : <Cell snap={snap} column={column} />}</div>
+              <div hidden={!editing.has('core')} className="space-y-1">
               <FieldEditor column={column} value={snap.core[column.field.key]} terminology={terminology} onSave={(value) => update(column, value)} />
               {edited && <div className="space-y-1 text-sm">
                 <p>Original Hudl value: {snap.imported?.[column.field.key]}</p>
@@ -119,20 +126,34 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
                       .finally(() => setRestoring(null))
                   }}>Restore original</Button>
               </div>}
+              </div>
             </dd>
           </div>
         })}
       </dl>
     </SectionPanel>
-    <section className="space-y-3" aria-label="Template Analysis Data">
-      <h2 className="font-semibold">Template Analysis Data</h2>
-      {tree.sections.filter((section) => sectionAppliesTo(section.name, snap.core.playType)).map((section) => <div key={section._id} className="space-y-2">
-        <h3 className="text-sm font-semibold">{section.name}</h3>
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{columns.filter((column) => column.kind === 'template' && column.field.sectionId === section._id)
-          .map((column) => <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt><dd><FieldEditor column={column} value={column.kind === 'template' ? snap.analysis[column.field._id] : undefined} terminology={terminology} onSave={(value) => update(column, value)} /></dd></div>)}</dl>
-      </div>)}
+    <section className="grid gap-4" aria-label="Template Analysis Data">
+      <h2 className="sr-only">Template Analysis Data</h2>
+      {sections.length === 0 && <Meta>No Sections apply to this Play Type</Meta>}
+      {sections.map((section) => {
+        const fields = columns.filter((column) => column.kind === 'template' && column.field.sectionId === section._id)
+        return <SectionPanel key={section._id} title={section.name} editing={editing.has(section._id)} {...(fields.length ? { onToggle: () => toggleEditing(section._id) } : {})}>
+          {fields.length === 0 ? <Meta>No fields in this Section</Meta> : <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">{fields.map((column) =>
+            <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt><dd>
+              <div hidden={editing.has(section._id)}>{displayValue(snap, column) === '' ? <Meta>—</Meta> : <Cell snap={snap} column={column} />}</div>
+              <div hidden={!editing.has(section._id)}><FieldEditor column={column} value={column.kind === 'template' ? snap.analysis[column.field._id] : undefined} terminology={terminology} onSave={(value) => update(column, value)} /></div>
+            </dd></div>)}</dl>}
+        </SectionPanel>
+      })}
     </section>
-    <SectionPanel title="Cell Notes">
+    <SectionPanel title="Cell Notes" editing={editing.has('cellNotes')} onToggle={() => toggleEditing('cellNotes')}>
+      <div hidden={editing.has('cellNotes')}>
+        {notes.length === 0 ? <Meta>No Cell Notes</Meta> : <dl className="space-y-3">{notes.map((note) => <div key={note._id}>
+          <dt className="text-sm text-muted-foreground">{columns.find((column) => column.key === note.fieldKey)?.label ?? note.fieldKey}</dt>
+          <dd><p className="whitespace-pre-wrap">{note.text}</p></dd>
+        </div>)}</dl>}
+      </div>
+      <div hidden={!editing.has('cellNotes')} className="space-y-3">
       {columns.filter((column) => column.key === adding || notes.some((note) => note.fieldKey === column.key)).map((column) =>
         <div key={column.key} className="max-w-xl space-y-1"><h3 className="text-sm">{column.label}</h3>
           <CellNoteEditor label={column.label} note={notes.find((note) => note.fieldKey === column.key)?.text ?? ''}
@@ -144,9 +165,12 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
         {columns.filter((column) => column.key === adding || !notes.some((note) => note.fieldKey === column.key))
           .map((column) => <option key={column.key} value={column.key}>{column.label}</option>)}
       </Select>
+      </div>
     </SectionPanel>
+    </div>
+    <div className="grid min-w-0 content-start gap-6">
     <SectionPanel title="Quick Notes">
-      {snapQuickNotes === undefined ? <p>Loading…</p> : snapQuickNotes.length === 0 ? <p>No Quick Notes for this Snap</p> : <ul className="space-y-3">{snapQuickNotes.map((note) => <li key={note._id} className="space-y-2">
+      {snapQuickNotes === undefined ? <Meta>Loading…</Meta> : snapQuickNotes.length === 0 ? <Meta>No Quick Notes for this Snap</Meta> : <ul className="space-y-3">{snapQuickNotes.map((note) => <li key={note._id} className="space-y-2 border-t border-border pt-3 first:border-t-0 first:pt-0">
         <Meta>{new Date(note.createdAt).toLocaleString()}</Meta><p className="whitespace-pre-wrap">{note.text}</p>
         <div className="flex flex-wrap gap-2">{note.tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}</div>
       </li>)}</ul>}
@@ -154,7 +178,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
       <QuickNoteDialog open={noting} onOpenChange={setNoting} sourceGameId={snap.sourceGameId} snap={snap} />
     </SectionPanel>
     <SectionPanel title="Play Diagram">
-      {diagram === undefined ? <p>Loading…</p> : diagram ? <div className="max-w-md space-y-2">
+      {diagram === undefined ? <Meta>Loading…</Meta> : diagram ? <div className="space-y-2">
         <Link className="block" to={`${base}/diagrams/${diagram._id}`} aria-label="Edit Play Diagram">
           <DiagramSvg diagram={diagram} title="Play Diagram" className="rounded-xl border border-border" {...(diagram.hiddenSide ? { hideSide: diagram.hiddenSide } : {})} />
         </Link>
@@ -165,6 +189,8 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
         <Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Use existing Play Diagram</Link>
       </div>}
     </SectionPanel>
+    </div>
+    </div>
   </Root>
 }
 
