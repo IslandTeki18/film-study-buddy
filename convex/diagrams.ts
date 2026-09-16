@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import { mutation, query, type MutationCtx } from './_generated/server'
 import { softDeleteBatch } from './deletions'
-import { normalizeDiagram } from './domain/diagram.ts'
+import { attachedSnapIds, normalizeDiagram } from './domain/diagram.ts'
 import schema from './schema'
 import { requireLiveSnap } from './snaps'
 import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
@@ -19,9 +19,9 @@ async function requireLiveDiagram(ctx: MutationCtx, id: Id<'diagrams'>): Promise
   return diagram
 }
 
-async function hasLiveDiagramForSnap(ctx: MutationCtx, snapId: Id<'snaps'>, exceptId?: Id<'diagrams'>): Promise<boolean> {
-  const diagrams = await ctx.db.query('diagrams').withIndex('by_snap', (q) => q.eq('snapId', snapId)).collect()
-  return diagrams.some((diagram) => diagram.deletedAt === undefined && diagram._id !== exceptId)
+async function hasLiveDiagramForSnap(ctx: MutationCtx, sourceGameId: Id<'sourceGames'>, snapId: Id<'snaps'>, exceptId?: Id<'diagrams'>): Promise<boolean> {
+  const diagrams = await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', sourceGameId)).collect()
+  return diagrams.some((diagram) => diagram.deletedAt === undefined && diagram._id !== exceptId && attachedSnapIds(diagram).includes(snapId))
 }
 
 export const listBySourceGame = query({
@@ -49,8 +49,8 @@ export const getBySnap = query({
   handler: async (ctx, args) => {
     const snap = await ctx.db.get(args.snapId)
     if (!snap || snap.deletedAt !== undefined || !await isLiveSourceGame(ctx, snap.sourceGameId)) return null
-    return (await ctx.db.query('diagrams').withIndex('by_snap', (q) => q.eq('snapId', args.snapId)).collect())
-      .find((diagram) => diagram.deletedAt === undefined) ?? null
+    return (await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', snap.sourceGameId)).collect())
+      .find((diagram) => diagram.deletedAt === undefined && attachedSnapIds(diagram).includes(args.snapId)) ?? null
   },
 })
 
@@ -61,7 +61,7 @@ export const create = mutation({
     if (args.snapId) {
       const snap = await requireLiveSnap(ctx, args.snapId)
       if (snap.sourceGameId !== game._id) throw new Error('Snap belongs to a different Source Game')
-      if (await hasLiveDiagramForSnap(ctx, snap._id)) throw new Error('This Snap already has a Play Diagram')
+      if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id)) throw new Error('This Snap already has a Play Diagram')
     }
     return ctx.db.insert('diagrams', {
       sourceGameId: game._id, ...(args.snapId ? { snapId: args.snapId } : {}),
@@ -98,7 +98,7 @@ export const attach = mutation({
     if (args.snapId) {
       const snap = await requireLiveSnap(ctx, args.snapId)
       if (snap.sourceGameId !== diagram.sourceGameId) throw new Error('Snap belongs to a different Source Game')
-      if (await hasLiveDiagramForSnap(ctx, snap._id, diagram._id)) throw new Error('This Snap already has a Play Diagram')
+      if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id, diagram._id)) throw new Error('This Snap already has a Play Diagram')
     }
     await ctx.db.patch(diagram._id, { snapId: args.snapId ?? undefined, updatedAt: Date.now() })
     return null
