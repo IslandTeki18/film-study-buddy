@@ -1,5 +1,28 @@
 # Phase 8 Play Designer and Diagrams — completion report
 
+## Follow-up verification after the call-sheet revision
+
+The original Phase 8 evidence below describes `52760a4`. The subsequent user commit `8dd40bd`
+revised the specification and designer to formations and per-player assignments; those changes
+were preserved. The untracked `shared-play-diagrams.md` plan was not implemented or committed.
+
+- Fixed one confirmed regression in `fda1bc5`: selecting Man issued two draft updates, and revealing
+  offense overwrote the assignment update with the previous draft. One atomic update now clears
+  the previous route/zone/coverage and reveals offense while entering target selection.
+- `node src/features/designer/assignments.check.mjs` failed before the fix (`Zone` remained instead
+  of `Man`) and passed afterward, for both visible and hidden offense. It exercises the actual
+  handler functions without a React render between updates and checks preservation of unrelated data.
+- `npm run build` passed on `fda1bc5`: strict TypeScript, all 15 tests, and Electron/Vite compilation.
+  `npx convex dev --once` and `git diff --check` passed. The existing missing-preload warning remains.
+- Electron verified a 22-player preset, Zone-to-Man switching, revealing hidden offense, selecting
+  the covered player, and reload persistence. It also verified named routes, labels, notes, saved
+  formation save/load, player removal, hidden-side persistence, and gallery/Play Detail thumbnails.
+- Checks used isolated data (`/tmp/p8finish-ids.json`, `/tmp/p8finish-ui.mjs`). The temporary saved
+  formation was removed, and the fixture Season and Template were soft-deleted through existing
+  APIs; follow-up queries confirmed that the Source Game and Template were no longer live.
+
+## Original Phase 8 delivery
+
 Implemented and verified on `main`, with one small commit per implementation step and a focused
 Undo follow-up. The supplied untracked plan remains unchanged and excluded from commits. No schema
 or dependency changes. No Git push, branch switch, merge, or pull request.
