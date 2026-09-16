@@ -1,7 +1,7 @@
 import { CORE_FIELDS, formatCoreValue } from './domain/coreFields.ts'
 import { analysisValueText, columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
 import { formatAvgYards, formatFrequency } from './domain/aggregate.ts'
-import { playerReportName, HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
+import { CLIP_REFERENCE_LABEL, playerReportName, HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
 import { computeResult } from './opponentData'
 import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
 import { templateTree } from './templates'
@@ -145,7 +145,9 @@ export const insertBlock = mutation({
           const field = fields.find((field) => fieldColumnKey(field._id) === key)
           return { core, field, label: core?.label ?? field!.name }
         })
-        const labels = uniqueLabels(columns.map((column) => column.label))
+        const nonClipLabels = uniqueLabels([CLIP_REFERENCE_LABEL, ...columns.filter((column) => column.core?.key !== 'clipNumber').map((column) => column.label)])
+        let labelIndex = 1
+        const labels = columns.map((column) => column.core?.key === 'clipNumber' ? CLIP_REFERENCE_LABEL : nonClipLabels[labelIndex++]!)
         const snaps = await Promise.all(source.snapIds.map(async (snapId) => {
           const snap = await ctx.db.get(snapId)
           if (!snap || snap.deletedAt !== undefined || snap.sourceGameId !== game._id) throw new Error('Snap not found')
