@@ -1,4 +1,8 @@
 export const DIAGRAM_TOOLS = ['arrow', 'curve', 'block', 'dashed', 'free'] as const
+export function attachedSnapIds<T extends string>(diagram: { snapId?: T; snapIds?: T[] }): T[] {
+  return diagram.snapIds ?? (diagram.snapId ? [diagram.snapId] : [])
+}
+
 export type DiagramTool = (typeof DIAGRAM_TOOLS)[number]
 export const PLAYER_SIDES = ['offense', 'defense'] as const
 export type PlayerSide = (typeof PLAYER_SIDES)[number]

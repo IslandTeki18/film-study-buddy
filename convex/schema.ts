@@ -195,6 +195,7 @@ export default defineSchema({
   diagrams: defineTable({
     sourceGameId: v.id('sourceGames'),
     snapId: v.optional(v.id('snaps')),
+    snapIds: v.optional(v.array(v.id('snaps'))),
     name: v.optional(v.string()),
     note: v.optional(v.string()),
     // Side the coach hid in the designer; the gallery and Play Detail hide it too.
