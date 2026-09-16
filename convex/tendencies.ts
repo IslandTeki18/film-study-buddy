@@ -7,6 +7,7 @@ import { computeResult } from './opponentData'
 import schema from './schema'
 import { requireLiveWorkspace } from './workspaces'
 import { isLiveSourceGame } from './sourceGames'
+import { softDeleteBatch } from './deletions'
 
 const tendencyValidator = v.object({ ...schema.tables.tendencies.validator.fields, _id: v.id('tendencies'), _creationTime: v.number() })
 
@@ -104,5 +105,13 @@ export const update = mutation({
       ...(args.includeInReport !== undefined ? { includeInReport: args.includeInReport } : {}),
     })
     return null
+  },
+})
+
+export const remove = mutation({
+  args: { tendencyId: v.id('tendencies') }, returns: v.string(),
+  handler: async (ctx, args) => {
+    const tendency = await requireLiveTendency(ctx, args.tendencyId)
+    return softDeleteBatch(ctx, { kind: 'tendency', label: tendency.title, records: [{ table: 'tendencies', id: tendency._id }] })
   },
 })

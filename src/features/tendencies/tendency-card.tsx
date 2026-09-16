@@ -34,7 +34,9 @@ export function TendencyCard({ tendency, diagrams, onDelete }: {
     <div className="space-y-1"><label htmlFor={`${id}-title`}>Title</label><Input id={`${id}-title`} maxLength={NAME_MAX_LENGTH} value={title.draft} onChange={(event) => title.setDraft(event.target.value)} onBlur={title.flush} />
       {title.status !== 'idle' && <Meta role="status">{title.status === 'error' ? <>Save failed <Button variant="ghost" size="sm" onClick={title.flush}>Retry</Button></> : 'Saving…'}</Meta>}
     </div>
-    <div className="space-y-1"><label htmlFor={`${id}-category`}>Category</label><TendencyCategorySelect id={`${id}-category`} value={tendency.category} onChange={(category) => commit({ category })} /></div>
+    <fieldset disabled={title.status !== 'idle' || note.status !== 'idle'} className="space-y-1"><label htmlFor={`${id}-category`}>Category</label><TendencyCategorySelect id={`${id}-category`} value={tendency.category} onChange={(category) => commit({ category })} />
+      {(title.status === 'error' || note.status === 'error') && <Meta>Resolve the failed save before changing category.</Meta>}
+    </fieldset>
     <TendencySnapshot snapshot={tendency.snapshot} />
     <Meta>From {tendency.snapshot.gameIds.length} Source Games · created {new Date(tendency.createdAt).toLocaleDateString()}</Meta>
     <div className="space-y-1"><label htmlFor={`${id}-note`}>Coach explanation</label><Textarea id={`${id}-note`} maxLength={TENDENCY_NOTE_MAX_LENGTH} value={note.draft} onChange={(event) => note.setDraft(event.target.value)} onBlur={note.flush} />

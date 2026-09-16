@@ -295,7 +295,7 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
       *Verify:* import another game; the existing tendency's numbers do not move.
 - [~] **9.6 Tendency fields and categories.** Title, category (defaults plus custom),
       explanation, optional diagram, report-inclusion flag (SPEC §62, §63).
-- [ ] **9.7 Tendencies screen.** List by category, edit, delete with Undo.
+- [~] **9.7 Tendencies screen.** List by category, edit, delete with Undo.
 
 ---
 
