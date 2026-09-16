@@ -136,7 +136,7 @@ Mode.
 _Avoid_: Review list, flagged plays, inbox.
 
 **Play Diagram**:
-A saved drawing of a play, attached to a Snap, built from scratch in the Play Designer and
+A saved drawing of a play, attached to one or more Snaps, built from scratch in the Play Designer and
 reusable as report content.
 _Avoid_: Diagram alone where Diagram Note is nearby, drawing, sketch, whiteboard.
 

@@ -1108,7 +1108,7 @@ No arbitrary text-placement tool is required in V1.
 
 ## 55. Play Diagrams
 
-Diagrams attach to plays.
+A Play Diagram may be attached to several Snaps in the same Source Game; a Snap has at most one Play Diagram.
 
 Each Source Game contains a Play Diagrams gallery.
 
