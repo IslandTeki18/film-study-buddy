@@ -1,4 +1,9 @@
 import type { ReactNode } from 'react'
-import { ChartingPreview } from '@/features/preview/charting-preview'
-// ponytail: static preview until Phase 9 (Opponent Data) lands; swap for the real screen there.
-export function OpponentDataPage(): ReactNode { return <ChartingPreview /> }
+import { useParams } from 'react-router'
+import { isConvexConfigured } from '@/convex-client'
+import { OpponentData } from '@/features/opponent-data/opponent-data'
+
+export function OpponentDataPage(): ReactNode {
+  const { workspaceId = '' } = useParams()
+  return isConvexConfigured ? <OpponentData workspaceId={workspaceId} /> : <p className="p-6">Convex is not configured</p>
+}

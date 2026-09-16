@@ -286,7 +286,7 @@ Completion and evidence: [Phase 8 completion report](plans/phase-8-completion.md
       *Verify:* unit tests over a fixture including blanks, missing yards, and an empty scope.
 - [~] **9.2 Grouping field list.** Core Snap fields plus the structured template fields of the
       selected games (SPEC §57).
-- [ ] **9.3 Opponent Data screen.** Game selection defaulting to all, Group By, optional second
+- [~] **9.3 Opponent Data screen.** Game selection defaulting to all, Group By, optional second
       Group By, results table; statistics recalculate on selection change (SPEC §58, §106).
 - [ ] **9.4 Derived situational grouping.** Down and Distance Situation and Field Zone available
       as grouping fields with no manual classification (SPEC §60, §22).
