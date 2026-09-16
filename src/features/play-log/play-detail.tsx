@@ -9,6 +9,7 @@ import { isCoreFieldKey, normalizeCoreValue } from '@convex/domain/coreFields'
 import { provenanceOf, restoredValueFor } from '@convex/domain/provenance'
 import { sectionAppliesTo } from '@convex/domain/playSide'
 import { Button } from '@/components/ui/button'
+import { DiagramSvg } from '@/components/diagram-svg'
 import { Chip, Meta } from '@/components/ui/panel'
 import { QuickNoteDialog } from '@/features/notes/quick-note-dialog'
 import { Select } from '@/components/ui/select'
@@ -44,6 +45,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
   readonly notes: readonly Doc<'cellNotes'>[]; readonly terminology: readonly { list: TerminologyList; value: string }[]; readonly base: string
 }): ReactNode {
   const quickNotes = useQuery(api.notes.listQuickNotes, { sourceGameId: snap.sourceGameId })
+  const diagram = useQuery(api.diagrams.getBySnap, { snapId: snap._id })
   const snapQuickNotes = quickNotes?.filter((note) => note.snapId === snap._id)
   const [noting, setNoting] = useState(false)
   const Root = embedded ? 'div' : 'main'
@@ -155,7 +157,14 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
       <QuickNoteDialog open={noting} onOpenChange={setNoting} sourceGameId={snap.sourceGameId} snap={snap} />
     </section>
     <section className="space-y-2" aria-label="Play Diagram">
-      <h2 className="font-semibold">Play Diagram</h2><Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Add / Edit Play Diagram</Link>
+      <h2 className="font-semibold">Play Diagram</h2>
+      {diagram === undefined ? <p>Loading…</p> : diagram ? <div className="max-w-md space-y-2">
+        <Link className="block" to={`${base}/diagrams/${diagram._id}`} aria-label="Edit Play Diagram">
+          <DiagramSvg diagram={diagram} title="Play Diagram" className="rounded-xl border border-border" />
+        </Link>
+        <Link className="underline" to={`${base}/diagrams/${diagram._id}`}>Edit Play Diagram</Link>
+        {diagram.note && <p className="whitespace-pre-wrap">{diagram.note}</p>}
+      </div> : <Link className="underline" to={`${base}/diagrams?snap=${snap._id}`}>Add Play Diagram</Link>}
     </section>
   </Root>
 }
