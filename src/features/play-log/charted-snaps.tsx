@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
@@ -16,6 +17,22 @@ export const LOG_GRID = 'grid grid-cols-[52px_30px_100px_minmax(76px,1fr)_52px_m
 export const LOG_HEADERS = ['#', '★', 'D&D', 'Zone', 'Pers', 'Form', 'Call', 'Result']
 const SELECT_LOG_GRID = 'grid grid-cols-[28px_52px_30px_100px_minmax(76px,1fr)_52px_minmax(100px,1fr)_minmax(108px,1.25fr)_88px_32px] items-center gap-2 px-3'
 const cell = 'truncate font-mono text-[11.5px] text-foreground/80'
+
+// ponytail: createdAt groups one-mutation imports; add importBatchId if imports ever span mutations.
+function importGroups(snaps: readonly Doc<'snaps'>[]): Array<{ key: number; snapIds: Id<'snaps'>[]; createdAt: number; firstLabel: string; lastLabel: string }> {
+  const groups = new Map<number, Doc<'snaps'>[]>()
+  for (const snap of snaps) {
+    if (snap.imported === undefined) continue
+    const group = groups.get(snap.createdAt) ?? []
+    group.push(snap); groups.set(snap.createdAt, group)
+  }
+  return [...groups].sort(([a], [b]) => a - b).map(([createdAt, group]) => {
+    group.sort((a, b) => a.order - b.order)
+    const first = group[0]!, last = group.at(-1)!
+    return { key: createdAt, createdAt, snapIds: group.map((snap) => snap._id),
+      firstLabel: first.core.clipNumber ?? String(first.order), lastLabel: last.core.clipNumber ?? String(last.order) }
+  })
+}
 
 export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated }: {
   readonly snaps: readonly Doc<'snaps'>[]
@@ -45,6 +62,7 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
     async (args) => { await undo(args) }, (snapIds) => `Deleted ${snapIds.length} ${snapIds.length === 1 ? 'Snap' : 'Snaps'}`)
   const reviewCount = snaps.filter((snap) => snap.mustReview).length
   const shown = [...snaps].reverse().filter((snap) => !onlyReview || snap.mustReview)
+  const imports = importGroups(snaps)
   const shownSelected = shown.filter((snap) => liveSelected.has(snap._id)).length
   useEffect(() => {
     if (allCheckbox.current) allCheckbox.current.indeterminate = shownSelected > 0 && shownSelected < shown.length
@@ -55,6 +73,10 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
     <div className="mb-2.5 flex flex-wrap items-center gap-3">
       <h2><Eyebrow className="text-xs">Charted snaps</Eyebrow></h2>
       <Meta>{snaps.length} charted · {reviewCount} must review</Meta>
+      {imports.length > 0 && <DropdownMenu label="Select import" triggerProps={{ variant: 'outline', size: 'sm' }} items={imports.map((group, index) => ({
+        label: `Import ${index + 1} · ${group.snapIds.length} Snaps · ${new Date(group.createdAt).toLocaleString()} · Clips ${group.firstLabel}–${group.lastLabel}`,
+        onSelect: () => { setOnlyReview(false); setSelected(new Set(group.snapIds)); anchor.current = null },
+      }))} />}
       <Button variant="outline" size="sm" aria-pressed={onlyReview} onClick={() => setOnlyReview((current) => !current)}
         className={cn('ml-auto h-7 bg-transparent text-[10.5px]', onlyReview && 'border-warm text-warm')}>
         {onlyReview ? 'Showing must review only' : 'Show must review only'}
