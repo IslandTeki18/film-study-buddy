@@ -3,7 +3,8 @@ import { normalizeQuickNoteTags, QUICK_NOTE_TAG_MAX_LENGTH } from '@convex/domai
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
-export function TagPicker({ vocabulary, selected, onChange, idPrefix }: {
+export function TagPicker({ vocabulary, selected, onChange, idPrefix, maxLength = QUICK_NOTE_TAG_MAX_LENGTH }: {
+  readonly maxLength?: number
   readonly vocabulary: readonly string[]; readonly selected: readonly string[]
   readonly onChange: (next: string[]) => void; readonly idPrefix: string
 }): ReactNode {
@@ -16,7 +17,7 @@ export function TagPicker({ vocabulary, selected, onChange, idPrefix }: {
         className={cn('rounded-md border border-border-strong bg-muted px-2 py-1 font-mono text-[11px] text-foreground/80 focus-visible:outline-ring', active && 'border-primary text-primary')}
         onClick={() => onChange(active ? selected.filter((value) => value.toLowerCase() !== tag.toLowerCase()) : normalizeQuickNoteTags([...selected, tag]))}>{tag}</button>
     })}</div>
-    <Input id={`${idPrefix}-custom-tag`} aria-label="Add tag" placeholder="Add tag, then press Enter" value={custom} maxLength={QUICK_NOTE_TAG_MAX_LENGTH}
+    <Input id={`${idPrefix}-custom-tag`} aria-label="Add tag" placeholder="Add tag, then press Enter" value={custom} maxLength={maxLength}
       onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => {
         if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
         event.preventDefault()

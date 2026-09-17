@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Eyebrow } from '@/components/ui/panel'
-import { PlayerNotes } from '../preview/charting-preview'
+import { PlayerNotes } from '@/features/player-notes/player-notes'
 import type { Mode } from '../preview/preview-data'
 import { MODE_OPTIONS, PreviewBadge, Segmented } from '../preview/preview-shared'
 import { buildColumns } from './columns'
@@ -128,7 +128,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
         </section>
         <ChartingAside chartedCount={snaps?.length ?? 0} mustReviewCount={snaps?.filter((snap) => snap.mustReview).length ?? 0}
           mode={mode} onOpenPlayers={() => setDataTab('players')} />
-      </div> : <PlayerNotes mode={mode} />}
+      </div> : <PlayerNotes workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />}
     </div>
     <Dialog open={finishing} onOpenChange={setFinishing} aria-label="Completeness Warning">
       <div className="space-y-4">
