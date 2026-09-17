@@ -44,6 +44,15 @@ displayed, since a desktop window has no visible console.
 | --- | --- | --- |
 | `VITE_CONVEX_URL` | Convex deployment URL used by the renderer client. | Convex wiring |
 | `CONVEX_DEPLOYMENT` | Written by the Convex CLI. Never commit the real value. | Convex wiring |
+| `ANTHROPIC_API_KEY` | Claude API key used by AI Report generation. Set on the Convex deployment with `npx convex env set`; never committed. | AI Report generation |
+
+## AI Report generation
+
+Generate with AI requires network access and a Claude API key on the Convex deployment.
+Each generation is a paid API call. The Workspace brief, including opponent identity and
+scouting notes, is sent to Anthropic. Keep the key on the deployment, never in `.env.local`
+or renderer code. With the key unset, the button remains visible and returns a clear error.
+Generated Reports are created directly and remain fully editable in the Report Builder.
 
 ## Scripts
 
