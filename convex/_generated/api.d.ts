@@ -8,11 +8,13 @@
  * @module
  */
 
+import type * as aiReports from "../aiReports.js";
 import type * as columnLayouts from "../columnLayouts.js";
 import type * as crons from "../crons.js";
 import type * as deletions from "../deletions.js";
 import type * as diagrams from "../diagrams.js";
 import type * as domain_aggregate from "../domain/aggregate.js";
+import type * as domain_aiReport from "../domain/aiReport.js";
 import type * as domain_completeness from "../domain/completeness.js";
 import type * as domain_coreFields from "../domain/coreFields.js";
 import type * as domain_csvMapping from "../domain/csvMapping.js";
@@ -51,11 +53,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  aiReports: typeof aiReports;
   columnLayouts: typeof columnLayouts;
   crons: typeof crons;
   deletions: typeof deletions;
   diagrams: typeof diagrams;
   "domain/aggregate": typeof domain_aggregate;
+  "domain/aiReport": typeof domain_aiReport;
   "domain/completeness": typeof domain_completeness;
   "domain/coreFields": typeof domain_coreFields;
   "domain/csvMapping": typeof domain_csvMapping;
