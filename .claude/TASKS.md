@@ -346,7 +346,7 @@ Not in SPEC. Owner decisions and assumptions:
 - [x] **10B.5 Player Notes backend.** List with resolved Snap links, player CRUD, Player Note CRUD.
 - [x] **10B.6 Player notes tab.** Real groups by side, add player, autosaved profile card, delete with Undo.
 - [x] **10B.7 Player Note entries.** Create, edit, delete; link Snaps; clip count; Play Detail links.
-- [ ] **10B.8 Note a player from Charting.** Aside lists real players and opens the Player Note dialog with the latest Snap linked.
+- [x] **10B.8 Note a player from Charting.** Aside lists real players and opens the Player Note dialog with the latest Snap linked.
 - [ ] **10B.9 Docs and completion report.** Glossary, BLUEPRINT, completion report.
 
 ---

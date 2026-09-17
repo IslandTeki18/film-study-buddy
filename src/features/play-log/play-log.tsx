@@ -97,7 +97,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
         <h1><Eyebrow className="text-xs">{game.label}</Eyebrow></h1>
         <Segmented label="Opponent data section" value={dataTab} options={[['charting', 'Charting'], ['players', 'Player notes']]} onChange={setDataTab} />
         <Segmented label="Which side of the ball" value={mode} options={MODE_OPTIONS} onChange={setMode} accent />
-        <span className="ml-auto"><PreviewBadge /></span>
+        {dataTab === 'charting' && <span className="ml-auto"><PreviewBadge /></span>}
         <Button variant="outline" size="sm" disabled={incomplete === undefined || pending} onClick={() => {
           if (incomplete === 0) navigate(`/w/${workspaceId}/games`)
           else setFinishing(true)
@@ -127,7 +127,8 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
             workspaceId={workspaceId} sourceGameId={game._id} onDuplicated={setCreatedId} />
         </section>
         <ChartingAside chartedCount={snaps?.length ?? 0} mustReviewCount={snaps?.filter((snap) => snap.mustReview).length ?? 0}
-          mode={mode} onOpenPlayers={() => setDataTab('players')} />
+          mode={mode} onOpenPlayers={() => setDataTab('players')} workspaceId={game.workspaceId} sourceGameId={game._id}
+          snaps={snaps ?? []} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />
       </div> : <PlayerNotes workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />}
     </div>
     <Dialog open={finishing} onOpenChange={setFinishing} aria-label="Completeness Warning">
