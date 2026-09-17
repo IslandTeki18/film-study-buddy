@@ -33,6 +33,7 @@ import type * as formations from "../formations.js";
 import type * as hudlImport from "../hudlImport.js";
 import type * as notes from "../notes.js";
 import type * as opponentData from "../opponentData.js";
+import type * as opponentPlayers from "../opponentPlayers.js";
 import type * as reports from "../reports.js";
 import type * as seasons from "../seasons.js";
 import type * as settings from "../settings.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   hudlImport: typeof hudlImport;
   notes: typeof notes;
   opponentData: typeof opponentData;
+  opponentPlayers: typeof opponentPlayers;
   reports: typeof reports;
   seasons: typeof seasons;
   settings: typeof settings;
