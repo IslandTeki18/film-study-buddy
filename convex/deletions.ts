@@ -23,6 +23,8 @@ const softDeleteTables = [
   'diagrams',
   'tendencies',
   'reports',
+  'opponentPlayers',
+  'playerNotes',
 ] as const
 
 type SoftDeleteTable = (typeof softDeleteTables)[number]
@@ -134,7 +136,7 @@ export const undo = mutation({
       .unique()
     if (deletion === null || deletion.undoneAt !== undefined) return null
 
-    // ponytail: scans the twelve soft-deletable tables per undo; add a by_deleteBatchId index per table if undo latency shows up.
+    // ponytail: scans the fourteen soft-deletable tables per undo; add a by_deleteBatchId index per table if undo latency shows up.
     for (const table of softDeleteTables) await restoreTable(ctx, table, args.batchId)
     await ctx.db.patch(deletion._id, { undoneAt: Date.now() })
     return null

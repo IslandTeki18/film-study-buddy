@@ -19,6 +19,7 @@ import type * as domain_csvMapping from "../domain/csvMapping.js";
 import type * as domain_diagram from "../domain/diagram.js";
 import type * as domain_fieldZone from "../domain/fieldZone.js";
 import type * as domain_names from "../domain/names.js";
+import type * as domain_opponentPlayers from "../domain/opponentPlayers.js";
 import type * as domain_playSide from "../domain/playSide.js";
 import type * as domain_provenance from "../domain/provenance.js";
 import type * as domain_quickNoteTags from "../domain/quickNoteTags.js";
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   "domain/diagram": typeof domain_diagram;
   "domain/fieldZone": typeof domain_fieldZone;
   "domain/names": typeof domain_names;
+  "domain/opponentPlayers": typeof domain_opponentPlayers;
   "domain/playSide": typeof domain_playSide;
   "domain/provenance": typeof domain_provenance;
   "domain/quickNoteTags": typeof domain_quickNoteTags;

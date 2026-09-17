@@ -1,3 +1,4 @@
+import { POSITION_GROUPS, PLAYER_GRADES } from './domain/opponentPlayers.ts'
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { TEMPLATE_FIELD_TYPES } from './domain/templateFields.ts'
@@ -7,6 +8,9 @@ const softDelete = {
   deletedAt: v.optional(v.number()),
   deleteBatchId: v.optional(v.string()),
 }
+
+export const positionGroupValidator = v.union(...POSITION_GROUPS.map(({ key }) => v.literal(key)))
+export const gradeValidator = v.union(...PLAYER_GRADES.map((grade) => v.literal(grade)))
 
 const hashValidator = v.union(...HASHES.map((value) => v.literal(value)))
 const playTypeValidator = v.union(...PLAY_TYPES.map((value) => v.literal(value)))
@@ -193,6 +197,17 @@ export default defineSchema({
     createdAt: v.number(),
     ...softDelete,
   }).index('by_sourceGame', ['sourceGameId']),
+  opponentPlayers: defineTable({
+    workspaceId: v.id('workspaces'),
+    jersey: v.string(), position: v.string(), group: positionGroupValidator,
+    name: v.string(), details: v.string(), grade: v.optional(gradeValidator),
+    traits: v.array(v.string()), summary: v.string(), tendency: v.string(), assignment: v.string(),
+    createdAt: v.number(), ...softDelete,
+  }).index('by_workspace', ['workspaceId']),
+  playerNotes: defineTable({
+    workspaceId: v.id('workspaces'), playerId: v.id('opponentPlayers'),
+    text: v.string(), snapIds: v.array(v.id('snaps')), createdAt: v.number(), ...softDelete,
+  }).index('by_workspace', ['workspaceId']).index('by_player', ['playerId']),
   diagrams: defineTable({
     sourceGameId: v.id('sourceGames'),
     snapId: v.optional(v.id('snaps')),
