@@ -9,6 +9,7 @@
  */
 
 import type * as aiReports from "../aiReports.js";
+import type * as aiReportsNode from "../aiReportsNode.js";
 import type * as columnLayouts from "../columnLayouts.js";
 import type * as crons from "../crons.js";
 import type * as deletions from "../deletions.js";
@@ -54,6 +55,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   aiReports: typeof aiReports;
+  aiReportsNode: typeof aiReportsNode;
   columnLayouts: typeof columnLayouts;
   crons: typeof crons;
   deletions: typeof deletions;

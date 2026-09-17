@@ -1,8 +1,11 @@
-import { v, type Infer } from 'convex/values'
+import { ConvexError, v, type Infer } from 'convex/values'
 import { api } from './_generated/api'
-import type { Id } from './_generated/dataModel'
-import { internalQuery, type QueryCtx } from './_generated/server'
-import { AI_BRIEF_MAX_AGGREGATE_ROWS, AI_BRIEF_MAX_GROUPINGS, AI_BRIEF_MAX_PLAYER_NOTES, AI_BRIEF_MAX_QUICK_NOTES } from './domain/aiReport.ts'
+import type { Doc, Id } from './_generated/dataModel'
+import { internalMutation, internalQuery, type QueryCtx } from './_generated/server'
+import { AI_PLAN_MAX_BLOCKS, AI_BRIEF_MAX_AGGREGATE_ROWS, AI_BRIEF_MAX_GROUPINGS, AI_BRIEF_MAX_PLAYER_NOTES, AI_BRIEF_MAX_QUICK_NOTES } from './domain/aiReport.ts'
+import { groupingFieldsFor, groupingValuesOf, templateGroupingKey } from './domain/aggregate.ts'
+import { DEFAULT_SELECTED_PLAY_CORE_KEYS, HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH } from './domain/reportBlocks.ts'
+import { buildBlock, requireName, requireSize, type blockSourceValidator } from './reports'
 import { CORE_FIELDS } from './domain/coreFields.ts'
 import { attachedSnapIds } from './domain/diagram.ts'
 import { columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
@@ -70,7 +73,7 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>): P
   return {
     opponentName: workspace.opponentName, week: workspace.week, seasonName: season!.name, coachingArea: settings?.coachingArea ?? '',
     sourceGames: games.map(({ label, snapCount }) => ({ label, snapCount })), totalSnaps: games.reduce((total, game) => total + game.snapCount, 0), groupings,
-    tendencies: allTendencies.filter((tendency) => tendency.snapshot.gameIds.length > 0 && tendency.snapshot.gameIds.every((id) => gameIds.has(id))
+    tendencies: allTendencies.filter((tendency) => tendency.includeInReport && tendency.snapshot.gameIds.length > 0 && tendency.snapshot.gameIds.every((id) => gameIds.has(id))
       && (!tendency.diagramId || !allDiagrams.some((diagram) => diagram._id === tendency.diagramId) || diagramIds.has(tendency.diagramId)))
       .map((tendency) => ({ id: tendency._id, title: tendency.title, category: tendency.category, note: tendency.note,
         groupBy: tendency.snapshot.groupBy, ...(tendency.snapshot.groupBy2 ? { groupBy2: tendency.snapshot.groupBy2 } : {}),
@@ -83,4 +86,106 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>): P
 export const brief = internalQuery({
   args: { workspaceId: v.id('workspaces') }, returns: briefValidator,
   handler: (ctx, { workspaceId }): Promise<AiReportBrief> => loadBrief(ctx, workspaceId),
+})
+
+export const planValidator = v.array(v.union(
+  v.object({ type: v.literal('heading'), text: v.string() }),
+  v.object({ type: v.literal('text'), text: v.string() }),
+  v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string() }),
+  v.object({ type: v.literal('tendency'), tendencyId: v.string() }),
+  v.object({ type: v.literal('diagram'), diagramId: v.string() }),
+  v.object({ type: v.literal('quickNotes'), noteIds: v.array(v.string()) }),
+  v.object({ type: v.literal('selectedPlays'), sourceGameLabel: v.string(), groupingKey: v.string(), groupingValue: v.string(), limit: v.number() }),
+))
+export type AiReportPlan = Infer<typeof planValidator>
+
+export const AI_PLAN_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['blocks'],
+  properties: { blocks: { type: 'array', items: { anyOf: planValidator.element.members.map((member) => ({
+    type: 'object', additionalProperties: false,
+    required: Object.entries(member.fields).filter(([, field]) => field.isOptional !== 'optional').map(([key]) => key),
+    properties: Object.fromEntries(Object.entries(member.fields).map(([key, field]) => [key,
+      field.kind === 'literal' ? { type: 'string', const: field.value }
+        : field.kind === 'array' ? { type: 'array', items: { type: 'string' } }
+          : { type: field.kind === 'float64' ? 'number' : field.kind },
+    ])),
+  })) } } },
+}
+export const generationResultValidator = v.object({ reportId: v.id('reports'), blockCount: v.number(), skipped: v.number() })
+export type GenerationResult = Infer<typeof generationResultValidator>
+
+export const createGenerated = internalMutation({
+  args: { workspaceId: v.id('workspaces'), name: v.string(), intent: schema.tables.reports.validator.fields.intent, plan: planValidator, sourceGameIds: v.optional(v.array(v.id('sourceGames'))) },
+  returns: generationResultValidator,
+  handler: async (ctx, { workspaceId, name, intent, plan, sourceGameIds }): Promise<GenerationResult> => {
+    await requireLiveWorkspace(ctx, workspaceId)
+    const reportName = requireName(name)
+    if (plan.length > AI_PLAN_MAX_BLOCKS) throw new ConvexError(`A Generated Report can have at most ${AI_PLAN_MAX_BLOCKS} Blocks.`)
+    const brief = await loadBrief(ctx, workspaceId)
+    if (sourceGameIds && (sourceGameIds.length !== brief.snapColumns.length || brief.snapColumns.some((game) => !sourceGameIds.includes(game.sourceGameId)))) {
+      throw new ConvexError('Included Source Games changed while building the Report. Try again.')
+    }
+    const blocks: Doc<'reports'>['blocks'] = []
+    let skipped = 0
+    // ponytail: skipped blocks are counted, not explained; surface per-block reasons if coaches start asking which block vanished.
+    for (const entry of plan) {
+      try {
+        let source: Infer<typeof blockSourceValidator>
+        switch (entry.type) {
+          case 'heading': case 'text': source = { type: entry.type }; break
+          case 'dataTable':
+            if (![entry.groupBy, ...(entry.groupBy2 ? [entry.groupBy2] : [])].every((key) => brief.groupings.some((field) => field.key === key))) throw new Error('Grouping Field not available')
+            source = entry
+            break
+          case 'tendency': {
+            const tendencyId = ctx.db.normalizeId('tendencies', entry.tendencyId)
+            if (!tendencyId || !brief.tendencies.some((item) => item.id === tendencyId)) throw new Error('Tendency / Alert not found')
+            source = { type: entry.type, tendencyId }
+            break
+          }
+          case 'diagram': {
+            const diagramId = ctx.db.normalizeId('diagrams', entry.diagramId)
+            if (!diagramId || !brief.diagrams.some((item) => item.id === diagramId)) throw new Error('Play Diagram not found')
+            source = { type: entry.type, diagramId }
+            break
+          }
+          case 'quickNotes': {
+            const noteIds = [...new Set(entry.noteIds)].flatMap((value) => {
+              const id = ctx.db.normalizeId('quickNotes', value)
+              return id && brief.quickNotes.some((note) => note.id === id) ? [id] : []
+            })
+            if (!noteIds.length) throw new Error('Quick Note not found')
+            source = { type: entry.type, noteIds }
+            break
+          }
+          case 'selectedPlays': {
+            const games = brief.snapColumns.filter((game) => game.sourceGameLabel === entry.sourceGameLabel)
+            if (games.length !== 1 || !Number.isSafeInteger(entry.limit) || entry.limit < 1) throw new Error('Source Game or Snap selection not available')
+            const game = await ctx.db.get(games[0]!.sourceGameId)
+            if (!game) throw new Error('Source Game not found')
+            const template = await ctx.db.get(game.templateId)
+            const fields = template && template.deletedAt === undefined ? (await templateTree(ctx, game.templateId)).flatMap((section) => section.fields) : []
+            const field = groupingFieldsFor([fields]).find((field) => field.key === entry.groupingKey)
+            if (!field || !brief.groupings.some((group) => group.key === field.key && group.rows.some((row) => row.values.includes(entry.groupingValue)))) throw new Error('Grouping Field not available')
+            const templateFieldId = fields.find((candidate) => templateGroupingKey(candidate) === field.key)?._id
+            const snaps = (await ctx.db.query('snaps').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect())
+              .filter((snap) => snap.deletedAt === undefined && groupingValuesOf(snap, field, templateFieldId).includes(entry.groupingValue))
+              .sort((a, b) => a.order - b.order).slice(0, Math.min(entry.limit, 12))
+            if (!snaps.length) throw new Error('No matching Snaps')
+            source = { type: entry.type, sourceGameId: game._id, snapIds: snaps.map((snap) => snap._id), columnKeys: DEFAULT_SELECTED_PLAY_CORE_KEYS.map(coreColumnKey) }
+            break
+          }
+        }
+        const block = await buildBlock(ctx, { workspaceId }, source)
+        if ((block.type === 'heading' || block.type === 'text') && (entry.type === 'heading' || entry.type === 'text')) {
+          block.text = entry.text.slice(0, block.type === 'heading' ? HEADING_MAX_LENGTH : TEXT_BLOCK_MAX_LENGTH)
+        }
+        blocks.push(block)
+      } catch { skipped += 1 }
+    }
+    if (!blocks.length) throw new ConvexError('The generated Report had no usable content. Try again.')
+    requireSize(blocks)
+    const reportId = await ctx.db.insert('reports', { workspaceId, name: reportName, intent, showClipReferences: intent === 'coach', blocks, updatedAt: Date.now() })
+    return { reportId, blockCount: blocks.length, skipped }
+  },
 })
