@@ -273,6 +273,25 @@ export const remove = mutation({
   },
 })
 
+const BULK_DELETE_MAX = 500
+
+export const removeMany = mutation({
+  args: { sourceGameId: v.id('sourceGames'), snapIds: v.array(v.id('snaps')) },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    const game = await requireLiveSourceGame(ctx, args.sourceGameId)
+    const ids = [...new Set(args.snapIds)]
+    if (!ids.length) throw new Error('Select at least one Snap')
+    if (ids.length > BULK_DELETE_MAX) throw new Error('Delete at most 500 Snaps at once')
+    const snaps = await Promise.all(ids.map((id) => requireLiveSnap(ctx, id)))
+    if (snaps.some((snap) => snap.sourceGameId !== game._id)) throw new Error('Snap belongs to another Source Game')
+    const records: Parameters<typeof softDeleteBatch>[1]['records'][number][] = []
+    // ponytail: collectSnapCascade rescans the game's Quick Notes and diagrams per Snap; hoist those loads out of the loop if bulk deletes hit Convex read limits.
+    for (const snap of snaps) records.push(...await collectSnapCascade(ctx, snap))
+    return softDeleteBatch(ctx, { kind: 'snaps', label: ids.length === 1 ? (snaps[0]!.core.clipNumber ?? `Snap ${snaps[0]!.order}`) : `${ids.length} Snaps`, records })
+  },
+})
+
 export const duplicate = mutation({
   args: { snapId: v.id('snaps') }, returns: v.id('snaps'),
   handler: async (ctx, args) => {

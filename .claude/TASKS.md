@@ -339,7 +339,7 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 Not in SPEC. Owner decisions and assumptions:
 [Phase 10B plan](plans/phase-10b-player-notes-bulk-snap-removal.md).
 
-- [ ] **10B.1 Bulk Snap removal backend.** `snaps.removeMany`: one soft-delete batch, all-or-nothing, 500 cap.
+- [x] **10B.1 Bulk Snap removal backend.** `snaps.removeMany`: one soft-delete batch, all-or-nothing, 500 cap.
 - [ ] **10B.2 Charting selection and bulk delete.** Row checkboxes, select all, Shift+click range, confirmation, one Undo.
 - [ ] **10B.3 Select import.** Select every Snap from one Hudl CSV Import in one action.
 - [ ] **10B.4 Player Notes data model.** `opponentPlayers`, `playerNotes`, domain constants, soft-delete and Workspace cascade.
