@@ -339,15 +339,26 @@ Completion and evidence: [phase-9-completion.md](plans/phase-9-completion.md).
 Not in SPEC. Owner decisions and assumptions:
 [Phase 10B plan](plans/phase-10b-player-notes-bulk-snap-removal.md).
 
+Completion and evidence: [Phase 10B completion report](plans/phase-10b-completion.md).
+
 - [x] **10B.1 Bulk Snap removal backend.** `snaps.removeMany`: one soft-delete batch, all-or-nothing, 500 cap.
+      *Evidence:* Convex sync/typecheck passed; 115 of 230 fixture Snaps and annotations deleted in one batch, exact Undo restored them; all invalid cases rejected atomically.
 - [x] **10B.2 Charting selection and bulk delete.** Row checkboxes, select all, Shift+click range, confirmation, one Undo.
+      *Evidence:* Electron verified checkbox/Shift/select-all/filter/keyboard behavior, optimistic delete/Undo, 501-Snap error rollback with selection retained, and unchanged Review Queue.
 - [x] **10B.3 Select import.** Select every Snap from one Hudl CSV Import in one action.
+      *Evidence:* Two UI imports each shared one createdAt; exact second-import selection excluded manual/duplicate Snaps; delete/Undo and production build passed.
 - [x] **10B.4 Player Notes data model.** `opponentPlayers`, `playerNotes`, domain constants, soft-delete and Workspace cascade.
+      *Evidence:* Additive schema sync/typecheck passed; fourteen Undo tables and four Workspace-scoped cascade tables confirmed; normalizer boundary checks passed.
 - [x] **10B.5 Player Notes backend.** List with resolved Snap links, player CRUD, Player Note CRUD.
+      *Evidence:* Live fixture CRUD, limits, cross-Workspace rejection, chronological links/counts, archived editing, and Snap/note/player/Workspace delete/Undo passed.
 - [x] **10B.6 Player notes tab.** Real groups by side, add player, autosaved profile card, delete with Undo.
+      *Evidence:* Electron verified real side-filtered cards, validation, all profile autosaves, grade/traits/group, Retry recovery, cross-game/reload persistence, and player/notes Undo.
 - [x] **10B.7 Player Note entries.** Create, edit, delete; link Snaps; clip count; Play Detail links.
+      *Evidence:* Electron verified 0/1/multiple/20 links, edit/delete/Undo, Play Detail navigation, cross-game preservation, stale-link recovery, and bulk-linked-Snap filtering/Undo.
 - [x] **10B.8 Note a player from Charting.** Aside lists real players and opens the Player Note dialog with the latest Snap linked.
-- [ ] **10B.9 Docs and completion report.** Glossary, BLUEPRINT, completion report.
+      *Evidence:* Electron verified live aside chips, palette-created latest-Snap preselection, empty cases, keyboard flow and both themes; production build passed.
+- [x] **10B.9 Docs and completion report.** Glossary, BLUEPRINT, completion report.
+      *Evidence:* Glossary/BLUEPRINT/report updated; final typecheck/build and diff checks passed; fixtures cleaned and real Source Game unchanged at 232 Snaps.
 
 ---
 

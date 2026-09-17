@@ -211,6 +211,16 @@ edit applies; Undo replays `before` values. Purged with the same cron.
 **`quickNotes`** — `sourceGameId`, `snapId?`, `text`, `tags: string[]`, `createdAt`.
 Index `by_sourceGame`.
 
+**`opponentPlayers`** — `workspaceId`, `jersey`, `position`, `group` (QB/RB/WR/OL or
+DL/LB/DB), `name`, `details`, optional `grade` (A/B/C), `traits: string[]`, `summary`,
+`tendency`, `assignment`, `createdAt`. Index `by_workspace`. Shared across the Workspace's
+Source Games. Profile text autosaves; deleting a player includes its live Player Notes.
+
+**`playerNotes`** — `workspaceId`, `playerId`, `text`, `snapIds: Id<'snaps'>[]`, `createdAt`.
+Indexes `by_workspace`, `by_player`. Chronological entries with at most 20 linked Snaps from
+the same Workspace. Reads omit dead Snaps and deleted Source Games; `clipCount` counts distinct
+live linked Snaps per Opponent Player. Both tables join Workspace Soft Deletion and Undo.
+
 **`diagrams`** — `sourceGameId`, `snapId?`, `name?`, `note?`,
 `players: Array<{ id, side: 'offense' | 'defense', x: number, y: number, label?, jersey? }>`,
 `shapes: Array<{ id, tool: 'arrow' | 'curve' | 'block' | 'dashed' | 'free', points: number[] }>`,
@@ -266,9 +276,10 @@ its arguments with Convex validators and filters `deletedAt === undefined` on re
 | `workspaces` | `listBySeason`, `listArchived`, `get`, `getOverview`, `create`, `update`, `archive`, `unarchive`, `remove` |
 | `sourceGames` | `listByWorkspace`, `get`, `create`, `rename`, `changeTemplate`, `remove` |
 | `templates` | `list`, `getFull`, `create`, `duplicate`, `rename`, `remove`, `addSection`, `renameSection`, `reorderSections`, `removeSection`, `addField`, `updateField`, `addFieldOption`, `reorderFields`, `removeField`, `listViews`, `saveView`, `removeView` |
-| `snaps` | `listBySourceGame`, `get`, `create`, `updateCore`, `updateAnalysis`, `restoreImportedValue`, `duplicate`, `remove`, `setMustReview`, `bulkUpdate`, `undoBulkUpdate`, `countIncomplete` |
+| `snaps` | `listBySourceGame`, `get`, `create`, `updateCore`, `updateAnalysis`, `restoreImportedValue`, `duplicate`, `remove`, `removeMany`, `setMustReview`, `bulkUpdate`, `undoBulkUpdate`, `countIncomplete` |
 | `import` | `getRememberedMapping`, `detectDuplicates`, `commit`, `rememberMapping` |
 | `notes` | `listQuickNotes`, `createQuickNote`, `updateQuickNote`, `removeQuickNote`, `listCellNotes`, `setCellNote` |
+| `opponentPlayers` | `listByWorkspace`, `create`, `update`, `remove`, `createNote`, `updateNote`, `removeNote` |
 | `diagrams` | `listBySourceGame`, `get`, `create`, `save`, `remove` |
 | `opponentData` | `aggregate({ workspaceId, gameIds, groupBy, groupBy2? })`, `listGroupingFields({ workspaceId })` |
 | `tendencies` | `listByWorkspace`, `create`, `update`, `remove`, `listCategories`, `createCategory` |
@@ -297,7 +308,7 @@ UI shows a toast with a single Undo action wired to `deletions.undo`. Bulk edits
 toast shape backed by `snaps.undoBulkUpdate`.
 
 Hierarchies that cascade as one batch:
-- Workspace → Source Games → Snaps, Quick Notes, Cell Notes, Diagrams; plus Tendencies, Reports
+- Workspace → Source Games → Snaps, Quick Notes, Cell Notes, Diagrams; plus Tendencies, Reports, Opponent Players and Player Notes
 - Source Game → Snaps, Quick Notes, Cell Notes, Diagrams
 - Snap → Cell Notes, its Diagram, Quick Notes bound to it
 - Template → Sections → Fields → Views (Snap analysis values are left in place, recoverable)

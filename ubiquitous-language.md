@@ -154,6 +154,19 @@ _Avoid_: Piece, token, dot, player.
 The single free-text field belonging to a Play Diagram.
 _Avoid_: Caption, annotation, comment.
 
+## Opponent Players
+
+**Opponent Player**:
+A player on the opponent's team, recorded in a Weekly Opponent Workspace with a jersey #,
+position, position group, and a coach-written profile. Shared by every Source Game of that
+Workspace.
+_Avoid_: Player alone (ambiguous with Player Object), roster entry, athlete.
+
+**Player Note**:
+A chronological observation about one Opponent Player, optionally linked to Snaps whose Hudl
+References locate the evidence.
+_Avoid_: Note alone (ambiguous with Quick Note, Cell Note, Diagram Note), scouting report.
+
 ## Analysis
 
 **Opponent Data**:
@@ -278,5 +291,5 @@ Words the product deliberately does not use, because the concept does not exist 
 | Sync, cloud, device | Installations are independent; the local machine owns the data. |
 | Video, clip playback, timestamp | Film is watched in Hudl. Only Hudl References are stored. |
 | Success rate, efficiency, significance | Statistics are objective counts and averages only; the coach interprets. |
-| Team, roster, staff, share | Single-coach product; collaboration is post-V1. |
+| Team, roster, staff, share | Refers to the coach's own team; collaboration is post-V1. Opponent personnel are Opponent Players. |
 | Backup, restore, export database | Deferred past V1. PDF export is the only export. |
