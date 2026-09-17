@@ -1,4 +1,7 @@
 import { useId, useState, type ChangeEvent, type ReactNode } from 'react'
+import { Link } from 'react-router'
+import type { Doc, Id } from '@convex/_generated/dataModel'
+import { PlayerNoteDialog, snapLinkLabel } from './player-note-dialog'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import {
@@ -19,7 +22,8 @@ import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
 import type { Mode } from '../preview/preview-data'
 import type { OpponentPlayer } from './player-notes'
 
-export function PlayerCard({ player, vocabulary, mode }: {
+export function PlayerCard({ player, vocabulary, mode, sourceGameId, snaps }: {
+  readonly sourceGameId: Id<'sourceGames'>; readonly snaps: readonly Doc<'snaps'>[]
   readonly player: OpponentPlayer; readonly vocabulary: readonly string[]; readonly mode: Mode
 }): ReactNode {
   const id = useId()
@@ -33,6 +37,7 @@ export function PlayerCard({ player, vocabulary, mode }: {
   const tendency = useAutosave(player.tendency, async (tendency) => { await update({ playerId: player._id, tendency }) })
   const assignment = useAutosave(player.assignment, async (assignment) => { await update({ playerId: player._id, assignment }) })
   const unsettled = [jersey, position, name, details, summary, tendency, assignment].some((field) => field.status !== 'idle')
+  const [noting, setNoting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -76,7 +81,11 @@ export function PlayerCard({ player, vocabulary, mode }: {
       <div><dt className="sr-only">Our job</dt><dd>{field('Our job', assignment, PLAYER_PROFILE_TEXT_MAX_LENGTH, true)}</dd></div>
       <div className="flex items-baseline gap-2"><dt><Meta>Clips</Meta></dt><dd className="font-mono text-[11px] text-brand">{player.clipCount} {player.clipCount === 1 ? 'clip' : 'clips'}</dd></div>
     </dl>
-    {/* Player Note entries follow in 10B.7. */}
+    <div className="grid gap-3 border-t border-border pt-3">
+      <Button variant="outline" size="sm" onClick={() => setNoting(true)}>Add note</Button>
+      {player.notes.map((note) => <PlayerNoteEntry key={note._id} note={note} player={player} sourceGameId={sourceGameId} snaps={snaps} />)}
+    </div>
+    <PlayerNoteDialog open={noting} onOpenChange={setNoting} player={player} sourceGameId={sourceGameId} snaps={snaps} initialSnapId={null} />
     <Dialog open={confirming} onOpenChange={(open) => { if (!pending) setConfirming(open) }} aria-label={`Delete ${label}?`}
       onCancel={(event) => { if (pending) event.preventDefault() }}>
       {confirming && <div className="space-y-4">
@@ -95,4 +104,48 @@ export function PlayerCard({ player, vocabulary, mode }: {
       </div>}
     </Dialog>
   </Panel>
+}
+
+function PlayerNoteEntry({ note, player, sourceGameId, snaps }: {
+  readonly note: OpponentPlayer['notes'][number]; readonly player: OpponentPlayer
+  readonly sourceGameId: Id<'sourceGames'>; readonly snaps: readonly Doc<'snaps'>[]
+}): ReactNode {
+  const [editing, setEditing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+  const { show } = useToast()
+  const remove = useMutation(api.opponentPlayers.removeNote)
+  const undo = useMutation(api.deletions.undo)
+  const deleteNote = useUndoableMutation(() => remove({ noteId: note._id }), async (args) => { await undo(args) }, () => 'Deleted Player Note')
+  return <article className="space-y-2 rounded-lg border border-border p-3">
+    <div className="flex items-center justify-between gap-2"><Meta><time dateTime={new Date(note.createdAt).toISOString()}>{new Date(note.createdAt).toLocaleDateString()}</time></Meta>
+      <DropdownMenu label="⋯" triggerProps={{ variant: 'ghost', size: 'sm', 'aria-label': 'Player Note actions' }} items={[
+        { label: 'Edit note', onSelect: () => setEditing(true) },
+        { label: 'Delete note', onSelect: () => { setError(''); setConfirming(true) } },
+      ]} />
+    </div>
+    <p className="text-xs whitespace-pre-wrap">{note.text}</p>
+    <div className="flex flex-wrap gap-1.5">{note.snaps.map((snap) => <Link key={snap.snapId}
+      className="rounded-md border border-border-strong bg-muted px-2 py-1 font-mono text-[11px] text-brand focus-visible:outline-ring"
+      to={`/w/${player.workspaceId}/games/${snap.sourceGameId}/snap/${snap.snapId}`}>{snapLinkLabel(snap)}</Link>)}</div>
+    <PlayerNoteDialog open={editing} onOpenChange={setEditing} player={player} sourceGameId={sourceGameId} snaps={snaps} initialSnapId={null} note={note} />
+    <Dialog open={confirming} onOpenChange={(open) => { if (!pending) setConfirming(open) }} aria-label="Delete Player Note?"
+      onCancel={(event) => { if (pending) event.preventDefault() }}>
+      {confirming && <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Delete Player Note?</h2>
+        <p>The Player Note is soft-deleted. Undo restores it.</p>
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2"><Button autoFocus variant="outline" disabled={pending} onClick={() => setConfirming(false)}>Cancel</Button>
+          <Button disabled={pending} onClick={() => {
+            if (pending) return
+            setPending(true); setError('')
+            void deleteNote(undefined).then(() => setConfirming(false)).catch((error: unknown) => {
+              const message = `Could not delete Player Note. ${error instanceof Error ? error.message : String(error)}`
+              setError(message); show({ message })
+            }).finally(() => setPending(false))
+          }}>Delete note</Button></div>
+      </div>}
+    </Dialog>
+  </article>
 }

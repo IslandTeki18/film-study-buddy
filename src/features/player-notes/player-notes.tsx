@@ -12,7 +12,7 @@ import { PlayerCard } from './player-card'
 
 export type OpponentPlayer = FunctionReturnType<typeof api.opponentPlayers.listByWorkspace>[number]
 
-export function PlayerNotes({ workspaceId, mode }: {
+export function PlayerNotes({ workspaceId, sourceGameId, snaps, mode }: {
   readonly workspaceId: Id<'workspaces'>; readonly sourceGameId: Id<'sourceGames'>
   readonly snaps: readonly Doc<'snaps'>[]; readonly mode: Mode; readonly latestSnapId: Id<'snaps'> | null
 }): ReactNode {
@@ -38,7 +38,7 @@ export function PlayerNotes({ workspaceId, mode }: {
           <Meta>{members.length} {members.length === 1 ? 'player' : 'players'}</Meta>
         </div>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
-          {members.map((player) => <PlayerCard key={player._id} player={player} vocabulary={vocabulary} mode={mode} />)}
+          {members.map((player) => <PlayerCard key={player._id} player={player} vocabulary={vocabulary} mode={mode} sourceGameId={sourceGameId} snaps={snaps} />)}
         </div>
       </div>
     })}
