@@ -10,6 +10,7 @@ import { Chip, Meta, Page } from '@/components/ui/panel'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
+import { GenerateReportDialog } from './generate-report-dialog'
 
 export function ReportList({ workspaceId }: { readonly workspaceId: string }): ReactNode {
   const workspace = useQuery(api.workspaces.get, { workspaceId })
@@ -25,6 +26,7 @@ export function ReportList({ workspaceId }: { readonly workspaceId: string }): R
   const { show } = useToast()
   const navigate = useNavigate()
   const [dialog, setDialog] = useState<ReportIntent | Doc<'reports'> | null>(null)
+  const [generating, setGenerating] = useState(false)
   const deleteReport = useUndoableMutation((report: Doc<'reports'>) => remove({ reportId: report._id }), async (args) => { await undo(args) }, (report) => `Deleted ${report.name}`)
   function failure(verb: string, error: unknown): void {
     show({ message: `Could not ${verb} Report. ${error instanceof Error ? error.message : String(error)}` })
@@ -34,6 +36,7 @@ export function ReportList({ workspaceId }: { readonly workspaceId: string }): R
   return <Page width="max-w-[900px]">
     <header className="flex flex-wrap items-center gap-3"><h1 className="text-xl font-bold">Reports</h1><Meta>{reports.length} Reports</Meta>
       {REPORT_INTENTS.map((intent) => <Button key={intent} onClick={() => setDialog(intent)}>New {REPORT_INTENT_LABEL[intent]}</Button>)}
+      <Button onClick={() => setGenerating(true)}>Generate with AI</Button>
     </header>
     {reports.length === 0 ? <p>No Reports yet. Create a Coach Report to start.</p> : <ul className="grid gap-2">
       {reports.map((report) => <li key={report._id} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4">
@@ -60,5 +63,10 @@ export function ReportList({ workspaceId }: { readonly workspaceId: string }): R
           } else if (dialog) await update({ reportId: dialog._id, name })
         } catch (error) { failure(typeof dialog === 'string' ? 'create' : 'rename', error); throw error }
       }} />
+    {generating && <GenerateReportDialog workspaceId={workspace._id} onClose={() => setGenerating(false)} onGenerated={(reportId, skipped) => {
+      setGenerating(false)
+      show({ message: `Generated Report created.${skipped ? ` ${skipped} ${skipped === 1 ? 'Block was' : 'Blocks were'} skipped.` : ''}` })
+      void navigate(`/w/${workspaceId}/reports/${reportId}`)
+    }} />}
   </Page>
 }
