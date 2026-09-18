@@ -380,7 +380,8 @@ Approved scope: `.claude/plans/phase-10c-ai-report-generation.md` (owner-supplie
       *Evidence:* README, glossary and BLUEPRINT updated; Phase 10C inserted before Phase 11 with explicit incomplete verification markers.
 - [~] **10C.6 Backend checks (fixture data).**
       *Evidence:* live fixtures passed all seven generated types, exact single/two-field table and saved Tendency snapshots, exclusion across every source kind, Player clip default, text caps, ambiguous selection, malformed/empty/25-Block rollback and unchanged real Snaps/Reports. Mocked action checks passed, zero paid calls. Live Claude generation remains blocked by absent key.
-- [ ] **10C.7 Coach-type and intent differentiation (Electron).**
+- [~] **10C.7 Coach-type and intent differentiation (Electron).**
+      *Evidence:* real Electron dialog keyboard/pending/Escape/error retention and both themes passed; fixture Player Report hides clip columns. Mocked empty-Workspace branch passed. Actual Defensive Line/Quarterbacks differentiation and Player prose require the missing key.
 - [ ] **10C.8 Close out.**
 
 ---
