@@ -7,6 +7,7 @@ import {
   useParams,
 } from 'react-router'
 import { App } from '@/app'
+import { isConvexConfigured } from '@/convex-client'
 import { Tabs } from '@/components/ui/tabs'
 import { WorkspaceHeader } from '@/components/workspace-header'
 import { AddSourceGamePage } from './add-source-game-page'
@@ -35,6 +36,7 @@ import { WorkspaceOverviewPage } from './workspace-overview-page'
 
 function WorkspaceLayout(): ReactNode {
   const { workspaceId = '' } = useParams()
+  if (!isConvexConfigured) return <p className="p-6">Convex is not configured</p>
   return <>
     <WorkspaceHeader workspaceId={workspaceId} />
     <Outlet />

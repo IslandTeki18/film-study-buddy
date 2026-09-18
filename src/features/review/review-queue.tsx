@@ -13,8 +13,8 @@ export function ReviewQueue({ workspaceId, sourceGameId }: {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const snaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
   const base = `/w/${workspaceId}/games/${sourceGameId}`
-  if (game === undefined || (game && snaps === undefined)) return <main className="p-6">Loading…</main>
-  if (!game || game.workspaceId !== workspaceId) return <main className="p-6">Source Game not found</main>
+  if (game === undefined || (game && snaps === undefined)) return <div role="status" aria-label="Loading Review Queue" className="m-6 h-32 animate-pulse rounded bg-muted" />
+  if (!game || game.workspaceId !== workspaceId) return <main className="space-y-3 p-6"><h1>Source Game not found</h1><Link className="underline" to={`/w/${workspaceId}/games`}>Source Games</Link></main>
   const queue = (snaps ?? []).filter((snap) => snap.mustReview).sort((a, b) => a.order - b.order)
   return <main className="space-y-4 p-6">
     <header className="flex flex-wrap items-center gap-4">

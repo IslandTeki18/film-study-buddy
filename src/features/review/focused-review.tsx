@@ -15,8 +15,8 @@ export function FocusedReview({ workspaceId, sourceGameId, snapId }: {
   readonly workspaceId: string; readonly sourceGameId: string; readonly snapId: string
 }): ReactNode {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
-  if (game === undefined) return <main className="p-6">Loading…</main>
-  if (!game || game.workspaceId !== workspaceId) return <main className="p-6">Source Game not found</main>
+  if (game === undefined) return <div role="status" aria-label="Loading Focused Review" className="m-6 h-32 animate-pulse rounded bg-muted" />
+  if (!game || game.workspaceId !== workspaceId) return <main className="space-y-3 p-6"><h1>Source Game not found</h1><Link className="underline" to={`/w/${workspaceId}/games`}>Source Games</Link></main>
   return <ReviewContent key={game._id} workspaceId={workspaceId} sourceGameId={game._id} snapId={snapId} />
 }
 
@@ -68,11 +68,6 @@ function ReviewContent({ workspaceId, sourceGameId, snapId }: {
     } finally { pending.current = false; setResolving(null) }
   }
   useEffect(() => {
-    if (snaps !== undefined && !resolving && index === -1 && walk[0]) {
-      navigate(`${base}/review/${walk[0]._id}`, { replace: true })
-    }
-  }, [snaps, resolving, index, walk, base, navigate])
-  useEffect(() => {
     function onKey(event: KeyboardEvent): void {
       if (event.defaultPrevented || inDialog(event.target)) return
       if (isShortcut(event, 'toggleMustReview')) { event.preventDefault(); void resolve() }
@@ -82,9 +77,9 @@ function ReviewContent({ workspaceId, sourceGameId, snapId }: {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   })
-  if (snaps === undefined) return <main className="p-6">Loading…</main>
+  if (snaps === undefined) return <div role="status" aria-label="Loading Focused Review" className="m-6 h-32 animate-pulse rounded bg-muted" />
   if (!current) return <main className="space-y-3 p-6">
-    <h1>{walk.length ? 'Loading…' : 'Review Queue is empty'}</h1>
+    <h1>{walk.length ? 'Snap not in the Review Queue' : 'Review Queue is empty'}</h1>
     <Link className="mr-4 underline" to={base}>Back to Play Log</Link>
     <Link className="underline" to={`${base}/review`}>Back to Review Queue</Link>
   </main>

@@ -54,7 +54,7 @@ export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspa
     return () => { active = false }
   }, [base, create, diagrams, forceNew, game, navigate, show, snapParam, snaps, workspaceId])
 
-  if (game === undefined || (game && (diagrams === undefined || snaps === undefined))) return <Page><p>Loading…</p></Page>
+  if (game === undefined || (game && (diagrams === undefined || snaps === undefined))) return <div role="status" aria-label="Loading Play Diagrams" className="m-6 h-32 animate-pulse rounded bg-muted" />
   if (!game || game.workspaceId !== workspaceId) return <Page><h1>Source Game not found</h1><Link className="underline" to={`/w/${workspaceId}/games`}>Back to Source Games</Link></Page>
 
   const loadedDiagrams = diagrams ?? []

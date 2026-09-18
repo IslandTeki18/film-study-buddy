@@ -22,6 +22,7 @@ export function SeasonView({ seasonId }: SeasonViewProps): ReactNode {
   return <>
     <AppHeader title={`${season.name} season`} meta={`${workspaces.length} opponent workspaces`} />
     <Page width="max-w-[820px]" className="gap-2">
+      {workspaces.length === 0 && <p>No opponent workspaces in this season yet.</p>}
       {workspaces.map((workspace) => <div key={workspace._id}
         className="grid grid-cols-[74px_minmax(0,1fr)_auto] items-center gap-4 rounded-[11px] border border-border bg-card px-4 py-3.5">
         <Meta className="tracking-[0.08em] uppercase">Week {workspace.week}</Meta>

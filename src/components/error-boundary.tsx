@@ -23,12 +23,13 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBound
     const { error } = this.state
     if (error === null) return this.props.children
     return (
-      <div className="flex h-screen w-screen items-center justify-center p-8">
+      <div className="flex min-h-[50vh] w-full items-center justify-center p-8">
         <div className="max-w-lg space-y-2">
           <h1 className="text-lg font-semibold">Something went wrong</h1>
           <pre className="text-muted-foreground overflow-auto rounded-md border border-border p-3 text-xs whitespace-pre-wrap">
             {error.message}
           </pre>
+          <div className="flex gap-4 text-sm"><button type="button" className="underline" onClick={() => this.setState({ error: null })}>Try again</button><a className="underline" href="#/">Home</a></div>
         </div>
       </div>
     )

@@ -39,7 +39,7 @@ export function PlayDesigner({ workspaceId, sourceGameId, diagramId }: {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const diagram = useQuery(api.diagrams.get, { diagramId })
   const base = `/w/${workspaceId}/games/${sourceGameId}/diagrams`
-  if (game === undefined || diagram === undefined || workspace === undefined) return <main className="p-6">Loading…</main>
+  if (game === undefined || diagram === undefined || workspace === undefined) return <div role="status" aria-label="Loading Play Designer" className="m-6 h-32 animate-pulse rounded bg-muted" />
   if (!game || game.workspaceId !== workspaceId || !diagram || diagram.sourceGameId !== game._id) return <main className="space-y-3 p-6">
     <p>Play Diagram not found</p><Link className="underline" to={base}>Back to Play Diagrams</Link>
   </main>

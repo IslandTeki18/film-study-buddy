@@ -19,7 +19,7 @@ export function QuickNotes({ workspaceId, sourceGameId }: { readonly workspaceId
   const [creating, setCreating] = useState(false)
   const [filter, setFilter] = useState<string | null>(null)
   const base = `/w/${workspaceId}/games/${sourceGameId}`
-  if (game === undefined || (game && (notes === undefined || snaps === undefined))) return <Page><p>Loading…</p></Page>
+  if (game === undefined || (game && (notes === undefined || snaps === undefined))) return <div role="status" aria-label="Loading Quick Notes" className="m-6 h-32 animate-pulse rounded bg-muted" />
   if (!game || game.workspaceId !== workspaceId) return <Page><h1>Source Game not found</h1><Link to={`/w/${workspaceId}/games`} className="underline">Back to Source Games</Link></Page>
   const vocabulary = tagVocabulary((notes ?? []).flatMap((note) => note.tags))
   const used = new Set((notes ?? []).flatMap((note) => note.tags.map((tag) => tag.toLowerCase())))

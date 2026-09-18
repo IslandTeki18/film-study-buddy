@@ -11,20 +11,11 @@ import { useTheme } from '@/features/theme-settings/theme-provider'
 
 export function SettingsPage(): ReactNode {
   const { preference, effectiveTheme } = useTheme()
-  const settings = useQuery(api.settings.get, isConvexConfigured ? {} : 'skip')
-  const seasons = useQuery(api.seasons.list, isConvexConfigured ? {} : 'skip')
-  const season = seasons?.find((item) => item._id === settings?.activeSeasonId)
-  const rows = [
-    { label: 'Coaching area', note: 'Set your starter template', value: settings?.coachingArea ?? '—' },
-    { label: 'Current season', note: 'Default for new workspaces', value: season?.name ?? '—' },
-  ]
   return <>
     <AppHeader title="Settings" />
     <Page width="max-w-[620px]" className="gap-5">
       <Panel className="overflow-hidden">
-        {rows.map((row) => <SettingsRow key={row.label} label={row.label} note={row.note}>
-          <span className="font-mono text-xs">{row.value}</span>
-        </SettingsRow>)}
+        {isConvexConfigured ? <DeploymentSettings /> : <SettingsRow label="Deployment" note="Convex is not configured"><span className="text-xs">Unavailable</span></SettingsRow>}
         <SettingsRow label="Appearance" note={`Currently ${preference}${preference === 'system' ? ` (${effectiveTheme})` : ''}`}>
           <ThemeToggle className="w-auto" compact />
         </SettingsRow>
@@ -34,6 +25,21 @@ export function SettingsPage(): ReactNode {
       </Link>
     </Page>
   </>
+}
+
+function DeploymentSettings(): ReactNode {
+  const settings = useQuery(api.settings.get, {})
+  const seasons = useQuery(api.seasons.list, {})
+  const season = seasons?.find((item) => item._id === settings?.activeSeasonId)
+  const rows = [
+    { label: 'Coaching area', note: 'Set your starter template', value: settings?.coachingArea ?? '—' },
+    { label: 'Current season', note: 'Default for new workspaces', value: season?.name ?? '—' },
+  ]
+  return rows.map((row) => <SettingsRow key={row.label} label={row.label} note={row.note}>
+    {settings === undefined || seasons === undefined
+      ? <div role="status" aria-label={`Loading ${row.label}`} className="h-5 w-24 animate-pulse rounded bg-muted" />
+      : <span className="font-mono text-xs">{row.value}</span>}
+  </SettingsRow>)
 }
 
 function SettingsRow({ label, note, children }: { readonly label: string; readonly note: string; readonly children: ReactNode }): ReactNode {

@@ -26,7 +26,7 @@ export function WorkspaceHeader({ workspaceId }: { readonly workspaceId: string 
     <div className="flex flex-wrap items-center gap-4">
       <Link className={buttonVariants({ variant: 'outline', size: 'sm' })} to={season ? `/seasons/${season._id}` : '/'}>← {season?.name ?? 'Home'}</Link>
       <div className="flex min-w-0 items-baseline gap-2.5">
-        <span className="truncate text-[19px] font-bold tracking-tight">{workspace?.opponentName ?? '…'}</span>
+        <span className="truncate text-[19px] font-bold tracking-tight">{workspace === undefined ? '…' : workspace?.opponentName ?? 'Workspace not found'}</span>
         {workspace && <Meta className="text-[11.5px]">
           Week {workspace.week}{season && ` · ${season.name}`}{workspace.gameDate && ` · ${workspace.gameDate}`}
         </Meta>}
