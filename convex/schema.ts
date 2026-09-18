@@ -32,6 +32,7 @@ const playerValidator = v.object({
   route: v.optional(v.array(v.number())),
   zone: v.optional(v.object({ x: v.number(), y: v.number(), rx: v.number(), ry: v.number() })),
   coversId: v.optional(v.string()),
+  motion: v.optional(v.object({ x: v.number(), y: v.number() })),
 })
 const shapeValidator = v.object({
   id: v.string(),

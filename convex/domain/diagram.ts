@@ -32,6 +32,8 @@ export interface DiagramPlayer {
   zone?: DiagramZone
   /** Defense only: id of the offensive player this man covers. */
   coversId?: string
+  /** Pre-snap start spot; x/y is the at-snap spot. */
+  motion?: { x: number; y: number }
 }
 
 /** Legacy free-drawn shapes. The designer no longer creates them; existing ones still render. */
@@ -124,6 +126,7 @@ function normalizePlayer(player: DiagramPlayer, ids: Set<string>): DiagramPlayer
     requireFinite(player.route, `Player ${player.id} route`)
   }
   if (player.zone) requireFinite([player.zone.x, player.zone.y, player.zone.rx, player.zone.ry], `Player ${player.id} zone`)
+  if (player.motion) requireFinite([player.motion.x, player.motion.y], `Player ${player.id} motion`)
   const kind = normalizeText(player.kind, PLAYER_KIND_MAX_LENGTH)
   const label = normalizeText(player.label, PLAYER_LABEL_MAX_LENGTH)
   const jersey = normalizeText(player.jersey, PLAYER_JERSEY_MAX_LENGTH)
@@ -132,6 +135,7 @@ function normalizePlayer(player: DiagramPlayer, ids: Set<string>): DiagramPlayer
   const zone = player.zone
     ? { x: clamp01(player.zone.x), y: clamp01(player.zone.y), rx: Math.min(1, Math.max(0.01, player.zone.rx)), ry: Math.min(1, Math.max(0.01, player.zone.ry)) }
     : undefined
+  const motion = player.motion ? { x: clamp01(player.motion.x), y: clamp01(player.motion.y) } : undefined
   return {
     id: player.id,
     side: player.side,
@@ -143,6 +147,7 @@ function normalizePlayer(player: DiagramPlayer, ids: Set<string>): DiagramPlayer
     ...(job ? { job } : {}),
     ...(route ? { route } : {}),
     ...(zone ? { zone } : {}),
+    ...(motion ? { motion } : {}),
     ...(player.coversId ? { coversId: player.coversId } : {}),
   }
 }
