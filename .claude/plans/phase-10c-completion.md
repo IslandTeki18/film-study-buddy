@@ -183,3 +183,14 @@ A temporary mocked-action regression failed before the change and passed after i
 five-Block opening, 24-Block boundary, 25-Block rejection and malformed response. Typecheck,
 production build and all 15 existing tests passed. No paid call or notebook mutation was made
 for this fix; the actual offending responses remain unavailable and live success is not claimed.
+
+## Follow-up — preserve Claude API errors (2026-09-17)
+
+The owner next encountered the generic request-failure message. That catch discarded the
+provider's status/body, so the underlying cause (schema, authentication, rate limit, connection
+or service failure) cannot be established from the historical log. The Node action now surfaces
+the SDK API error message, bounded to 1,000 characters and with the configured API key redacted.
+It does not log the request, brief or headers. No speculative schema change or automatic retry
+was added. A temporary regression check failed before and passed after the change for mocked
+400, 401, 429, 529 and connection failures, including redaction and zero mutations/retries.
+The actual generation failure remains unresolved until its provider error is available.

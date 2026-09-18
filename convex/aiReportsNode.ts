@@ -32,7 +32,11 @@ export const generate = action({
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: JSON.stringify({ coachType, intent, focus, brief }) }],
       })
-    } catch {
+    } catch (error) {
+      if (error instanceof Anthropic.APIError) {
+        const detail = error.message.replaceAll(key, '[redacted]').slice(0, 1000)
+        throw new ConvexError(`Could not generate the Report. Claude API: ${detail}`)
+      }
       throw new ConvexError('Could not generate the Report. Check the connection and Claude API configuration, then try again.')
     }
     if (response.stop_reason === 'refusal') throw new ConvexError('The model declined to generate this Report.')
