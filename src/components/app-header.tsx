@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router'
 import { cn } from '@/lib/utils'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Meta } from '@/components/ui/panel'
 
 export const HOME_NAV = [
@@ -32,6 +32,7 @@ export function AppHeader({ title, meta, children }: {
     </>}
     {meta && <Meta className="border-l border-border-strong pl-4">{meta}</Meta>}
     {children}
+    <Button variant="ghost" size="sm" aria-label="Keyboard shortcuts" onClick={() => window.dispatchEvent(new CustomEvent('shortcut-help:open'))}>?</Button>
     {!title && <nav aria-label="Main" className="ml-auto flex flex-wrap gap-2">
       {HOME_NAV.map(({ path, label }) => <NavLink key={path} to={path}
         className={({ isActive }) => cn(buttonVariants({ variant: 'outline', size: 'sm' }), isActive && 'text-foreground')}>

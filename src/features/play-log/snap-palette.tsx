@@ -21,7 +21,7 @@ function formatDraftValue(column: PlayLogColumn, value: unknown): string {
 }
 
 export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSnapNumber, mustReview,
-  onMustReviewChange, saving, onSave, onClear, onAddTerminology, onAddFieldOption }: {
+  onMustReviewChange, saving, onSave, onOpenPlayDetail, onClear, onAddTerminology, onAddFieldOption }: {
   readonly columns: readonly PlayLogColumn[]
   readonly terminology: readonly { list: TerminologyList; value: string }[]
   readonly draft: Draft
@@ -31,6 +31,7 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
   readonly onMustReviewChange: (value: boolean) => void
   readonly saving: boolean
   readonly onSave: () => void
+  readonly onOpenPlayDetail: () => void
   readonly onClear: () => void
   readonly onAddTerminology: (list: TerminologyList, value: string) => Promise<void>
   readonly onAddFieldOption: (fieldId: Id<'templateFields'>, option: string) => Promise<void>
@@ -115,6 +116,12 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
   }
   useEffect(() => {
     function onKey(event: KeyboardEvent): void {
+      if (!event.defaultPrevented && !inDialog(event.target) && isShortcut(event, 'createSnap')) {
+        event.preventDefault(); save(); return
+      }
+      if (!event.defaultPrevented && !inDialog(event.target) && isShortcut(event, 'openPlayDetail')) {
+        event.preventDefault(); onOpenPlayDetail(); return
+      }
       if (!event.defaultPrevented && !inDialog(event.target) && isShortcut(event, 'toggleMustReview')) {
         const target = event.target
         if (target instanceof HTMLElement && (target === document.body || section.current?.contains(target))) {
@@ -148,7 +155,7 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
     <section ref={section}>
       <div className="mb-3.5 flex flex-wrap items-center gap-3">
         <h2><Eyebrow className="text-xs">Chart a snap</Eyebrow></h2>
-        <Meta>Click to chart — it advances to the next field · 1-9 picks, Tab next group, Enter saves</Meta>
+        <Meta>Click to chart — it advances to the next field · 1-9 picks, Tab next group, Enter or Cmd/Ctrl+N saves · ? shortcuts</Meta>
         <span className="ml-auto"><Segmented label="Palette layout" value={layout} options={[['focus', 'One group'], ['all', 'All groups']]} onChange={setLayout} /></span>
       </div>
 

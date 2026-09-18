@@ -110,6 +110,11 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
           <SnapPalette columns={visibleColumns} terminology={terminology ?? []} draft={draft} onDraftChange={setDraft}
             nextSnapNumber={(snaps?.length ?? 0) + 1} mustReview={mustReview} onMustReviewChange={setMustReview}
             saving={pending} onSave={() => { void save() }} onClear={() => { setDraft({}); setMustReview(false) }}
+            onOpenPlayDetail={() => {
+              const snapId = createdId ?? snaps?.at(-1)?._id
+              if (snapId) navigate(`/w/${workspaceId}/games/${game._id}/snap/${snapId}`)
+              else show({ message: 'No Snap to open' })
+            }}
             onAddTerminology={async (list, value) => {
               try { await addTerminology({ list, value }) }
               catch (error) {

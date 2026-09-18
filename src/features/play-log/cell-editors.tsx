@@ -92,6 +92,7 @@ function DeferredInput({ column, value, disabled, onSave }: {
   const latest = useRef(draft)
   const saved = useRef(value)
   const pending = useRef<Promise<void> | null>(null)
+  const cancelled = useRef(false)
   const edits = useContext(PendingFieldEdits)
   const [, rerender] = useState(0)
   useEffect(() => {
@@ -116,7 +117,18 @@ function DeferredInput({ column, value, disabled, onSave }: {
   })
   function save(): void { void commit().catch(() => undefined) }
   return <div onBlur={(event) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) save()
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      if (cancelled.current) cancelled.current = false
+      else save()
+    }
+  }} onKeyDown={(event) => {
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    event.stopPropagation()
+    cancelled.current = true
+    latest.current = saved.current
+    setDraft(saved.current);
+    (event.target as HTMLElement).blur()
   }}>
     <GroupInput column={column} value={draft} disabled={disabled || pending.current !== null}
       onChange={(next) => { latest.current = next; setDraft(next) }} onNext={save} />

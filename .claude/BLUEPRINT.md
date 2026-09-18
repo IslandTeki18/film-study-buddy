@@ -345,12 +345,13 @@ template fields, Play Log column headers, and Report blocks. Persisting a reorde
 
 ### 7.5 Keyboard Shortcuts (SPEC §50)
 
-Fixed, non-configurable, declared once in `src/lib/shortcuts.ts`:
-arrow keys move the Play Log cell cursor; `Enter` opens the cell editor and commits;
-`Tab`/`Shift+Tab` move horizontally; `Esc` cancels an edit; `Cmd/Ctrl+Enter` opens Play Detail;
-`Cmd/Ctrl+R` toggles Must Review; `Cmd/Ctrl+N` creates the next Snap with carry-forward;
-`Cmd/Ctrl+F` focuses search; `Cmd/Ctrl+Z` triggers the active Undo toast;
-`J`/`K` move Next/Previous inside Focused Review Mode. Enter never creates a row (SPEC §98).
+Fixed, non-configurable shortcuts are declared in `src/lib/shortcuts.ts`. `?` opens the shortcut
+help dialog. In the Play Log, `1`–`9` pick tags, `Tab`/`Shift+Tab` and field-group arrows move
+between groups, `Esc` clears the palette draft, `Cmd/Ctrl+R` toggles Must Review, and
+`Cmd/Ctrl+Enter` opens the latest Snap in Play Detail. `J`/`K` move Next/Previous inside Focused
+Review Mode. `Cmd/Ctrl+Z` triggers the active Undo toast outside editable fields. In Play Detail,
+`Enter` commits and `Esc` cancels a field edit. In the charting palette, `Enter` and `Cmd/Ctrl+N`
+save the draft as a Snap; Enter never creates an empty Snap.
 
 ### 7.6 Loading, Empty, and Error States
 
@@ -413,7 +414,7 @@ Play Diagrams (SPEC §10). Density over comfort: compact rows, small controls, m
 9. The application never labels a play good, bad, or successful (SPEC §59, §107).
 10. There is no Save button (SPEC §89).
 11. Two different terminology strings are two different values; no aliasing (SPEC §96).
-12. Enter does not create a Snap (SPEC §98).
+12. In the charting palette, Enter saves a nonempty draft as a Snap; it never creates an empty Snap (SPEC §98).
 
 ---
 

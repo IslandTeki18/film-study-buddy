@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { Button } from './button'
+import { isShortcut } from '@/lib/shortcuts'
 
 export interface ToastAction { readonly label: string; readonly onAction: () => void }
 export interface ToastOptions {
@@ -21,6 +22,7 @@ interface VisibleToast extends ToastOptions { readonly id: string }
 interface ToastContextValue {
   readonly show: (options: ToastOptions) => void
   readonly dismiss: (id: string) => void
+  readonly runAction: () => boolean
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null)
@@ -38,6 +40,23 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
   const show = useCallback((options: ToastOptions): void => {
     setToast({ ...options, id: crypto.randomUUID() })
   }, [])
+  const runAction = useCallback((): boolean => {
+    if (!toast?.action) return false
+    toast.action.onAction()
+    dismiss(toast.id)
+    return true
+  }, [dismiss, toast])
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent): void {
+      const target = event.target
+      if (!isShortcut(event, 'undoToast') || (target instanceof HTMLElement &&
+        (target.isContentEditable || target.closest('input, textarea, select, [contenteditable="true"]')))) return
+      if (runAction()) event.preventDefault()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [runAction])
 
   const resume = useCallback((): void => {
     if (!toast || timer.current !== null) return
@@ -62,7 +81,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
     }
   }, [resume, toast])
 
-  const value = useMemo(() => ({ show, dismiss }), [dismiss, show])
+  const value = useMemo(() => ({ show, dismiss, runAction }), [dismiss, show, runAction])
   function onBlur(event: FocusEvent<HTMLDivElement>): void {
     if (!event.currentTarget.contains(event.relatedTarget)) resume()
   }
@@ -85,10 +104,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
           <div className="flex max-w-sm items-center gap-3 rounded-md border border-border bg-background p-3 text-sm text-foreground shadow-lg">
             <span>{toast.message}</span>
             {toast.action && (
-              <Button size="sm" variant="outline" onClick={() => {
-                toast.action?.onAction()
-                dismiss(toast.id)
-              }}>{toast.action.label}</Button>
+              <Button size="sm" variant="outline" onClick={runAction}>{toast.action.label}</Button>
             )}
             <Button size="sm" variant="ghost" aria-label="Dismiss notification" onClick={() => dismiss(toast.id)}>×</Button>
           </div>

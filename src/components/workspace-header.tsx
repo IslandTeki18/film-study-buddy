@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Meta } from '@/components/ui/panel'
 import { WorkspaceActions } from '@/components/workspace-actions'
 import { isConvexConfigured } from '@/convex-client'
@@ -36,6 +36,7 @@ export function WorkspaceHeader({ workspaceId }: { readonly workspaceId: string 
         <WorkspaceActions workspaceId={workspace._id} archived={workspace.archivedAt !== undefined}
           label={`Week ${workspace.week} — ${workspace.opponentName}`} />
       </div>}
+      <Button variant="ghost" size="sm" aria-label="Keyboard shortcuts" onClick={() => window.dispatchEvent(new CustomEvent('shortcut-help:open'))}>?</Button>
     </div>
     <nav aria-label="Workspace" className="-mb-px flex flex-wrap gap-0.5">
       {WORKSPACE_TABS.map(({ segment, label }) => <NavLink key={segment} to={segment ? `${base}/${segment}` : base} end={segment === ''}

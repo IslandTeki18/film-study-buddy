@@ -4,6 +4,7 @@ import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { isConvexConfigured } from '@/convex-client'
+import { ShortcutHelp } from '@/components/shortcut-help'
 
 export function App(): ReactNode {
   return isConvexConfigured ? <FirstLaunchGate /> : <AppShell />
@@ -27,6 +28,7 @@ function AppShell(): ReactNode {
         </p>
       )}
       <ErrorBoundary><Outlet /></ErrorBoundary>
+      <ShortcutHelp />
     </main>
   )
 }
