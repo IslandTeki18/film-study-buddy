@@ -1,4 +1,4 @@
-import { ConvexError, v, type Infer } from 'convex/values'
+import { ConvexError, v, type Infer, type GenericValidator } from 'convex/values'
 import { api } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { internalMutation, internalQuery, type QueryCtx } from './_generated/server'
@@ -115,25 +115,43 @@ export const planValidator = v.array(v.union(
 ))
 export type AiReportPlan = Infer<typeof planValidator>
 
-const blockSchemas = planValidator.element.members.map((member) => ({
-  type: 'object', additionalProperties: false,
-  required: Object.entries(member.fields).filter(([, field]) => field.isOptional !== 'optional').map(([key]) => key),
-  properties: Object.fromEntries(Object.entries(member.fields).map(([key, field]) => [key,
-    field.kind === 'literal' ? { type: 'string', const: field.value }
-      : field.kind === 'array' ? { type: 'array', items: { type: 'string' } }
-        : { type: field.kind === 'float64' ? 'number' : field.kind },
-  ])),
-}))
-export const AI_PLAN_SCHEMA = {
-  type: 'object', additionalProperties: false,
-  required: ['heading', 'block1', 'block2', 'block3', 'block4', 'additionalBlocks'],
-  properties: {
-    heading: blockSchemas[0],
-    block1: { anyOf: blockSchemas }, block2: { anyOf: blockSchemas },
-    block3: { anyOf: blockSchemas }, block4: { anyOf: blockSchemas },
-    additionalBlocks: { type: 'array', items: { anyOf: blockSchemas } },
-  },
+const sectionBlockValidator = v.union(
+  v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string() }),
+  v.object({ type: v.literal('tendency'), tendencyId: v.string() }),
+  v.object({ type: v.literal('diagram'), diagramId: v.string() }),
+  v.object({ type: v.literal('quickNotes'), noteIds: v.array(v.string()) }),
+  v.object({ type: v.literal('selectedPlays'), sourceGameLabel: v.string(), groupingKey: v.string(), groupingValue: v.string(), limit: v.number() }),
+)
+export const generatedPlanValidator = v.object({
+  summary: v.object({
+    identity: v.string(), identityTable: v.object({ groupBy: v.string(), title: v.string() }),
+    priorities: v.array(v.string()), alertTendencyIds: v.array(v.string()),
+  }),
+  tendencySections: v.array(v.object({
+    kind: v.union(v.literal('evidence'), v.literal('split'), v.literal('formation')),
+    title: v.string(), filter: v.optional(v.object({ groupBy: v.string(), value: v.string() })),
+    blocks: v.array(sectionBlockValidator), counter: v.string(),
+  })),
+})
+export type GeneratedPlan = Infer<typeof generatedPlanValidator>
+
+function toJsonSchema(validator: GenericValidator): Record<string, unknown> {
+  switch (validator.kind) {
+    case 'object': {
+      const fields = Object.entries(validator.fields) as [string, GenericValidator][]
+      return { type: 'object', additionalProperties: false,
+        required: fields.filter(([, field]) => field.isOptional !== 'optional').map(([key]) => key),
+        properties: Object.fromEntries(fields.map(([key, field]) => [key, toJsonSchema(field)])) }
+    }
+    case 'array': return { type: 'array', items: toJsonSchema(validator.element) }
+    case 'union': return { anyOf: validator.members.map(toJsonSchema) }
+    case 'literal': return { type: typeof validator.value, const: validator.value }
+    case 'string': return { type: 'string' }
+    case 'float64': return { type: 'number' }
+    default: throw new Error(`Unsupported plan validator: ${validator.kind}`)
+  }
 }
+export const AI_PLAN_SCHEMA = toJsonSchema(generatedPlanValidator)
 export const generationResultValidator = v.object({ reportId: v.id('reports'), blockCount: v.number(), skipped: v.number() })
 export type GenerationResult = Infer<typeof generationResultValidator>
 
