@@ -1086,6 +1086,11 @@ lengths read in yards. Blocking jobs end in a bar, everything else in an arrowhe
 
 Defense adds Zone (a draggable, resizable ellipse) and Man (click the offensive man to cover).
 
+Offensive skill players can carry pre-snap motion: the coach marks the current spot as the motion
+start and drags the man to the at-snap spot. The start spot shows as a dashed ghost joined by a
+wavy line with an arrowhead; both ends drag. Motion saves with the diagram and custom formations.
+Defense motion, timing, and named motion types are not in V1.
+
 The legacy free-drawn shapes (arrow, curve, block, dashed, freehand) still render in existing
 diagrams but are no longer authored.
 

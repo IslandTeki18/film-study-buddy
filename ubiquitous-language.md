@@ -150,6 +150,11 @@ A placed marker on the Play Designer canvas with a side (Offense / Defense), a p
 optional position label, and an optional jersey number.
 _Avoid_: Piece, token, dot, player.
 
+**Diagram Motion**:
+A Player Object's pre-snap start spot in a Play Diagram, drawn as a ghost joined to the Player
+Object's at-snap spot by a wavy line. Distinct from Motion, the Core Snap Data field.
+_Avoid_: Motion alone where the Core Snap field is nearby, shift, animation.
+
 **Diagram Note**:
 The single free-text field belonging to a Play Diagram.
 _Avoid_: Caption, annotation, comment.
