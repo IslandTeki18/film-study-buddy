@@ -28,11 +28,15 @@ export function ReportPreview({ workspaceId, reportId }: { readonly workspaceId:
   const visibleBlocks = report.blocks.filter((block) => (block.type !== 'heading' && block.type !== 'text') || block.text.trim())
   const blocks = visibleBlocks.filter((block, index) => block.type !== 'pageBreak' || (index > 0 && visibleBlocks[index - 1]?.type !== 'pageBreak'))
     .filter((block, index, remaining) => block.type !== 'pageBreak' || index < remaining.length - 1)
+  const pageBreakIndex = blocks.findIndex((block) => block.type === 'pageBreak')
+  const first = blocks[0], next = blocks[pageBreakIndex + 1]
+  const summaryEnd = first?.type === 'heading' && first.text === 'Game-Plan Summary' &&
+    next?.type === 'heading' && next.text === 'Tendency Report' ? pageBreakIndex : -1
   return <>
     <div className="flex flex-wrap items-center gap-4 px-6 pt-6 print:hidden"><Link className="underline" to={`/w/${workspaceId}/reports/${reportId}`}>Back to Builder</Link><Button disabled={pending || !window.filmStudy} onClick={() => { void exportPdf() }}>{pending ? 'Exporting…' : 'Export PDF'}</Button>{!window.filmStudy && <p>PDF export requires the desktop app</p>}</div>
     <article data-report-ready className="report-sheet mx-auto my-6 w-[8.5in] shrink-0 space-y-6 p-[0.5in] shadow print:m-0 print:w-auto print:p-0 print:shadow-none">
       <header className="report-avoid-break space-y-2 border-b border-border pb-4"><h1 className="text-2xl font-bold">{report.name}</h1><p>{REPORT_INTENT_LABEL[report.intent]}</p><p className="text-sm">{workspace.opponentName} · Week {workspace.week} · {workspace.seasonName}{workspace.gameDate && ` · ${workspace.gameDate}`}</p></header>
-      {blocks.map((block) => <div key={block.id} className={block.type === 'heading' ? 'report-heading' : undefined}><ReportBlockView block={block} showClipReferences={report.showClipReferences} mode="print" /></div>)}
+      {blocks.map((block, index) => <div key={block.id} className={`${block.type === 'heading' ? 'report-heading' : ''}${index < summaryEnd ? ' report-summary-block' : ''}`}><ReportBlockView block={block} showClipReferences={report.showClipReferences} mode="print" /></div>)}
     </article>
   </>
 }

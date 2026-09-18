@@ -132,4 +132,7 @@
   html, body { overflow: visible; height: auto; background: white; color-scheme: light !important; }
   .report-sheet { print-color-adjust: exact; }
   .report-page-break { break-after: page; height: 0; }
+  .report-summary-block { margin-block: 0 !important; padding-block: 4px; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+  .report-summary-block h2 { font-size: 18px; line-height: 1.3; }
+  .report-summary-block th, .report-summary-block td { padding-block: 4px; }
 }
