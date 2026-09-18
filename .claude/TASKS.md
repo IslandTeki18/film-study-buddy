@@ -362,6 +362,28 @@ Completion and evidence: [Phase 10B completion report](plans/phase-10b-completio
 
 ---
 
+## Phase 10C — AI Report Generation
+
+Approved scope: `.claude/plans/phase-10c-ai-report-generation.md` (owner-supplied, uncommitted).
+
+- [~] **10C.0 Dependency and key plumbing.**
+      *Evidence:* SDK installed, README documents deployment-only key, paid calls and third-party brief transmission; typecheck passed. Deployment key is absent.
+- [x] **10C.1 Extract `buildBlock()` from `insertBlock`.**
+      *Evidence:* typecheck/sync passed; all seven manual insertion types passed on fixture data and rendered in Electron; table/Tendency snapshots matched exactly.
+- [x] **10C.2 The brief (what the model is allowed to see).**
+      *Evidence:* fixture query returned eight Snaps as counts only, capped previews, two Quick Notes, one Tendency and one Play Diagram. Existing read queries reused; prompt covers eleven Coaching Areas.
+- [~] **10C.3 `createGenerated` (materializing the plan).**
+      *Evidence:* typecheck/sync passed; three valid Blocks plus one invalid reference produced skipped:1, exact table rows and no existing writes. Missing-key and changed-scope failures created nothing. Paid action awaits key.
+- [~] **10C.4 The UI.**
+      *Evidence:* Electron keyboard flow, both themes, pending status/Escape lock and retained inputs on configuration error passed. Live generation success awaits key.
+- [x] **10C.5 Docs.**
+      *Evidence:* README, glossary and BLUEPRINT updated; Phase 10C inserted before Phase 11 with explicit incomplete verification markers.
+- [ ] **10C.6 Backend checks (fixture data).**
+- [ ] **10C.7 Coach-type and intent differentiation (Electron).**
+- [ ] **10C.8 Close out.**
+
+---
+
 ## Phase 11 — Hardening and Acceptance
 
 - [ ] **11.1 Keyboard shortcut pass.** Every shortcut in BLUEPRINT §7.5 implemented and listed on

@@ -197,6 +197,13 @@ A multi-page document assembled from ordered Blocks inside a Weekly Opponent Wor
 as PDF.
 _Avoid_: Document, export, packet, printout.
 
+**Generated Report**:
+A Report whose Blocks were assembled by the application from the Workspace's included Source
+Games, Tendencies / Alerts, Play Diagrams, Quick Notes, and Player Notes, for a chosen
+Coaching Area. Every Block still holds a real Report Snapshot, and the Report is fully
+editable afterwards.
+_Avoid_: AI report, auto report, generated document.
+
 **Coach Report**:
 The comprehensive Report intent, aimed at staff and personal game planning. May include Hudl
 clip references.

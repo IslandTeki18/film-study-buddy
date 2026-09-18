@@ -57,7 +57,7 @@ Convex specifically beyond the `convex/` directory and the hooks in `src/lib/db/
   dependency), `lucide-react` icons.
 - **Backend**: Convex — schema, queries, mutations, actions, crons.
 - **Added dependencies**: `react-router`, `@tanstack/react-table`, `papaparse`
-  (+ `@types/papaparse`). Nothing else.
+  (+ `@types/papaparse`), and `@anthropic-ai/sdk` for Phase 10C Report generation.
 
 ---
 
@@ -92,6 +92,8 @@ film-study-buddy/
 │   ├── opponent-data.ts         # aggregation queries
 │   ├── tendencies.ts
 │   ├── reports.ts
+│   ├── aiReports.ts             # included Workspace brief and Generated Report materialization
+│   ├── aiReportsNode.ts         # server-only Claude generation action
 │   ├── deletions.ts             # soft delete, undo, purge
 │   └── theme-settings/
 │       └── preferences.ts       # existing
@@ -252,6 +254,10 @@ Never recomputed (SPEC §65).
 ```
 Blocks hold copied values, not ids (SPEC §71). Duplicating a Coach Report as a Player Report is
 a deep copy of the array, which is why it is independent by construction (SPEC §70).
+
+Phase 10C adds Generated Reports: Claude selects ordered Blocks for a Coaching Area from an
+included Workspace brief, and the existing Block builder copies real Report Snapshots into a
+new, fully editable Report; model-written prose remains subject to the coach's review.
 
 ### 5.7 Deletion Ledger
 
