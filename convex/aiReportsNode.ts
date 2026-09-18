@@ -53,9 +53,7 @@ export const generate = action({
     if (!parsed.heading || typeof parsed.heading !== 'object' || !('type' in parsed.heading) || parsed.heading.type !== 'heading') {
       throw new ConvexError('The generated Report is missing its opening Heading. Try again.')
     }
-    if (plan.length > AI_PLAN_MAX_BLOCKS) {
-      throw new ConvexError(`The generated Report contained ${plan.length} Blocks; the limit is ${AI_PLAN_MAX_BLOCKS}. Try a narrower focus.`)
-    }
-    return ctx.runMutation(internal.aiReports.createGenerated, { workspaceId, name, intent, plan: plan as AiReportPlan, sourceGameIds: brief.snapColumns.map((game) => game.sourceGameId) })
+    const result = await ctx.runMutation(internal.aiReports.createGenerated, { workspaceId, name, intent, plan: plan.slice(0, AI_PLAN_MAX_BLOCKS) as AiReportPlan, sourceGameIds: brief.snapColumns.map((game) => game.sourceGameId) })
+    return { ...result, skipped: result.skipped + Math.max(0, plan.length - AI_PLAN_MAX_BLOCKS) }
   },
 })

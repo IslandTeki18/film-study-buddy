@@ -220,3 +220,18 @@ its mutation context inspected the plan without inserting anything: **zero Repor
 real notebook reads or writes**. This proves live request acceptance and plan generation, not
 a full real-Workspace UI/materialization walkthrough. The successful fallback was then synced
 to the development Convex deployment.
+
+## Follow-up — retain overlong generated plans (2026-09-17)
+
+Live responses containing 25 and 29 Blocks were rejected after the paid call despite usable
+content. The action now passes the first 24 descriptors, unchanged and in order, to the existing
+materializer. It adds omitted descriptors to the materializer's skipped count, which the existing
+success toast already displays. The internal mutation retains its own 24-Block guard and all
+validation; failed writes still fail normally. There is no automatic retry or additional API
+call. Tradeoff: trailing Blocks are omitted rather than rejecting the complete Report.
+
+A temporary regression reproduced the original failure and passed after the change for 5, 24,
+25 and 29 Blocks, both with and without materializer skips. It verified exact retained content
+and order, combined skip counts, one API call per attempt and mutation failure propagation.
+JSON fallback and API-error/redaction checks also passed. These checks used mocked responses,
+made no paid calls, and changed no notebook data.
