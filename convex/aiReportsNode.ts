@@ -28,8 +28,8 @@ export const generate = action({
       response = await client.messages.create({
         model: 'claude-opus-5', max_tokens: 16000,
         thinking: { type: 'adaptive' },
-        output_config: { effort: 'high', format: { type: 'json_schema', schema: AI_PLAN_SCHEMA } },
-        system: SYSTEM_PROMPT,
+        output_config: { effort: 'high' },
+        system: `${SYSTEM_PROMPT}\nReturn only valid JSON matching this schema, without Markdown fences or other commentary:\n${JSON.stringify(AI_PLAN_SCHEMA)}`,
         messages: [{ role: 'user', content: JSON.stringify({ coachType, intent, focus, brief }) }],
       })
     } catch (error) {

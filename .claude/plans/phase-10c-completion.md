@@ -194,3 +194,29 @@ It does not log the request, brief or headers. No speculative schema change or a
 was added. A temporary regression check failed before and passed after the change for mocked
 400, 401, 429, 529 and connection failures, including redaction and zero mutations/retries.
 The actual generation failure remains unresolved until its provider error is available.
+
+## Follow-up — confirmed grammar-size rejection and JSON fallback (2026-09-17)
+
+The preserved provider error confirmed HTTP 400 `invalid_request_error`: the compiled grammar
+was too large. The action now uses the plan's JSON-only fallback: keep high-effort/adaptive
+thinking and the pinned model, but pass the schema as prompt instructions instead of
+`output_config.format`. Convex still validates every descriptor before materialization; the
+existing heading/count, reference ownership, inclusion and size checks remain. There is no
+automatic retry or second API request. Tradeoff: JSON syntax/shape is now prompted rather than
+provider-constrained; malformed responses fail explicitly before any Report write.
+
+The two-line request change passed the mocked fallback regression, the API-error/redaction
+regression, typecheck, production build and all 15 existing tests. One live synthetic check
+used the exact user Focus text with eight synthetic Snaps summarized by Formation and Play
+Concept. The actual action returned a 15-Block plan in **18.1 seconds**, HTTP **200**, including
+three data tables and two Selected Plays descriptors. The check verified count, initial
+Heading, known Block types and available grouping/game references. Usage: **4,684 input tokens,
+1,243 output tokens**, including 287 thinking tokens; no cache tokens. This was exactly one
+real API call with retries disabled. Monetary cost was not calculated.
+
+The scratch harness `/tmp/p10c-live-schema-check.cjs` read the configured key directly into
+process memory without printing or writing it. Its query context supplied synthetic data and
+its mutation context inspected the plan without inserting anything: **zero Reports saved, no
+real notebook reads or writes**. This proves live request acceptance and plan generation, not
+a full real-Workspace UI/materialization walkthrough. The successful fallback was then synced
+to the development Convex deployment.
