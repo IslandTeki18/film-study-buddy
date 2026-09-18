@@ -2,9 +2,9 @@ import { ConvexError, v, type Infer, type GenericValidator } from 'convex/values
 import { api } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { internalMutation, internalQuery, type QueryCtx } from './_generated/server'
-import { AI_BRIEF_MAX_FORMATIONS, AI_BRIEF_FORMATION_BREAKDOWN_KEYS, AI_BRIEF_MAX_BREAKDOWN_ROWS, generatedReportBudget, AI_PLAN_MAX_BLOCKS, AI_BRIEF_MAX_AGGREGATE_ROWS, AI_BRIEF_MAX_GROUPINGS, AI_BRIEF_MAX_PLAYER_NOTES, AI_BRIEF_MAX_QUICK_NOTES } from './domain/aiReport.ts'
+import { AI_IDENTITY_MAX_LENGTH, AI_PRIORITY_MAX_LENGTH, AI_MAX_PRIORITIES, AI_MAX_ALERTS, AI_IDENTITY_TABLE_MAX_ROWS, AI_COUNTER_MAX_LENGTH, IDENTITY_SLOT_LABEL, PRIORITIES_SLOT_LABEL, ALERTS_SLOT_LABEL, COUNTER_SLOT_LABEL, SECTION_KIND_ORDER, SECTION_KIND_HEADING, AI_BRIEF_MAX_FORMATIONS, AI_BRIEF_FORMATION_BREAKDOWN_KEYS, AI_BRIEF_MAX_BREAKDOWN_ROWS, generatedReportBudget, AI_PLAN_MAX_BLOCKS, AI_BRIEF_MAX_AGGREGATE_ROWS, AI_BRIEF_MAX_GROUPINGS, AI_BRIEF_MAX_PLAYER_NOTES, AI_BRIEF_MAX_QUICK_NOTES } from './domain/aiReport.ts'
 import { NONE_GROUP, groupingFieldsFor, groupingValuesOf, templateGroupingKey } from './domain/aggregate.ts'
-import { DEFAULT_SELECTED_PLAY_CORE_KEYS, HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH } from './domain/reportBlocks.ts'
+import { DEFAULT_SELECTED_PLAY_CORE_KEYS, HEADING_MAX_LENGTH, TABLE_TITLE_MAX_LENGTH } from './domain/reportBlocks.ts'
 import { buildBlock, requireName, requireSize, type blockSourceValidator } from './reports'
 import { CORE_FIELDS } from './domain/coreFields.ts'
 import { attachedSnapIds } from './domain/diagram.ts'
@@ -104,17 +104,6 @@ export const brief = internalQuery({
   handler: (ctx, { workspaceId }): Promise<AiReportBrief> => loadBrief(ctx, workspaceId),
 })
 
-export const planValidator = v.array(v.union(
-  v.object({ type: v.literal('heading'), text: v.string() }),
-  v.object({ type: v.literal('text'), text: v.string() }),
-  v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string() }),
-  v.object({ type: v.literal('tendency'), tendencyId: v.string() }),
-  v.object({ type: v.literal('diagram'), diagramId: v.string() }),
-  v.object({ type: v.literal('quickNotes'), noteIds: v.array(v.string()) }),
-  v.object({ type: v.literal('selectedPlays'), sourceGameLabel: v.string(), groupingKey: v.string(), groupingValue: v.string(), limit: v.number() }),
-))
-export type AiReportPlan = Infer<typeof planValidator>
-
 const sectionBlockValidator = v.union(
   v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string() }),
   v.object({ type: v.literal('tendency'), tendencyId: v.string() }),
@@ -156,75 +145,114 @@ export const generationResultValidator = v.object({ reportId: v.id('reports'), b
 export type GenerationResult = Infer<typeof generationResultValidator>
 
 export const createGenerated = internalMutation({
-  args: { workspaceId: v.id('workspaces'), name: v.string(), intent: schema.tables.reports.validator.fields.intent, plan: planValidator, sourceGameIds: v.optional(v.array(v.id('sourceGames'))) },
+  args: { workspaceId: v.id('workspaces'), name: v.string(), intent: schema.tables.reports.validator.fields.intent, plan: generatedPlanValidator, sourceGameIds: v.optional(v.array(v.id('sourceGames'))) },
   returns: generationResultValidator,
   handler: async (ctx, { workspaceId, name, intent, plan, sourceGameIds }): Promise<GenerationResult> => {
     await requireLiveWorkspace(ctx, workspaceId)
     const reportName = requireName(name)
-    if (plan.length > AI_PLAN_MAX_BLOCKS) throw new ConvexError(`A Generated Report can have at most ${AI_PLAN_MAX_BLOCKS} Blocks.`)
-    const brief = await loadBrief(ctx, workspaceId)
+    const scope = (await loadScope(ctx, workspaceId))!
+    const brief = await loadBrief(ctx, workspaceId, scope)
+    const budget = generatedReportBudget({ totalSnaps: brief.totalSnaps, tendencyCount: brief.tendencies.length, groupings: brief.groupings, intent })
     if (sourceGameIds && (sourceGameIds.length !== brief.snapColumns.length || brief.snapColumns.some((game) => !sourceGameIds.includes(game.sourceGameId)))) {
       throw new ConvexError('Included Source Games changed while building the Report. Try again.')
     }
     const blocks: Doc<'reports'>['blocks'] = []
     let skipped = 0
-    // ponytail: skipped blocks are counted, not explained; surface per-block reasons if coaches start asking which block vanished.
-    for (const entry of plan) {
-      try {
-        let source: Infer<typeof blockSourceValidator>
-        switch (entry.type) {
-          case 'heading': case 'text': source = { type: entry.type }; break
-          case 'dataTable':
-            if (![entry.groupBy, ...(entry.groupBy2 ? [entry.groupBy2] : [])].every((key) => brief.groupings.some((field) => field.key === key))) throw new Error('Grouping Field not available')
-            source = entry
-            break
-          case 'tendency': {
-            const tendencyId = ctx.db.normalizeId('tendencies', entry.tendencyId)
-            if (!tendencyId || !brief.tendencies.some((item) => item.id === tendencyId)) throw new Error('Tendency / Alert not found')
-            source = { type: entry.type, tendencyId }
-            break
-          }
-          case 'diagram': {
-            const diagramId = ctx.db.normalizeId('diagrams', entry.diagramId)
-            if (!diagramId || !brief.diagrams.some((item) => item.id === diagramId)) throw new Error('Play Diagram not found')
-            source = { type: entry.type, diagramId }
-            break
-          }
-          case 'quickNotes': {
-            const noteIds = [...new Set(entry.noteIds)].flatMap((value) => {
-              const id = ctx.db.normalizeId('quickNotes', value)
-              return id && brief.quickNotes.some((note) => note.id === id) ? [id] : []
-            })
-            if (!noteIds.length) throw new Error('Quick Note not found')
-            source = { type: entry.type, noteIds }
-            break
-          }
-          case 'selectedPlays': {
-            const games = brief.snapColumns.filter((game) => game.sourceGameLabel === entry.sourceGameLabel)
-            if (games.length !== 1 || !Number.isSafeInteger(entry.limit) || entry.limit < 1) throw new Error('Source Game or Snap selection not available')
-            const game = await ctx.db.get(games[0]!.sourceGameId)
-            if (!game) throw new Error('Source Game not found')
-            const template = await ctx.db.get(game.templateId)
-            const fields = template && template.deletedAt === undefined ? (await templateTree(ctx, game.templateId)).flatMap((section) => section.fields) : []
-            const field = groupingFieldsFor([fields]).find((field) => field.key === entry.groupingKey)
-            if (!field || !brief.groupings.some((group) => group.key === field.key && group.rows.some((row) => row.values.includes(entry.groupingValue)))) throw new Error('Grouping Field not available')
-            const templateFieldId = fields.find((candidate) => templateGroupingKey(candidate) === field.key)?._id
-            const snaps = (await ctx.db.query('snaps').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect())
-              .filter((snap) => snap.deletedAt === undefined && groupingValuesOf(snap, field, templateFieldId).includes(entry.groupingValue))
-              .sort((a, b) => a.order - b.order).slice(0, Math.min(entry.limit, 12))
-            if (!snaps.length) throw new Error('No matching Snaps')
-            source = { type: entry.type, sourceGameId: game._id, snapIds: snaps.map((snap) => snap._id), columnKeys: DEFAULT_SELECTED_PLAY_CORE_KEYS.map(coreColumnKey) }
-            break
-          }
+    type ReportBlock = Doc<'reports'>['blocks'][number]
+    async function materialize(entry: Infer<typeof sectionBlockValidator>, sectionFilter?: { groupBy: string; value: string }): Promise<ReportBlock> {
+      let source: Infer<typeof blockSourceValidator>
+      switch (entry.type) {
+        case 'dataTable':
+          if (![entry.groupBy, ...(entry.groupBy2 ? [entry.groupBy2] : [])].every((key) => brief.groupings.some((field) => field.key === key))) throw new Error('Grouping Field not available')
+          if (sectionFilter && !brief.groupings.some((field) => field.key === sectionFilter.groupBy &&
+            (field.rows.some((row) => row.values.includes(sectionFilter.value)) ||
+              (sectionFilter.groupBy === 'core:formation' && brief.formationBreakdowns.some((formation) => formation.value === sectionFilter.value))))) throw new Error('Filter not available')
+          source = { ...entry, title: entry.title.slice(0, TABLE_TITLE_MAX_LENGTH), ...(sectionFilter ? { filter: sectionFilter } : {}) }
+          break
+        case 'tendency': {
+          const tendencyId = ctx.db.normalizeId('tendencies', entry.tendencyId)
+          if (!tendencyId || !brief.tendencies.some((item) => item.id === tendencyId)) throw new Error('Tendency / Alert not found')
+          source = { type: entry.type, tendencyId }
+          break
         }
-        const block = await buildBlock(ctx, { workspaceId }, source)
-        if ((block.type === 'heading' || block.type === 'text') && (entry.type === 'heading' || entry.type === 'text')) {
-          block.text = entry.text.slice(0, block.type === 'heading' ? HEADING_MAX_LENGTH : TEXT_BLOCK_MAX_LENGTH)
+        case 'diagram': {
+          const diagramId = ctx.db.normalizeId('diagrams', entry.diagramId)
+          if (!diagramId || !brief.diagrams.some((item) => item.id === diagramId)) throw new Error('Play Diagram not found')
+          source = { type: entry.type, diagramId }
+          break
         }
-        blocks.push(block)
-      } catch { skipped += 1 }
+        case 'quickNotes': {
+          const noteIds = [...new Set(entry.noteIds)].flatMap((value) => {
+            const id = ctx.db.normalizeId('quickNotes', value)
+            return id && brief.quickNotes.some((note) => note.id === id) ? [id] : []
+          })
+          if (!noteIds.length) throw new Error('Quick Note not found')
+          source = { type: entry.type, noteIds }
+          break
+        }
+        case 'selectedPlays': {
+          if (!budget.allowSelectedPlays) throw new Error('Selected Plays are not included in Player Reports')
+          const games = brief.snapColumns.filter((game) => game.sourceGameLabel === entry.sourceGameLabel)
+          if (games.length !== 1 || !Number.isSafeInteger(entry.limit) || entry.limit < 1) throw new Error('Source Game or Snap selection not available')
+          const game = await ctx.db.get(games[0]!.sourceGameId)
+          if (!game) throw new Error('Source Game not found')
+          const fields = scope.templateFields.get(game._id) ?? []
+          const field = groupingFieldsFor([fields]).find((field) => field.key === entry.groupingKey)
+          if (!field || !brief.groupings.some((group) => group.key === field.key && group.rows.some((row) => row.values.includes(entry.groupingValue)))) throw new Error('Grouping Field not available')
+          const templateFieldId = fields.find((candidate) => templateGroupingKey(candidate) === field.key)?._id
+          const snaps = scope.snaps
+            .filter((snap) => snap.sourceGameId === game._id && groupingValuesOf(snap, field, templateFieldId).includes(entry.groupingValue))
+            .sort((a, b) => a.order - b.order).slice(0, Math.min(entry.limit, 12))
+          if (!snaps.length) throw new Error('No matching Snaps')
+          source = { type: entry.type, sourceGameId: game._id, snapIds: snaps.map((snap) => snap._id), columnKeys: DEFAULT_SELECTED_PLAY_CORE_KEYS.map(coreColumnKey) }
+          break
+        }
+      }
+
+      return buildBlock(ctx, { workspaceId }, source, scope)
     }
-    if (!blocks.length) throw new ConvexError('The generated Report had no usable content. Try again.')
+    const heading = (text: string): ReportBlock => ({ id: crypto.randomUUID(), type: 'heading', text: text.slice(0, HEADING_MAX_LENGTH) })
+    const text = (value: string): ReportBlock => ({ id: crypto.randomUUID(), type: 'text', text: value })
+    const slot = (label: string, value: string, max: number): ReportBlock => text(value.trim() ? `${label} ${value.trim().slice(0, max)}` : `${label}\n\n`)
+    blocks.push(heading('Game-Plan Summary'), slot(IDENTITY_SLOT_LABEL, plan.summary.identity, AI_IDENTITY_MAX_LENGTH))
+    try {
+      const table = await materialize({ type: 'dataTable', ...plan.summary.identityTable })
+      if (table.type === 'dataTable') table.rows = table.rows.slice(0, AI_IDENTITY_TABLE_MAX_ROWS)
+      blocks.push(table)
+    } catch { skipped += 1 }
+    const priorities = plan.summary.priorities.map((priority) => priority.trim()).filter(Boolean).slice(0, AI_MAX_PRIORITIES)
+    blocks.push(text(priorities.length ? `${PRIORITIES_SLOT_LABEL}\n${priorities.map((priority, index) => `${index + 1}. ${priority.slice(0, AI_PRIORITY_MAX_LENGTH)}`).join('\n')}` : `${PRIORITIES_SLOT_LABEL}\n1.\n2.\n3.`))
+    const alerts = [...new Set(plan.summary.alertTendencyIds)].flatMap((id) => {
+      const tendency = brief.tendencies.find((tendency) => tendency.id === id)
+      return tendency ? [tendency] : []
+    }).slice(0, AI_MAX_ALERTS)
+    blocks.push(text(alerts.length ? `${ALERTS_SLOT_LABEL}\n${alerts.map((tendency) => `• ${tendency.title} (${tendency.category})`).join('\n')}` : `${ALERTS_SLOT_LABEL}\n•\n•`),
+      { id: crypto.randomUUID(), type: 'pageBreak' }, heading('Tendency Report'))
+    // ponytail: skipped blocks are counted, not explained; surface per-block reasons if coaches start asking which block vanished.
+    for (const kind of SECTION_KIND_ORDER) {
+      const sections = plan.tendencySections.filter((section) => section.kind === kind)
+      const limit = budget[`${kind}Sections`]
+      skipped += Math.max(0, sections.length - limit)
+      let hasGroupHeading = false
+      for (const section of sections.slice(0, limit)) {
+        if (kind === 'formation' && (section.filter?.groupBy !== 'core:formation' ||
+          !brief.formationBreakdowns.some((formation) => formation.value === section.filter?.value))) { skipped += 1; continue }
+        skipped += Math.max(0, section.blocks.length - budget.blocksPerSection)
+        const content: ReportBlock[] = []
+        for (const entry of section.blocks.slice(0, budget.blocksPerSection)) {
+          try { content.push(await materialize(entry, section.filter)) } catch { skipped += 1 }
+        }
+        if (!content.length) continue
+        if (!hasGroupHeading) { blocks.push(heading(SECTION_KIND_HEADING[kind])); hasGroupHeading = true }
+        const titled = content.find((block) => block.type === 'dataTable' || block.type === 'tendency')
+        blocks.push(heading(section.title.trim() || section.filter?.value || (titled && 'title' in titled ? titled.title : SECTION_KIND_HEADING[kind])), ...content)
+        if (kind !== 'evidence' || !content.some((block) => block.type === 'tendency' && block.note.trim())) {
+          blocks.push(slot(COUNTER_SLOT_LABEL, section.counter, AI_COUNTER_MAX_LENGTH))
+        }
+      }
+    }
+    if (!blocks.some((block) => block.type !== 'heading' && block.type !== 'text' && block.type !== 'pageBreak')) throw new ConvexError('The generated Report had no usable content. Try again.')
+    if (blocks.length > AI_PLAN_MAX_BLOCKS) throw new ConvexError(`A Generated Report can have at most ${AI_PLAN_MAX_BLOCKS} Blocks.`)
     requireSize(blocks)
     const reportId = await ctx.db.insert('reports', { workspaceId, name: reportName, intent, showClipReferences: intent === 'coach', blocks, updatedAt: Date.now() })
     return { reportId, blockCount: blocks.length, skipped }

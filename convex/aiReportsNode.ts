@@ -4,8 +4,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { ConvexError, v } from 'convex/values'
 import { internal } from './_generated/api'
 import { action } from './_generated/server'
-import { AI_PLAN_SCHEMA, generationResultValidator, type AiReportPlan, type GenerationResult } from './aiReports'
-import { AI_FOCUS_MAX_LENGTH, AI_PLAN_MAX_BLOCKS, SYSTEM_PROMPT } from './domain/aiReport.ts'
+import { AI_PLAN_SCHEMA, generationResultValidator, type GeneratedPlan, type GenerationResult } from './aiReports'
+import { AI_FOCUS_MAX_LENGTH, SYSTEM_PROMPT } from './domain/aiReport.ts'
 import { normalizeName } from './domain/names.ts'
 import { isCoachingArea } from './domain/starterTemplates.ts'
 
@@ -44,16 +44,11 @@ export const generate = action({
     const text = response.content.find((block) => block.type === 'text')?.text
     let parsed: unknown
     try { parsed = JSON.parse(text ?? '') } catch { throw new ConvexError('The generated Report could not be read. Try again.') }
-    if (!parsed || typeof parsed !== 'object' || !('heading' in parsed) || !('block1' in parsed)
-      || !('block2' in parsed) || !('block3' in parsed) || !('block4' in parsed)
-      || !('additionalBlocks' in parsed) || !Array.isArray(parsed.additionalBlocks)) {
-      throw new ConvexError('The generated Report is missing required Blocks. Try again.')
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new ConvexError('The generated Report could not be read. Try again.')
+    if (!('summary' in parsed) || !parsed.summary || typeof parsed.summary !== 'object' || Array.isArray(parsed.summary)
+      || !('tendencySections' in parsed) || !Array.isArray(parsed.tendencySections)) {
+      throw new ConvexError('The generated Report is missing its Game-Plan Summary or Tendency Report. Try again.')
     }
-    const plan = [parsed.heading, parsed.block1, parsed.block2, parsed.block3, parsed.block4, ...parsed.additionalBlocks]
-    if (!parsed.heading || typeof parsed.heading !== 'object' || !('type' in parsed.heading) || parsed.heading.type !== 'heading') {
-      throw new ConvexError('The generated Report is missing its opening Heading. Try again.')
-    }
-    const result = await ctx.runMutation(internal.aiReports.createGenerated, { workspaceId, name, intent, plan: plan.slice(0, AI_PLAN_MAX_BLOCKS) as AiReportPlan, sourceGameIds: brief.snapColumns.map((game) => game.sourceGameId) })
-    return { ...result, skipped: result.skipped + Math.max(0, plan.length - AI_PLAN_MAX_BLOCKS) }
+    return ctx.runMutation(internal.aiReports.createGenerated, { workspaceId, name, intent, plan: parsed as GeneratedPlan, sourceGameIds: brief.snapColumns.map((game) => game.sourceGameId) })
   },
 })
