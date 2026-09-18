@@ -388,6 +388,32 @@ Completion and remaining gates: [Phase 10C completion report](plans/phase-10c-co
 
 ---
 
+## Phase 10D — Generated Report Structure
+
+Approved scope: [Phase 10D plan](plans/phase-10d-generated-report-structure.md) (owner-supplied, uncommitted).
+Evidence and remaining gates: [Phase 10D completion report](plans/phase-10d-completion.md).
+
+- [x] **10D.1 Page Break Block.**
+      *Evidence:* typecheck/sync passed; Electron insert, keyboard reorder, delete/Undo and Preview passed; PDF places the second Text Block on page 2.
+- [x] **10D.2 Filtered Opponent Data and scope reuse.**
+      *Evidence:* typecheck/sync passed; Trips table matches 18 fixture Snaps and 100% frequency; unfiltered output and brief unchanged.
+- [x] **10D.3 Brief extension and length budget.**
+      *Evidence:* three qualifying Formations match counts; brief is 10,815 bytes versus 6,167 (1.75×); Coach/Player budget checks and sync passed.
+- [x] **10D.4 Structured plan contract and prompt.**
+      *Evidence:* typecheck and recursive schema checks passed; every object rejects extra properties and required fields match the validator.
+- [x] **10D.5 Materializer rewrite.**
+      *Evidence:* full/empty plans produced 33 Blocks each; overflow/invalid plan produced 18 Blocks and exactly 13 skips; order, slots, counters and filtered counts passed; fixture Reports removed.
+- [x] **10D.6 Action update.**
+      *Evidence:* build/sync and mocked protocol checks passed; first live call produced 51 Blocks, zero skips, end_turn, 8,577 input / 4,891 output tokens in 53.9 seconds. Grounding audit found unsupported commentary; prompt tightened, tracked in completion report.
+- [x] **10D.7 Dialog default name.**
+      *Evidence:* typecheck passed; Electron opens with Game Plan and Tendencies.
+- [x] **10D.8 Docs.**
+      *Evidence:* glossary, SPEC and BLUEPRINT describe the fixed structure and Page Break; labels match code; git diff --check passed.
+- [ ] **10D.9 End-to-end verification and completion report.**
+      *Evidence:* final live, PDF, regression and cleanup checks pending; see completion report.
+
+---
+
 ## Phase 11 — Hardening and Acceptance
 
 - [ ] **11.1 Keyboard shortcut pass.** Every shortcut in BLUEPRINT §7.5 implemented and listed on

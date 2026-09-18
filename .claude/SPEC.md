@@ -1432,7 +1432,14 @@ V1 content blocks:
 - Play Diagram
 - Selected Plays
 - Quick Notes
+- Page Break
 The coach can add and reorder these blocks.
+
+### Page Break Block
+
+A Page Break starts the next Block on a new printed page. Coaches can insert, reorder,
+delete and Undo it like other Blocks. Preview shows a labeled divider; PDF export suppresses
+leading, trailing and consecutive Page Breaks to avoid blank pages.
 
 ---
 

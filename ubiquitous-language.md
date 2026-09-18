@@ -200,9 +200,28 @@ _Avoid_: Document, export, packet, printout.
 **Generated Report**:
 A Report whose Blocks were assembled by the application from the Workspace's included Source
 Games, Tendencies / Alerts, Play Diagrams, Quick Notes, and Player Notes, for a chosen
-Coaching Area. Every Block still holds a real Report Snapshot, and the Report is fully
-editable afterwards.
+Coaching Area. Its fixed structure is Game-Plan Summary, Page Break, then Tendency Report.
+Identity, Priorities and Counters restate only coach-recorded content or remain labeled blank
+slots. Every data Block holds a real Report Snapshot, and the Report is editable afterwards.
 _Avoid_: AI report, auto report, generated document.
+
+**Game-Plan Summary**:
+The one-page opening of a Generated Report: Identity, Priorities and Key Alerts.
+_Avoid_: Executive summary, overview.
+
+**Tendency Report**:
+The body of a Generated Report, ordered as Tendencies and Evidence, Situational Splits, and
+Formation Details, with an inline Our counter: slot unless a Tendency already has a Coaching Point.
+_Avoid_: Using it for a whole Report, or confusing it with Tendency / Alert.
+
+**Page Break**:
+A Block that starts the next Block on a new printed page. Reorderable and removable in the
+Report Builder; leading, trailing and consecutive breaks are suppressed in Preview and PDF.
+_Avoid_: Blank page, spacer.
+
+**Counter usage**:
+"Our counter:" labels the coach's recorded answer or a blank slot to fill in. "Counter" alone
+is a Play Concept.
 
 **Coach Report**:
 The comprehensive Report intent, aimed at staff and personal game planning. May include Hudl
@@ -216,7 +235,7 @@ _Avoid_: Simplified report, handout, player packet.
 
 **Block**:
 One unit of Report content, of a fixed V1 type: Heading, Text / Coach Notes, Opponent Data
-Table, Tendency / Alert, Play Diagram, Selected Plays, or Quick Notes. Reorderable by drag and
+Table, Tendency / Alert, Play Diagram, Selected Plays, Quick Notes, or Page Break. Reorderable by drag and
 drop.
 _Avoid_: Section (Section belongs to Coaching Templates), widget, component, element.
 

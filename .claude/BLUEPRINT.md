@@ -246,6 +246,7 @@ Never recomputed (SPEC §65).
 ```ts
 | { id, type: 'heading',      text: string }
 | { id, type: 'text',         text: string }
+| { id, type: 'pageBreak' }
 | { id, type: 'dataTable',    title: string, columns: string[], rows: string[][] }
 | { id, type: 'tendency',     title, category, note, rows, diagram?: DiagramDoc }
 | { id, type: 'diagram',      caption?: string, diagram: DiagramDoc }
@@ -255,9 +256,18 @@ Never recomputed (SPEC §65).
 Blocks hold copied values, not ids (SPEC §71). Duplicating a Coach Report as a Player Report is
 a deep copy of the array, which is why it is independent by construction (SPEC §70).
 
-Phase 10C adds Generated Reports: Claude selects ordered Blocks for a Coaching Area from an
-included Workspace brief, and the existing Block builder copies real Report Snapshots into a
-new, fully editable Report; model-written prose remains subject to the coach's review.
+Generated Reports use a structured plan (`summary` and `tendencySections`) selected by Claude
+from the included Workspace brief. The server owns the Game-Plan Summary, Page Break, Tendency
+Report group order, blank slots and length caps. `generatedReportBudget()` caps Evidence,
+Situational Splits and Formation Details from available data, halving section counts for Player
+intent and excluding Selected Plays. Page estimates are targets, not fixed page counts.
+
+The brief includes qualifying Formation breakdowns. An optional server-only `dataTable` filter
+scopes a table to one grouping value; aggregation reuses one loaded scope per brief/materialization.
+The existing Block builder still copies real Report Snapshots. Identity, Priorities and Counters
+must restate coach-recorded content or remain blank; Key Alerts use saved titles and categories.
+Grounding is prompted and requires review, not guaranteed by structural validation. The action
+keeps the JSON schema in the prompt and makes one Claude call without automatic retries.
 
 ### 5.7 Deletion Ledger
 
