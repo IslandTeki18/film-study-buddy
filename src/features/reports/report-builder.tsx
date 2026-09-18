@@ -85,7 +85,7 @@ export function ReportBuilder({ workspaceId, reportId }: { readonly workspaceId:
     {Picker && <Picker workspaceId={workspaceId} reportId={report._id} onClose={() => setPicker(null)} onInserted={setFocusId} />}
     <div ref={blocksRef} className="space-y-4">{report.blocks.length === 0 ? <p>No blocks yet.</p> : report.blocks.map((block, index) => <Panel key={`${report._id}:${block.id}`} data-block-id={block.id} tabIndex={-1} className={`space-y-3 p-4 ${drag.dragOverIndex === index ? 'border-primary' : ''}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" aria-label={`Drag ${BLOCK_TYPE_LABEL[block.type]}`} {...drag.getItemProps(index)}>⠿</Button>
+        <Button variant="ghost" size="sm" tabIndex={-1} aria-hidden="true" {...drag.getItemProps(index)}>⠿</Button>
         <Meta>{BLOCK_TYPE_LABEL[block.type]}</Meta>
         <Button variant="ghost" size="sm" aria-label={`Move ${BLOCK_TYPE_LABEL[block.type]} up`} disabled={!drag.canMoveUp(index)} onClick={() => drag.moveUp(index)}>Move up</Button>
         <Button variant="ghost" size="sm" aria-label={`Move ${BLOCK_TYPE_LABEL[block.type]} down`} disabled={!drag.canMoveDown(index)} onClick={() => drag.moveDown(index)}>Move down</Button>

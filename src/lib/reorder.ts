@@ -13,7 +13,6 @@ export function useReorder({ itemCount, onReorder, label }: ReorderOptions): {
     readonly onDragOver: (event: DragEvent) => void
     readonly onDragEnd: () => void
     readonly onDrop: (event: DragEvent) => void
-    readonly 'aria-grabbed'?: boolean
   }
   readonly moveUp: (index: number) => void
   readonly moveDown: (index: number) => void
@@ -23,7 +22,6 @@ export function useReorder({ itemCount, onReorder, label }: ReorderOptions): {
   readonly announcement: string
 } {
   const draggedIndexRef = useRef<number | null>(null)
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [announcement, setAnnouncement] = useState('')
   const isValid = useCallback((index: number): boolean => Number.isInteger(index) && index >= 0 && index < itemCount, [itemCount])
@@ -48,7 +46,6 @@ export function useReorder({ itemCount, onReorder, label }: ReorderOptions): {
     onDragStart: (event: DragEvent): void => {
       if (!isValid(index)) return
       draggedIndexRef.current = index
-      setDraggedIndex(index)
       event.dataTransfer.effectAllowed = 'move'
     },
     onDragOver: (event: DragEvent): void => {
@@ -59,7 +56,6 @@ export function useReorder({ itemCount, onReorder, label }: ReorderOptions): {
     },
     onDragEnd: (): void => {
       draggedIndexRef.current = null
-      setDraggedIndex(null)
       setDragOverIndex(null)
     },
     onDrop: (event: DragEvent): void => {
@@ -67,11 +63,9 @@ export function useReorder({ itemCount, onReorder, label }: ReorderOptions): {
       const fromIndex = draggedIndexRef.current
       if (fromIndex !== null) move(fromIndex, index)
       draggedIndexRef.current = null
-      setDraggedIndex(null)
       setDragOverIndex(null)
     },
-    ...(draggedIndex === index ? { 'aria-grabbed': true as const } : {}),
-  }), [draggedIndex, isValid, move])
+  }), [isValid, move])
 
   return { getItemProps, moveUp, moveDown, canMoveUp, canMoveDown, dragOverIndex, announcement }
 }

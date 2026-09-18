@@ -5,7 +5,7 @@ import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { fieldZoneOf, isValidYardLine } from '@convex/domain/fieldZone'
 import { Button } from '@/components/ui/button'
@@ -42,6 +42,7 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
   readonly sourceGameId: Id<'sourceGames'>
   readonly onDuplicated: (id: Id<'snaps'>) => void
 }): ReactNode {
+  const navigate = useNavigate()
   const [onlyReview, setOnlyReview] = useState(false)
   const [selected, setSelected] = useState<ReadonlySet<Id<'snaps'>>>(new Set())
   const anchor = useRef<Id<'snaps'> | null>(null)
@@ -91,26 +92,27 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
       {snaps.length === 0 ? <div className="px-4 py-6">
         <h2 className="font-semibold">No Snaps yet</h2>
         <Link className="underline" to={`${base}/import`}>Import Hudl CSV</Link>
-      </div> : <div role="table" aria-label="Charted snaps" className="min-w-[770px]">
-        <div role="rowgroup">
-          <div role="row" className={cn(SELECT_LOG_GRID, 'bg-muted py-2 font-mono text-[9.5px] tracking-[0.06em] text-muted-foreground uppercase')}>
-            <div role="columnheader"><input ref={allCheckbox} type="checkbox" aria-label="Select all shown Snaps"
+      </div> : <table aria-label="Charted snaps" className="min-w-[770px] w-full table-fixed">
+        <thead>
+          <tr className={cn(SELECT_LOG_GRID, 'bg-muted py-2 font-mono text-[9.5px] tracking-[0.06em] text-muted-foreground uppercase')}>
+            <th scope="col"><input ref={allCheckbox} type="checkbox" aria-label="Select all shown Snaps"
               checked={shown.length > 0 && shownSelected === shown.length} onChange={(event) => {
                 const next = new Set(liveSelected)
                 for (const snap of shown) { if (event.target.checked) next.add(snap._id); else next.delete(snap._id) }
                 setSelected(next)
-              }} /></div>
+              }} /></th>
             {LOG_HEADERS.map((label, index) =>
-              <div role="columnheader" key={label} className={cn(index === 1 && 'text-center', index === 7 && 'text-right')}>{label}</div>)}
-            <div role="columnheader"><span className="sr-only">Snap actions</span></div>
-          </div>
-        </div>
-        <div role="rowgroup" className="max-h-[340px] overflow-y-auto">
+              <th scope="col" key={label} className={cn(index === 1 && 'text-center', index === 7 && 'text-right')}>{label}</th>)}
+            <th scope="col"><span className="sr-only">Snap actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
           {shown.map((snap) => {
             const { core } = snap
             const label = core.clipNumber ?? snap.order
-            return <div role="row" key={snap._id} className={cn(SELECT_LOG_GRID, 'border-t border-border py-2', snap._id === freshId && 'bg-primary/10')}>
-              <div role="cell"><input type="checkbox" aria-label={`Select Snap ${label}`} checked={liveSelected.has(snap._id)}
+            return <tr key={snap._id} className={cn(SELECT_LOG_GRID, 'cursor-pointer border-t border-border py-2', snap._id === freshId && 'bg-primary/10')}
+              onClick={(event) => { if (!(event.target as HTMLElement).closest('input, button, a')) navigate(`${base}/snap/${snap._id}`) }}>
+              <td><input type="checkbox" aria-label={`Select Snap ${label}`} checked={liveSelected.has(snap._id)}
                 onChange={() => {}} onClick={(event) => {
                   const next = new Set(liveSelected)
                   const checked = event.currentTarget.checked
@@ -119,16 +121,13 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
                   const range = event.shiftKey && start >= 0 ? shown.slice(Math.min(start, end), Math.max(start, end) + 1) : [snap]
                   for (const item of range) { if (checked) next.add(item._id); else next.delete(item._id) }
                   setSelected(next); anchor.current = snap._id
-                }} /></div>
-              <Link to={`${base}/snap/${snap._id}`} aria-label={`Open Play Detail for Snap ${label}`}
-                className="contents focus-visible:[&>div]:outline-2 focus-visible:[&>div]:outline-ring">
-                <SnapRowCells snap={snap} />
-              </Link>
-              <div role="cell"><RowActions snap={snap} base={base} onDuplicated={onDuplicated} /></div>
-            </div>
+                }} /></td>
+              <SnapRowCells snap={snap} href={`${base}/snap/${snap._id}`} linkLabel={`Open Play Detail, clip ${label}`} />
+              <td><RowActions snap={snap} base={base} onDuplicated={onDuplicated} /></td>
+            </tr>
           })}
-        </div>
-      </div>}
+        </tbody>
+      </table>}
     </div>
     <Dialog open={confirming} onOpenChange={(open) => { if (!pending) setConfirming(open) }} aria-label={`Delete ${selectionLabel}?`}
       onCancel={(event) => { if (pending) event.preventDefault() }}>
@@ -155,17 +154,17 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
   </div>
 }
 
-export function SnapRowCells({ snap }: { readonly snap: Doc<'snaps'> }): ReactNode {
+export function SnapRowCells({ snap, href, linkLabel }: { readonly snap: Doc<'snaps'>; readonly href: string; readonly linkLabel: string }): ReactNode {
   const { core } = snap
   const label = core.clipNumber ?? snap.order
   return <>
-                <div role="cell" className={cn(cell, 'text-muted-foreground')}>{label}</div>
-                <div role="cell" className={cn(cell, 'text-center text-warm')}>{snap.mustReview ? '★' : ''}</div>
-                <div role="cell" className={cell}>{[core.down, core.distance].filter((value) => value !== undefined).join(' & ')}</div>
-                <div role="cell" className={cn(cell, 'text-muted-foreground')}>{isValidYardLine(core.yardLine) ? fieldZoneOf(core.yardLine) : ''}</div>
-                <div role="cell" className={cell}>{core.personnel ?? ''}</div>
-                <div role="cell" className={cell}>{core.formation ?? ''}</div>
-                <div role="cell" className={cn(cell, 'text-foreground')}>{core.playConcept ?? ''}</div>
-                <div role="cell" className={cn(cell, 'text-right text-muted-foreground')}>{core.yards === undefined ? '' : `${core.yards > 0 ? '+' : ''}${core.yards}`}</div>
+                <td className={cn(cell, 'text-muted-foreground')}><Link className="underline focus-visible:ring-2 focus-visible:ring-ring" to={href} aria-label={linkLabel}>{label}</Link></td>
+                <td className={cn(cell, 'text-center text-warm')}>{snap.mustReview ? '★' : ''}</td>
+                <td className={cell}>{[core.down, core.distance].filter((value) => value !== undefined).join(' & ')}</td>
+                <td className={cn(cell, 'text-muted-foreground')}>{isValidYardLine(core.yardLine) ? fieldZoneOf(core.yardLine) : ''}</td>
+                <td className={cell}>{core.personnel ?? ''}</td>
+                <td className={cell}>{core.formation ?? ''}</td>
+                <td className={cn(cell, 'text-foreground')}>{core.playConcept ?? ''}</td>
+                <td className={cn(cell, 'text-right text-muted-foreground')}>{core.yards === undefined ? '' : `${core.yards > 0 ? '+' : ''}${core.yards}`}</td>
   </>
 }

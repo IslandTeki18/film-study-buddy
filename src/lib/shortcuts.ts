@@ -22,6 +22,8 @@ export const LOCAL_KEYS = [
   { label: 'Delete / Backspace', description: 'Remove the selected designer object', context: 'Play Detail' },
   { label: 'Esc', description: 'Clear the designer selection', context: 'Play Detail' },
   { label: 'Arrows / Shift+arrows', description: 'Nudge the selected Player Object', context: 'Play Detail' },
+  { label: 'Alt+arrows / Shift+Alt+arrows', description: 'Move the selected zone or motion spot (zone wins when both exist)', context: 'Play Detail' },
+  { label: 'Alt+[ / Alt+]', description: 'Resize the selected zone', context: 'Play Detail' },
 ] as const
 
 export function isShortcut(event: KeyboardEvent | ReactKeyboardEvent, name: ShortcutName): boolean {

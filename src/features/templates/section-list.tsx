@@ -66,7 +66,7 @@ export function SectionList({ tree, selectedFieldId, onSelectField }: {
     {tree.sections.map((section, index) => <section key={section._id} aria-label={section.name}
       className={cn('space-y-3 rounded-md border border-border p-3', drag.dragOverIndex === index && 'border-primary')}>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" aria-label={`Drag section ${section.name}`} {...drag.getItemProps(index)}>⠿</Button>
+        <Button variant="ghost" size="sm" tabIndex={-1} aria-hidden="true" {...drag.getItemProps(index)}>⠿</Button>
         <InlineName label={`Section name: ${section.name}`} value={section.name} focus={focusId === section._id}
           save={async (name) => { await rename({ sectionId: section._id, name }) }} />
         <Button variant="ghost" size="sm" aria-label={`Move section ${section.name} up`}
@@ -130,7 +130,7 @@ function FieldList({ section, selectedFieldId, onSelectField }: {
       if (!(event.target instanceof Element) || !event.target.closest('button, input')) onSelectField(field._id)
     }}
       className={cn('flex flex-wrap items-center gap-2 rounded border border-border p-2', drag.dragOverIndex === index && 'border-primary', selectedFieldId === field._id && 'bg-accent')}>
-      <Button variant="ghost" size="sm" aria-label={`Drag field ${field.name}`} {...drag.getItemProps(index)}>⠿</Button>
+      <Button variant="ghost" size="sm" tabIndex={-1} aria-hidden="true" {...drag.getItemProps(index)}>⠿</Button>
       <InlineName label={`Field name: ${field.name}`} value={field.name} focus={focusId === field._id}
         save={async (name) => { await update({ fieldId: field._id, name }) }} />
       <span className="text-xs text-muted-foreground">{TEMPLATE_FIELD_TYPE_LABELS[field.type]}</span>

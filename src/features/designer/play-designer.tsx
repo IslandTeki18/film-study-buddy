@@ -89,6 +89,10 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
   function patch(id: string, update: (player: DiagramPlayer) => DiagramPlayer): void {
     setPlayers(draftRef.current.players.map((player) => player.id === id ? update(player) : player))
   }
+  function cover(defenderId: string, targetId: string): void {
+    patch(defenderId, (defender) => ({ ...strip(defender, ['route', 'zone']), job: 'Man', coversId: targetId }))
+    setPicking(undefined)
+  }
   function strip(player: DiagramPlayer, keys: readonly ('route' | 'zone' | 'coversId' | 'job')[]): DiagramPlayer {
     const next = { ...player }
     for (const key of keys) delete next[key]
@@ -112,8 +116,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
       const player = players.find((entry) => entry.id === target.id)
       if (!player) return
       if (picking && player.side === 'offense') {
-        patch(picking, (defender) => ({ ...strip(defender, ['route', 'zone']), job: 'Man', coversId: player.id }))
-        setPicking(undefined)
+        cover(picking, player.id)
         return
       }
       if (player.side !== side) return
@@ -265,8 +268,31 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
     const direction = directions[event.key]
     if (selected && direction) {
       event.preventDefault()
+      if (event.altKey && selected.zone) {
+        const dx = direction[0] / toPx({ x: 1, y: 0 }).x
+        const dy = direction[1] / toPx({ x: 0, y: 1 }).y
+        patch(selected.id, (player) => player.zone ? { ...player, zone: { ...player.zone,
+          x: Math.max(player.zone.rx, Math.min(1 - player.zone.rx, player.zone.x + dx)),
+          y: Math.max(player.zone.ry, Math.min(1 - player.zone.ry, player.zone.y + dy)) } } : player)
+        return
+      }
+      if (event.altKey && selected.motion) {
+        const from = toPx(selected.motion)
+        patch(selected.id, (player) => ({ ...player, motion: toNorm({ x: from.x + direction[0], y: from.y + direction[1] }) }))
+        return
+      }
       const from = toPx(selected)
       setPlayers(applyDrag({ kind: 'player', id: selected.id }, { x: from.x + direction[0], y: from.y + direction[1] }))
+    }
+    if (selected?.zone && event.altKey && (event.key === '[' || event.key === ']')) {
+      event.preventDefault()
+      const change = (event.key === ']' ? 1 : -1) * (event.shiftKey ? 5 : 1) * YARD_PX
+      const dx = change / toPx({ x: 1, y: 0 }).x
+      const dy = change / toPx({ x: 0, y: 1 }).y
+      const min = toNorm({ x: ZONE_MIN.rx, y: ZONE_MIN.ry })
+      patch(selected.id, (player) => player.zone ? { ...player, zone: { ...player.zone,
+        rx: Math.max(min.x, Math.min(player.zone.x, 1 - player.zone.x, player.zone.rx + dx)),
+        ry: Math.max(min.y, Math.min(player.zone.y, 1 - player.zone.y, player.zone.ry + dy)) } } : player)
     }
   }
 
@@ -308,8 +334,8 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
           {FORMATION_NAMES.map((name) => <button key={name} type="button" className={chip(formation === name, 'offense')} onClick={() => load(name, buildFormation(name))}>{name}</button>)}
           {customs.length > 0 && <span className="mx-1 h-5 w-px bg-border-strong" />}
           {customs.map((custom) => <span key={custom._id} className={cn(chip(formation === custom.name, 'offense', formation !== custom.name), 'inline-flex items-center gap-2 pr-2')}>
-            <button type="button" className="outline-none" onClick={() => loadCustom(custom)}>{custom.name}</button>
-            <button type="button" aria-label={`Forget formation ${custom.name}`} title="forget this formation" className="text-[12px] leading-none opacity-70 hover:opacity-100"
+            <button type="button" className="outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => loadCustom(custom)}>{custom.name}</button>
+            <button type="button" aria-label={`Remove formation ${custom.name}`} title="forget this formation" className="text-[12px] leading-none opacity-70 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => { if (formation === custom.name) setFormation(undefined); void removeFormation({ formationId: custom._id }) }}>×</button>
           </span>)}
           {naming === undefined
@@ -345,7 +371,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
             <button type="button" className={chip(false)} disabled={routePx.length === 0} onClick={() => selected && removePoint(selected.id, routePx.length - 1)}>↶ undo last point</button>
             <button type="button" className={chip(false)} disabled={!roster.some((player) => player.route || player.zone || player.coversId)}
               onClick={() => { setPicking(undefined); setPlayers(draftRef.current.players.map((player) => player.side === side ? strip(player, ['route', 'zone', 'coversId', 'job']) : player)) }}>clear all {side} routes</button>
-            <span className="ml-auto">drag man · click field to add point · drag point · double-click point to delete</span>
+            <span className="ml-auto">drag man · click field to add point · arrows nudge · Alt+arrows move zone or motion · Alt+[ / ] resize zone</span>
           </div>
           {pickingPlayer && <div role="status" className="rounded-lg border border-defense bg-defense/10 px-3 py-2 font-mono text-[11px]">now click the offensive man the {describe(pickingPlayer)} should cover</div>}
           <label className="grid gap-1">
@@ -378,6 +404,12 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
               className="w-full rounded-[7px] border border-border-strong bg-muted px-2.5 py-2 font-mono text-[11.5px] outline-none focus-visible:border-muted-foreground/60" />
             <p className="mt-1.5 text-[11px] text-muted-foreground">{coverTarget ? `covering ${describe(coverTarget)}` : selected.zone ? 'zone placed · drag it, drag the edge to resize' : ''}</p>
           </div>}
+          {selected?.job === 'Man' && <label className="grid gap-1 text-sm">Covers
+            <select aria-label="Covers" value={selected.coversId ?? ''} onChange={(event) => { if (event.target.value) cover(selected.id, event.target.value) }} className="rounded border border-border bg-muted p-2 focus-visible:ring-2 focus-visible:ring-ring">
+              <option value="">Select Player Object</option>
+              {players.filter((player) => player.side !== selected.side).map((player) => <option key={player.id} value={player.id}>{describe(player)}</option>)}
+            </select>
+          </label>}
 
           <div>
             <div className="mb-2 flex items-baseline gap-2"><Eyebrow className="text-[9.5px]">Stamp a route</Eyebrow><Meta className="text-[10px]">then drag its points</Meta></div>

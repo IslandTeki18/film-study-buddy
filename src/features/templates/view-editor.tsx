@@ -98,7 +98,7 @@ function ViewColumns({ view, tree, onDeleted }: {
       <legend className="mb-2 text-sm font-medium">Visible columns and order</legend>
       {columns.columnOrder.map((key, index) => <div key={key}
         className={cn('flex flex-wrap items-center gap-2 rounded border border-border p-2', drag.dragOverIndex === index && 'border-primary')}>
-        <Button size="sm" variant="ghost" aria-label={`Drag column ${label(key)}`} {...drag.getItemProps(index)}>⠿</Button>
+        <Button size="sm" variant="ghost" tabIndex={-1} aria-hidden="true" {...drag.getItemProps(index)}>⠿</Button>
         <span className="min-w-24 flex-1"><Checkbox label={label(key)} checked={columns.visibleColumns.includes(key)}
           onChange={(event) => { void persist({ visibleColumns: event.target.checked ? [...columns.visibleColumns, key] :
             columns.visibleColumns.filter((column) => column !== key) }).catch(report) }} /></span>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { buttonVariants } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 export function ReviewQueue({ workspaceId, sourceGameId }: {
   readonly workspaceId: string; readonly sourceGameId: string
 }): ReactNode {
+  const navigate = useNavigate()
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const snaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
   const base = `/w/${workspaceId}/games/${sourceGameId}`
@@ -25,17 +26,17 @@ export function ReviewQueue({ workspaceId, sourceGameId }: {
       <p>Nothing to review. Mark a Snap Must Review from the Play Log or Play Detail.</p>
       <Link className="underline" to={base}>Back to Play Log</Link>
     </div> : <div className="overflow-x-auto rounded-[10px] border border-border">
-      <div role="table" aria-label="Review Queue" className="min-w-[740px]">
-        <div role="rowgroup"><div role="row" className={cn(LOG_GRID, 'bg-muted py-2 font-mono text-[9.5px] tracking-[0.06em] text-muted-foreground uppercase')}>
-          {LOG_HEADERS.map((label, index) => <div role="columnheader" key={label} className={cn(index === 1 && 'text-center', index === 7 && 'text-right')}>{label}</div>)}
-          <div role="columnheader" aria-hidden />
-        </div></div>
-        <div role="rowgroup">{queue.map((snap) => <div role="row" key={snap._id} className={cn(LOG_GRID, 'border-t border-border py-2')}>
-          <Link to={`${base}/review/${snap._id}`} aria-label={`Review Snap ${snap.core.clipNumber ?? snap.order}`}
-            className="contents focus-visible:[&>div]:outline-2 focus-visible:[&>div]:outline-ring"><SnapRowCells snap={snap} /></Link>
-          <div role="cell" aria-hidden />
-        </div>)}</div>
-      </div>
+      <table aria-label="Review Queue" className="min-w-[740px] w-full table-fixed">
+        <thead><tr className={cn(LOG_GRID, 'bg-muted py-2 font-mono text-[9.5px] tracking-[0.06em] text-muted-foreground uppercase')}>
+          {LOG_HEADERS.map((label, index) => <th scope="col" key={label} className={cn(index === 1 && 'text-center', index === 7 && 'text-right')}>{label}</th>)}
+          <th scope="col" aria-label="Actions" />
+        </tr></thead>
+        <tbody>{queue.map((snap) => <tr key={snap._id} className={cn(LOG_GRID, 'cursor-pointer border-t border-border py-2')}
+          onClick={(event) => { if (!(event.target as HTMLElement).closest('input, button, a')) navigate(`${base}/review/${snap._id}`) }}>
+          <SnapRowCells snap={snap} href={`${base}/review/${snap._id}`} linkLabel={`Review Snap ${snap.core.clipNumber ?? snap.order}`} />
+          <td />
+        </tr>)}</tbody>
+      </table>
     </div>}
   </main>
 }

@@ -43,7 +43,7 @@ export function DropdownMenu({ label, items, triggerProps, className, ...props }
       triggerProps={{ 'aria-haspopup': 'menu', ...triggerProps }}
       contentRef={menuRef}
       role="menu"
-      aria-label={typeof label === 'string' ? label : 'Actions'}
+      aria-label={triggerProps?.['aria-label'] ?? (typeof label === 'string' ? label : 'Actions')}
       className={cn('m-0 min-w-40 p-1', className)}
       onToggle={(event) => {
         suppliedOnToggle?.(event)
