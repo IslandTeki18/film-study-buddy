@@ -5,7 +5,7 @@ import { ConvexError, v } from 'convex/values'
 import { internal } from './_generated/api'
 import { action } from './_generated/server'
 import { AI_PLAN_SCHEMA, generationResultValidator, type GeneratedPlan, type GenerationResult } from './aiReports'
-import { AI_FOCUS_MAX_LENGTH, SYSTEM_PROMPT } from './domain/aiReport.ts'
+import { AI_FOCUS_MAX_LENGTH, generatedReportBudget, SYSTEM_PROMPT } from './domain/aiReport.ts'
 import { normalizeName } from './domain/names.ts'
 import { isCoachingArea } from './domain/starterTemplates.ts'
 
@@ -22,6 +22,7 @@ export const generate = action({
     if (brief.totalSnaps === 0 && brief.tendencies.length === 0 && brief.quickNotes.length === 0) {
       throw new ConvexError('Nothing to report on yet. Chart Snaps or save a Tendency / Alert first.')
     }
+    const budget = generatedReportBudget({ totalSnaps: brief.totalSnaps, tendencyCount: brief.tendencies.length, groupings: brief.groupings, intent })
     const client = new Anthropic({ apiKey: key, maxRetries: 0 })
     let response: Anthropic.Message
     try {
@@ -30,7 +31,7 @@ export const generate = action({
         thinking: { type: 'adaptive' },
         output_config: { effort: 'high' },
         system: `${SYSTEM_PROMPT}\nReturn only valid JSON matching this schema, without Markdown fences or other commentary:\n${JSON.stringify(AI_PLAN_SCHEMA)}`,
-        messages: [{ role: 'user', content: JSON.stringify({ coachType, intent, focus, brief }) }],
+        messages: [{ role: 'user', content: JSON.stringify({ coachType, intent, focus, budget, brief }) }],
       })
     } catch (error) {
       if (error instanceof Anthropic.APIError) {
