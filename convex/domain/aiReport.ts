@@ -9,7 +9,7 @@ export const AI_BRIEF_MAX_QUICK_NOTES = 60
 export const AI_BRIEF_MAX_PLAYER_NOTES = 60
 export const AI_BRIEF_MAX_AGGREGATE_ROWS = 12
 export const AI_BRIEF_MAX_GROUPINGS = 20
-export const AI_GENERATED_REPORT_DEFAULT_NAME = 'AI Overview'
+export const AI_GENERATED_REPORT_DEFAULT_NAME = 'Game Plan and Tendencies'
 export type AiCoachType = CoachingArea
 
 export const AI_BRIEF_MAX_FORMATIONS = 8
