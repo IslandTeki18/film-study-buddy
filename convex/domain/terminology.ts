@@ -16,9 +16,7 @@ export const PLAY_CONCEPTS = [
 ] as const
 
 export const PERSONNEL = [
-  '5 WRs', '4 WRs; 1 TE', '4 WRs; 1 RB', '3 WRs; 1 TE; 1 RB', '2 WRs; 2 TEs; 1 RB',
-  '1 WR; 3 TEs; 1 RB', '3 WRs; 1 RB; 1 FB', '2 WRs; 1 TE; 1 RB; 1 FB',
-  '1 WR; 2 TEs; 1 RB; 1 FB', '3 TEs; 1 RB; 1 FB', '2 WRs; 1 TE; 2 RBs',
+  '10', '11', '12', '13', '20', '21', '22', '23', '01', '00',
 ] as const
 
 export type TerminologyList = 'formations' | 'motions' | 'playConcepts' | 'personnel'
