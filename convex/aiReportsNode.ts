@@ -40,10 +40,18 @@ export const generate = action({
     const text = response.content.find((block) => block.type === 'text')?.text
     let parsed: unknown
     try { parsed = JSON.parse(text ?? '') } catch { throw new ConvexError('The generated Report could not be read. Try again.') }
-    if (!parsed || typeof parsed !== 'object' || !('blocks' in parsed) || !Array.isArray(parsed.blocks)
-      || parsed.blocks.length < 5 || parsed.blocks.length > AI_PLAN_MAX_BLOCKS || parsed.blocks[0]?.type !== 'heading') {
-      throw new ConvexError(`The generated Report must start with a Heading and contain 5–${AI_PLAN_MAX_BLOCKS} Blocks. Try again.`)
+    if (!parsed || typeof parsed !== 'object' || !('heading' in parsed) || !('block1' in parsed)
+      || !('block2' in parsed) || !('block3' in parsed) || !('block4' in parsed)
+      || !('additionalBlocks' in parsed) || !Array.isArray(parsed.additionalBlocks)) {
+      throw new ConvexError('The generated Report is missing required Blocks. Try again.')
     }
-    return ctx.runMutation(internal.aiReports.createGenerated, { workspaceId, name, intent, plan: parsed.blocks as AiReportPlan, sourceGameIds: brief.snapColumns.map((game) => game.sourceGameId) })
+    const plan = [parsed.heading, parsed.block1, parsed.block2, parsed.block3, parsed.block4, ...parsed.additionalBlocks]
+    if (!parsed.heading || typeof parsed.heading !== 'object' || !('type' in parsed.heading) || parsed.heading.type !== 'heading') {
+      throw new ConvexError('The generated Report is missing its opening Heading. Try again.')
+    }
+    if (plan.length > AI_PLAN_MAX_BLOCKS) {
+      throw new ConvexError(`The generated Report contained ${plan.length} Blocks; the limit is ${AI_PLAN_MAX_BLOCKS}. Try a narrower focus.`)
+    }
+    return ctx.runMutation(internal.aiReports.createGenerated, { workspaceId, name, intent, plan: plan as AiReportPlan, sourceGameIds: brief.snapColumns.map((game) => game.sourceGameId) })
   },
 })

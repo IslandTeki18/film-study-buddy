@@ -99,17 +99,24 @@ export const planValidator = v.array(v.union(
 ))
 export type AiReportPlan = Infer<typeof planValidator>
 
+const blockSchemas = planValidator.element.members.map((member) => ({
+  type: 'object', additionalProperties: false,
+  required: Object.entries(member.fields).filter(([, field]) => field.isOptional !== 'optional').map(([key]) => key),
+  properties: Object.fromEntries(Object.entries(member.fields).map(([key, field]) => [key,
+    field.kind === 'literal' ? { type: 'string', const: field.value }
+      : field.kind === 'array' ? { type: 'array', items: { type: 'string' } }
+        : { type: field.kind === 'float64' ? 'number' : field.kind },
+  ])),
+}))
 export const AI_PLAN_SCHEMA = {
-  type: 'object', additionalProperties: false, required: ['blocks'],
-  properties: { blocks: { type: 'array', items: { anyOf: planValidator.element.members.map((member) => ({
-    type: 'object', additionalProperties: false,
-    required: Object.entries(member.fields).filter(([, field]) => field.isOptional !== 'optional').map(([key]) => key),
-    properties: Object.fromEntries(Object.entries(member.fields).map(([key, field]) => [key,
-      field.kind === 'literal' ? { type: 'string', const: field.value }
-        : field.kind === 'array' ? { type: 'array', items: { type: 'string' } }
-          : { type: field.kind === 'float64' ? 'number' : field.kind },
-    ])),
-  })) } } },
+  type: 'object', additionalProperties: false,
+  required: ['heading', 'block1', 'block2', 'block3', 'block4', 'additionalBlocks'],
+  properties: {
+    heading: blockSchemas[0],
+    block1: { anyOf: blockSchemas }, block2: { anyOf: blockSchemas },
+    block3: { anyOf: blockSchemas }, block4: { anyOf: blockSchemas },
+    additionalBlocks: { type: 'array', items: { anyOf: blockSchemas } },
+  },
 }
 export const generationResultValidator = v.object({ reportId: v.id('reports'), blockCount: v.number(), skipped: v.number() })
 export type GenerationResult = Infer<typeof generationResultValidator>

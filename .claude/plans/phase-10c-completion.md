@@ -164,3 +164,22 @@ Quarterbacks; generate/review Player prose and the live empty-Workspace error; v
 navigation/skip toast and native PDF export. Measure one call's usage/latency, remove its logger,
 and clean every new verification Report/fixture afterward. Until these checks pass, Phase 10C
 remains implemented but not fully accepted.
+
+## Follow-up — generated-plan contract (2026-09-17)
+
+Two owner-reported live calls reached the combined 5–24 Blocks / Heading guard. The old error
+and logs did not retain enough information to distinguish count, heading or shape failure.
+Inspection confirmed that the structured-output schema allowed an empty/short array and any
+first Block despite the stronger prompt and downstream requirements. Anthropic does not support
+`minItems: 5`; adding that constraint would reject the API request.
+
+The transport now requires a Heading descriptor, four subsequent Block descriptors, and an
+`additionalBlocks` array. The reader flattens these into the existing materializer array, so
+valid structured output guarantees the minimum and opening Heading. The 24-Block ceiling stays
+enforced; failures now distinguish missing fields, wrong opening type and the actual excess
+count. Report storage and snapshot construction are unchanged.
+
+A temporary mocked-action regression failed before the change and passed after it, covering the
+five-Block opening, 24-Block boundary, 25-Block rejection and malformed response. Typecheck,
+production build and all 15 existing tests passed. No paid call or notebook mutation was made
+for this fix; the actual offending responses remain unavailable and live success is not claimed.
