@@ -85,7 +85,7 @@ export default defineSchema({
     name: v.string(),
     createdAt: v.number(),
     ...softDelete,
-  }).index('by_deletedAt', ['deletedAt']),
+  }).index('by_deletedAt', ['deletedAt']).index('by_deleteBatchId', ['deleteBatchId']),
   workspaces: defineTable({
     seasonId: v.id('seasons'),
     opponentName: v.string(),
@@ -98,7 +98,8 @@ export default defineSchema({
     ...softDelete,
   })
     .index('by_season', ['seasonId'])
-    .index('by_season_archived', ['seasonId', 'archivedAt']),
+    .index('by_season_archived', ['seasonId', 'archivedAt'])
+    .index('by_deleteBatchId', ['deleteBatchId']),
   sourceGames: defineTable({
     workspaceId: v.id('workspaces'),
     label: v.string(),
@@ -107,7 +108,7 @@ export default defineSchema({
     included: v.optional(v.boolean()),
     createdAt: v.number(),
     ...softDelete,
-  }).index('by_workspace', ['workspaceId']),
+  }).index('by_workspace', ['workspaceId']).index('by_deleteBatchId', ['deleteBatchId']),
 
   templates: defineTable({
     name: v.string(),
@@ -115,13 +116,13 @@ export default defineSchema({
     isStarter: v.boolean(),
     createdAt: v.number(),
     ...softDelete,
-  }),
+  }).index('by_deleteBatchId', ['deleteBatchId']),
   templateSections: defineTable({
     templateId: v.id('templates'),
     name: v.string(),
     order: v.number(),
     ...softDelete,
-  }).index('by_template', ['templateId']),
+  }).index('by_template', ['templateId']).index('by_deleteBatchId', ['deleteBatchId']),
   templateFields: defineTable({
     templateId: v.id('templates'),
     sectionId: v.id('templateSections'),
@@ -134,7 +135,8 @@ export default defineSchema({
     ...softDelete,
   })
     .index('by_template', ['templateId'])
-    .index('by_section', ['sectionId']),
+    .index('by_section', ['sectionId'])
+    .index('by_deleteBatchId', ['deleteBatchId']),
   templateViews: defineTable({
     templateId: v.id('templates'),
     name: v.string(),
@@ -172,14 +174,15 @@ export default defineSchema({
     ...softDelete,
   })
     .index('by_sourceGame', ['sourceGameId', 'order'])
-    .index('by_sourceGame_mustReview', ['sourceGameId', 'mustReview']),
+    .index('by_sourceGame_mustReview', ['sourceGameId', 'mustReview'])
+    .index('by_deleteBatchId', ['deleteBatchId']),
   cellNotes: defineTable({
     sourceGameId: v.id('sourceGames'),
     snapId: v.id('snaps'),
     fieldKey: v.string(),
     text: v.string(),
     ...softDelete,
-  }).index('by_snap', ['snapId']).index('by_sourceGame', ['sourceGameId']),
+  }).index('by_snap', ['snapId']).index('by_sourceGame', ['sourceGameId']).index('by_deleteBatchId', ['deleteBatchId']),
   bulkEdits: defineTable({
     sourceGameId: v.id('sourceGames'),
     createdAt: v.number(),
@@ -188,7 +191,7 @@ export default defineSchema({
       fieldKey: v.string(),
       before: v.union(analysisValueValidator, v.null()),
     })),
-  }),
+  }).index('by_createdAt', ['createdAt']),
 
   quickNotes: defineTable({
     sourceGameId: v.id('sourceGames'),
@@ -197,18 +200,18 @@ export default defineSchema({
     tags: v.array(v.string()),
     createdAt: v.number(),
     ...softDelete,
-  }).index('by_sourceGame', ['sourceGameId']),
+  }).index('by_sourceGame', ['sourceGameId']).index('by_deleteBatchId', ['deleteBatchId']),
   opponentPlayers: defineTable({
     workspaceId: v.id('workspaces'),
     jersey: v.string(), position: v.string(), group: positionGroupValidator,
     name: v.string(), details: v.string(), grade: v.optional(gradeValidator),
     traits: v.array(v.string()), summary: v.string(), tendency: v.string(), assignment: v.string(),
     createdAt: v.number(), ...softDelete,
-  }).index('by_workspace', ['workspaceId']),
+  }).index('by_workspace', ['workspaceId']).index('by_deleteBatchId', ['deleteBatchId']),
   playerNotes: defineTable({
     workspaceId: v.id('workspaces'), playerId: v.id('opponentPlayers'),
     text: v.string(), snapIds: v.array(v.id('snaps')), createdAt: v.number(), ...softDelete,
-  }).index('by_workspace', ['workspaceId']).index('by_player', ['playerId']),
+  }).index('by_workspace', ['workspaceId']).index('by_player', ['playerId']).index('by_deleteBatchId', ['deleteBatchId']),
   diagrams: defineTable({
     sourceGameId: v.id('sourceGames'),
     snapId: v.optional(v.id('snaps')),
@@ -224,7 +227,8 @@ export default defineSchema({
     ...softDelete,
   })
     .index('by_sourceGame', ['sourceGameId'])
-    .index('by_snap', ['snapId']),
+    .index('by_snap', ['snapId'])
+    .index('by_deleteBatchId', ['deleteBatchId']),
   // Coach-saved offensive alignments for the Play Designer "Start from" strip. Offense players only.
   formations: defineTable({
     name: v.string(),
@@ -251,7 +255,7 @@ export default defineSchema({
       rows: v.array(tendencyRowValidator),
     }),
     ...softDelete,
-  }).index('by_workspace', ['workspaceId']),
+  }).index('by_workspace', ['workspaceId']).index('by_deleteBatchId', ['deleteBatchId']),
   reports: defineTable({
     workspaceId: v.id('workspaces'),
     name: v.string(),
@@ -299,7 +303,7 @@ export default defineSchema({
     )),
     updatedAt: v.number(),
     ...softDelete,
-  }).index('by_workspace', ['workspaceId']),
+  }).index('by_workspace', ['workspaceId']).index('by_deleteBatchId', ['deleteBatchId']),
 
   deletions: defineTable({
     batchId: v.string(),

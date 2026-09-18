@@ -428,8 +428,9 @@ Completion evidence: [Phase 11 report](plans/phase-11-completion.md).
       per SPEC §87, and offer Undo per SPEC §88.
       *Verify:* one deliberate delete-and-undo per record kind.
       *Evidence:* Eight fixture UI delete/Undo round trips passed; Workspace and Report Cmd+Z passed; real Snap/Report counts remained 18/2.
-- [ ] **11.5 Purge cron verification.** Records older than 24 hours are purged; undone records
+- [x] **11.5 Purge cron verification.** Records older than 24 hours are purged; undone records
       never are.
+      *Evidence:* A 522-record expired fixture purged across scheduled chunks; undone and fresh fixtures behaved correctly, and real live Snap/Report counts stayed 18/2.
 - [ ] **11.6 Full type check and production build.** `npm run build` clean; the packaged app
       launches.
 - [ ] **11.7 Acceptance walk.** The SPEC §111 journey end to end on a real Hudl export: three

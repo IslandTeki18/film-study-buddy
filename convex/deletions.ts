@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { attachedSnapIds } from './domain/diagram.ts'
+import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import {
   internalMutation,
@@ -9,6 +10,8 @@ import {
 } from './_generated/server'
 
 export const DELETION_RETENTION_MS = 24 * 60 * 60 * 1000
+// ponytail: 500 documents per run; split further only if a run approaches Convex limits.
+const PURGE_CHUNK = 500
 
 const softDeleteTables = [
   'seasons',
@@ -94,7 +97,7 @@ async function restoreTable(ctx: MutationCtx, table: SoftDeleteTable, batchId: s
   if (table === 'diagrams') {
     const diagrams = await ctx.db
       .query('diagrams')
-      .filter((query) => query.eq(query.field('deleteBatchId'), batchId))
+      .withIndex('by_deleteBatchId', (query) => query.eq('deleteBatchId', batchId))
       .collect()
     for (const diagram of diagrams) {
       const attached = await ctx.db.query('diagrams')
@@ -109,20 +112,12 @@ async function restoreTable(ctx: MutationCtx, table: SoftDeleteTable, batchId: s
   }
   const records = await ctx.db
     .query(table)
-    .filter((query) => query.eq(query.field('deleteBatchId'), batchId))
+    .withIndex('by_deleteBatchId', (query) => query.eq('deleteBatchId', batchId))
     .collect()
   for (const record of records) {
     // Convex 1.45 removes optional fields when patch receives undefined.
     await ctx.db.patch(record._id, { deletedAt: undefined, deleteBatchId: undefined })
   }
-}
-
-async function purgeTable(ctx: MutationCtx, table: SoftDeleteTable, batchId: string) {
-  const records = await ctx.db
-    .query(table)
-    .filter((query) => query.eq(query.field('deleteBatchId'), batchId))
-    .collect()
-  for (const record of records) await ctx.db.delete(record._id)
 }
 
 /** Restores one active batch; unknown and already-undone batches are no-ops. */
@@ -136,35 +131,49 @@ export const undo = mutation({
       .unique()
     if (deletion === null || deletion.undoneAt !== undefined) return null
 
-    // ponytail: scans the fourteen soft-deletable tables per undo; add a by_deleteBatchId index per table if undo latency shows up.
     for (const table of softDeleteTables) await restoreTable(ctx, table, args.batchId)
     await ctx.db.patch(deletion._id, { undoneAt: Date.now() })
     return null
   },
 })
 
-/** Permanently removes expired active batches while preserving every undone batch. */
+/** Permanently removes expired batches in bounded, self-rescheduling runs. */
 export const purgeExpired = internalMutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
     const cutoff = Date.now() - DELETION_RETENTION_MS
-    const deletions = await ctx.db
+    const deletion = await ctx.db
       .query('deletions')
       .withIndex('by_createdAt', (query) => query.lt('createdAt', cutoff))
-      .collect()
+      .first()
 
-    for (const deletion of deletions) {
-      if (deletion.undoneAt !== undefined) continue
-      if (deletion.createdAt >= cutoff) continue
-      for (const table of softDeleteTables) await purgeTable(ctx, table, deletion.batchId)
+    if (deletion) {
+      if (deletion.undoneAt === undefined) {
+        let deleted = 0
+        for (const table of softDeleteTables) {
+          if (deleted === PURGE_CHUNK) break
+          const records = await ctx.db.query(table)
+            .withIndex('by_deleteBatchId', (query) => query.eq('deleteBatchId', deletion.batchId))
+            .take(PURGE_CHUNK - deleted)
+          for (const record of records) await ctx.db.delete(record._id)
+          deleted += records.length
+        }
+        if (deleted === PURGE_CHUNK) {
+          await ctx.scheduler.runAfter(0, internal.deletions.purgeExpired, {})
+          return null
+        }
+      }
       await ctx.db.delete(deletion._id)
+      await ctx.scheduler.runAfter(0, internal.deletions.purgeExpired, {})
+      return null
     }
 
-    const bulkEdits = await ctx.db.query('bulkEdits').collect()
-    for (const edit of bulkEdits) {
-      if (edit.createdAt < cutoff) await ctx.db.delete(edit._id)
-    }
+    const bulkEdits = await ctx.db.query('bulkEdits')
+      .withIndex('by_createdAt', (query) => query.lt('createdAt', cutoff))
+      .take(PURGE_CHUNK)
+    for (const edit of bulkEdits) await ctx.db.delete(edit._id)
+    if (bulkEdits.length === PURGE_CHUNK) await ctx.scheduler.runAfter(0, internal.deletions.purgeExpired, {})
     return null
   },
 })
