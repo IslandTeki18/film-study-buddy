@@ -2,8 +2,8 @@ import { ConvexError, v, type Infer } from 'convex/values'
 import { api } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { internalMutation, internalQuery, type QueryCtx } from './_generated/server'
-import { AI_PLAN_MAX_BLOCKS, AI_BRIEF_MAX_AGGREGATE_ROWS, AI_BRIEF_MAX_GROUPINGS, AI_BRIEF_MAX_PLAYER_NOTES, AI_BRIEF_MAX_QUICK_NOTES } from './domain/aiReport.ts'
-import { groupingFieldsFor, groupingValuesOf, templateGroupingKey } from './domain/aggregate.ts'
+import { AI_BRIEF_MAX_FORMATIONS, AI_BRIEF_FORMATION_BREAKDOWN_KEYS, AI_BRIEF_MAX_BREAKDOWN_ROWS, generatedReportBudget, AI_PLAN_MAX_BLOCKS, AI_BRIEF_MAX_AGGREGATE_ROWS, AI_BRIEF_MAX_GROUPINGS, AI_BRIEF_MAX_PLAYER_NOTES, AI_BRIEF_MAX_QUICK_NOTES } from './domain/aiReport.ts'
+import { NONE_GROUP, groupingFieldsFor, groupingValuesOf, templateGroupingKey } from './domain/aggregate.ts'
 import { DEFAULT_SELECTED_PLAY_CORE_KEYS, HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH } from './domain/reportBlocks.ts'
 import { buildBlock, requireName, requireSize, type blockSourceValidator } from './reports'
 import { CORE_FIELDS } from './domain/coreFields.ts'
@@ -20,6 +20,7 @@ export const briefValidator = v.object({
   opponentName: v.string(), week: v.number(), seasonName: v.string(), coachingArea: v.string(),
   sourceGames: v.array(v.object({ label: v.string(), snapCount: v.number() })), totalSnaps: v.number(),
   groupings: v.array(v.object({ key: v.string(), label: v.string(), totalSnaps: v.number(), rows: schema.tables.tendencies.validator.fields.snapshot.fields.rows })),
+  formationBreakdowns: v.array(v.object({ value: v.string(), snaps: v.number(), breakdowns: v.array(v.object({ key: v.string(), label: v.string(), rows: schema.tables.tendencies.validator.fields.snapshot.fields.rows })) })),
   tendencies: v.array(v.object({ id: v.id('tendencies'), title: v.string(), category: v.string(), note: v.string(), groupBy: v.string(), groupBy2: v.optional(v.string()), rowCount: v.number(), hasDiagram: v.boolean() })),
   diagrams: v.array(v.object({ id: v.id('diagrams'), name: v.string(), note: v.string(), sourceGameLabel: v.string(), snapCount: v.number() })),
   quickNotes: v.array(v.object({ id: v.id('quickNotes'), text: v.string(), tags: v.array(v.string()), sourceGameLabel: v.string() })),
@@ -53,6 +54,20 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>, pr
     const computed = await computeResult(ctx, { workspaceId, groupBy: field.key, scope })
     return { ...field, totalSnaps: computed?.result.totalSnaps ?? 0, rows: computed?.result.rows.slice(0, AI_BRIEF_MAX_AGGREGATE_ROWS) ?? [] }
   }))
+  const totalSnaps = scope.snaps.length
+  const { minFormationSnaps } = generatedReportBudget({ totalSnaps, tendencyCount: 0, groupings, intent: 'coach' })
+  const formations = groupings.find((field) => field.key === 'core:formation')?.rows
+    .filter((row) => row.values[0] !== NONE_GROUP && row.snaps >= minFormationSnaps).slice(0, AI_BRIEF_MAX_FORMATIONS) ?? []
+  const formationBreakdowns = await Promise.all(formations.map(async (formation) => ({
+    value: formation.values[0]!, snaps: formation.snaps,
+    breakdowns: await Promise.all(AI_BRIEF_FORMATION_BREAKDOWN_KEYS.flatMap((key) => {
+      const field = groupingFields.find((field) => field.key === key)
+      return field ? [field] : []
+    }).map(async (field) => {
+      const computed = await computeResult(ctx, { workspaceId, groupBy: field.key, filter: { groupBy: 'core:formation', value: formation.values[0]! }, scope })
+      return { ...field, rows: computed?.result.rows.slice(0, AI_BRIEF_MAX_BREAKDOWN_ROWS) ?? [] }
+    })),
+  })))
   const notes = (await Promise.all(games.map(async (game) =>
     (await ctx.runQuery(api.notes.listQuickNotes, { sourceGameId: game._id })).map((note) => ({ ...note, sourceGameLabel: game.label })))))
     .flat().sort((a, b) => b.createdAt - a.createdAt).slice(0, AI_BRIEF_MAX_QUICK_NOTES)
@@ -73,7 +88,7 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>, pr
   }))
   return {
     opponentName: workspace.opponentName, week: workspace.week, seasonName: season!.name, coachingArea: settings?.coachingArea ?? '',
-    sourceGames: games.map(({ label, snapCount }) => ({ label, snapCount })), totalSnaps: games.reduce((total, game) => total + game.snapCount, 0), groupings,
+    sourceGames: games.map(({ label, snapCount }) => ({ label, snapCount })), totalSnaps, groupings, formationBreakdowns,
     tendencies: allTendencies.filter((tendency) => tendency.includeInReport && tendency.snapshot.gameIds.length > 0 && tendency.snapshot.gameIds.every((id) => gameIds.has(id))
       && (!tendency.diagramId || !allDiagrams.some((diagram) => diagram._id === tendency.diagramId) || diagramIds.has(tendency.diagramId)))
       .map((tendency) => ({ id: tendency._id, title: tendency.title, category: tendency.category, note: tendency.note,

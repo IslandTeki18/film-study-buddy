@@ -1,3 +1,4 @@
+import { NONE_GROUP } from './aggregate.ts'
 import type { CoachingArea } from './starterTemplates.ts'
 import { CAPTION_MAX_LENGTH, HEADING_MAX_LENGTH, TABLE_TITLE_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH } from './reportBlocks.ts'
 
@@ -9,6 +10,40 @@ export const AI_BRIEF_MAX_AGGREGATE_ROWS = 12
 export const AI_BRIEF_MAX_GROUPINGS = 20
 export const AI_GENERATED_REPORT_DEFAULT_NAME = 'AI Overview'
 export type AiCoachType = CoachingArea
+
+export const AI_BRIEF_MAX_FORMATIONS = 8
+export const AI_BRIEF_FORMATION_BREAKDOWN_KEYS = ['core:playConcept', 'core:direction', 'core:playType', 'derived:downDistanceSituation', 'core:personnel'] as const
+export const AI_BRIEF_MAX_BREAKDOWN_ROWS = 8
+export const SPLIT_CANDIDATE_KEYS = ['core:personnel', 'derived:downDistanceSituation', 'derived:fieldZone', 'core:hash', 'core:playType'] as const
+export const SECTION_KIND_ORDER = ['evidence', 'split', 'formation'] as const
+export type SectionKind = (typeof SECTION_KIND_ORDER)[number]
+export const SECTION_KIND_HEADING: Record<SectionKind, string> = { evidence: 'Tendencies and Evidence', split: 'Situational Splits', formation: 'Formation Details' }
+export const AI_SECTION_MAX_BLOCKS = 4
+
+export interface GeneratedReportBudget {
+  readonly evidenceSections: number; readonly splitSections: number; readonly formationSections: number
+  readonly blocksPerSection: number; readonly allowSelectedPlays: boolean; readonly targetPages: number
+  readonly minFormationSnaps: number
+}
+export function generatedReportBudget(input: {
+  totalSnaps: number; tendencyCount: number
+  groupings: readonly { key: string; rows: readonly { values: readonly string[]; snaps: number }[] }[]
+  intent: 'coach' | 'player'
+}): GeneratedReportBudget {
+  const minFormationSnaps = Math.max(3, Math.ceil(0.05 * input.totalSnaps))
+  const formation = Math.min(AI_BRIEF_MAX_FORMATIONS, input.groupings.find((group) => group.key === 'core:formation')?.rows
+    .filter((row) => row.values[0] !== NONE_GROUP && row.snaps >= minFormationSnaps).length ?? 0)
+  const split = SPLIT_CANDIDATE_KEYS.filter((key) => (input.groupings.find((group) => group.key === key)?.rows
+    .filter((row) => row.values[0] !== NONE_GROUP).length ?? 0) >= 2).length
+  const divisor = input.intent === 'player' ? 2 : 1
+  const evidenceSections = Math.ceil(Math.min(input.tendencyCount, 8) / divisor)
+  const splitSections = Math.ceil(split / divisor)
+  const formationSections = Math.ceil(formation / divisor)
+  // ponytail: about two sections per page is a heuristic; tune the caps if printed Reports miss the target.
+  const pages = 1 + Math.ceil((evidenceSections + splitSections + formationSections) / 2)
+  return { evidenceSections, splitSections, formationSections, blocksPerSection: AI_SECTION_MAX_BLOCKS,
+    allowSelectedPlays: input.intent === 'coach', targetPages: input.intent === 'coach' ? Math.max(5, Math.min(12, pages)) : Math.max(2, Math.min(5, pages)), minFormationSnaps }
+}
 
 export const SYSTEM_PROMPT = `You assemble a Generated Report for a film-study notebook. The application counts and organizes; the coach interprets.
 The reader is the supplied coachType coach preparing for brief.opponentName. intent="coach" means a Coach Report for staff. intent="player" means a Player Report: shorter, plainer language, no Clip References and no jargon.
