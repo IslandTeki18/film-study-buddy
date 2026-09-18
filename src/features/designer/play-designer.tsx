@@ -20,6 +20,7 @@ const ZONE_MIN = { rx: 18, ry: 14 } as const
 
 type Drag =
   | { kind: 'player'; id: string }
+  | { kind: 'motion'; id: string }
   | { kind: 'zone'; id: string }
   | { kind: 'zone-resize'; id: string }
   | { kind: 'point'; id: string; index: number }
@@ -118,6 +119,9 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
       if (player.side !== side) return
       drag.current = { kind: 'player', id: player.id }
       setSelectedId(player.id)
+    } else if (target?.role === 'motion') {
+      drag.current = { kind: 'motion', id: target.id }
+      setSelectedId(target.id)
     } else if (target?.role === 'zone' || target?.role === 'zone-resize') {
       drag.current = { kind: target.role, id: target.id }
       setSelectedId(target.id)
@@ -146,6 +150,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
         const dy = (at.y - from.y) / (toPx({ x: 0, y: 1 }).y)
         return { ...player, ...toNorm(at), ...(player.route ? { route: player.route.map((value, index) => Math.min(1, Math.max(0, value + (index % 2 ? dy : dx)))) } : {}) }
       }
+      if (active.kind === 'motion' && player.motion) return { ...player, motion: toNorm(at) }
       if (active.kind === 'zone' && player.zone) return { ...player, zone: { ...player.zone, ...toNorm(at) } }
       if (active.kind === 'zone-resize' && player.zone) {
         const center = toPx(player.zone)
@@ -386,6 +391,16 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
               </div>)}
             </div>
           </div>
+
+          {selected && selected.side === 'offense' && selected.kind !== 'OL' && <div>
+            <div className="mb-2 flex items-baseline gap-2"><Eyebrow className="text-[9.5px]">Motion</Eyebrow><Meta className="text-[10px]">{selected.motion ? 'ghost = where he lined up · drag either spot' : 'marks his current spot, then drag him to where he ends up'}</Meta></div>
+            <button type="button" aria-pressed={!!selected.motion} className={cn(chip(!!selected.motion, 'neutral', !selected.motion), 'w-full py-2', selected.motion && 'bg-primary/15')}
+              onClick={() => patch(selected.id, (player) => {
+                if (!player.motion) return { ...player, motion: { x: player.x, y: player.y } }
+                const { motion: _previous, ...rest } = player
+                return rest
+              })}>{selected.motion ? 'remove motion' : '∿ set motion from here'}</button>
+          </div>}
 
           <div className="mt-auto flex gap-1.5">
             <button type="button" className={cn(chip(false), 'flex-1 py-2')} disabled={!selected} onClick={() => selected && patch(selected.id, (player) => strip(player, ['route', 'zone', 'coversId', 'job']))}>clear route</button>
