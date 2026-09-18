@@ -56,6 +56,27 @@ function routePath(player: DiagramPlayer): string | undefined {
   return d
 }
 
+function wavyPath(a: { x: number; y: number }, b: { x: number; y: number }): string | undefined {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const length = Math.hypot(dx, dy)
+  if (length < 4) return undefined
+  const ux = dx / length
+  const uy = dy / length
+  const amp = 4.5
+  const count = Math.max(2, Math.round((length - 14) / 9))
+  const start = PLAYER_RADIUS + 1
+  const span = length - start - 14
+  let path = `M ${(a.x + ux * start).toFixed(1)} ${(a.y + uy * start).toFixed(1)}`
+  for (let i = 0; i < count; i += 1) {
+    const mid = start + span * (i + 0.5) / count
+    const end = start + span * (i + 1) / count
+    const offset = i % 2 ? -amp : amp
+    path += ` Q ${(a.x + ux * mid - uy * offset).toFixed(1)} ${(a.y + uy * mid + ux * offset).toFixed(1)} ${(a.x + ux * end).toFixed(1)} ${(a.y + uy * end).toFixed(1)}`
+  }
+  return path
+}
+
 function Marker({ player, selected, ink }: { readonly player: DiagramPlayer; readonly selected: boolean; readonly ink: string }): ReactNode {
   const px = x(player.x)
   const py = y(player.y)
@@ -130,6 +151,21 @@ export function DiagramSvg({ diagram, className, title = 'Play Diagram', selecte
           strokeOpacity={!isActive(player.side) ? 0.22 : selected || activeSide === undefined ? 1 : 0.55}
           strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={player.side === 'defense' ? '5 4' : undefined}
           markerEnd={`url(#${player.job && BLOCK_CAP_JOBS.has(player.job) ? blockId : arrowId})`} />
+      })}
+
+      {players.map((player) => {
+        if (!player.motion) return null
+        const a = { x: x(player.motion.x), y: y(player.motion.y) }
+        const d = wavyPath(a, { x: x(player.x), y: y(player.y) })
+        const active = isActive(player.side)
+        const color = sideColor(player.side)
+        return <g key={`motion-${player.id}`} opacity={active ? 1 : 0.28} className={active ? undefined : 'pointer-events-none'}>
+          {d && <path className="pointer-events-none" d={d} fill="none" stroke={color}
+            strokeOpacity={!active ? 0.22 : player.id === selectedId || activeSide === undefined ? 1 : 0.55}
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" markerEnd={`url(#${arrowId})`} />}
+          <circle data-role="motion" data-id={player.id} cx={a.x} cy={a.y} r={PLAYER_RADIUS} fill="var(--card)" stroke={color} strokeWidth="1.5" strokeDasharray="4 3" className={active ? 'cursor-grab' : undefined} />
+          <text x={a.x} y={a.y + 3} textAnchor="middle" fontSize="8.5" fontWeight="700" letterSpacing=".02em" fill="var(--muted-foreground)" className="font-mono pointer-events-none select-none">{player.kind ?? (player.side === 'defense' ? 'D' : 'O')}</text>
+        </g>
       })}
 
       {players.map((player) => {
