@@ -365,6 +365,7 @@ Completion and evidence: [Phase 10B completion report](plans/phase-10b-completio
 ## Phase 10C — AI Report Generation
 
 Approved scope: `.claude/plans/phase-10c-ai-report-generation.md` (owner-supplied, uncommitted).
+Completion and remaining gates: [Phase 10C completion report](plans/phase-10c-completion.md).
 
 - [~] **10C.0 Dependency and key plumbing.**
       *Evidence:* SDK installed, README documents deployment-only key, paid calls and third-party brief transmission; typecheck passed. Deployment key is absent.
@@ -382,7 +383,8 @@ Approved scope: `.claude/plans/phase-10c-ai-report-generation.md` (owner-supplie
       *Evidence:* live fixtures passed all seven generated types, exact single/two-field table and saved Tendency snapshots, exclusion across every source kind, Player clip default, text caps, ambiguous selection, malformed/empty/25-Block rollback and unchanged real Snaps/Reports. Mocked action checks passed, zero paid calls. Live Claude generation remains blocked by absent key.
 - [~] **10C.7 Coach-type and intent differentiation (Electron).**
       *Evidence:* real Electron dialog keyboard/pending/Escape/error retention and both themes passed; fixture Player Report hides clip columns. Mocked empty-Workspace branch passed. Actual Defensive Line/Quarterbacks differentiation and Player prose require the missing key.
-- [ ] **10C.8 Close out.**
+- [~] **10C.8 Close out.**
+      *Evidence:* typecheck/build and all 15 existing tests passed; production Electron file renderer launched. Six fixture Reports and fixture Season soft-deleted; real 18 Snaps and existing Report/observations deep-equal. Completion report written; paid cost/latency and distribution packaging remain unverified.
 
 ---
 
