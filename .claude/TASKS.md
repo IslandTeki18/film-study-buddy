@@ -409,8 +409,8 @@ Evidence and remaining gates: [Phase 10D completion report](plans/phase-10d-comp
       *Evidence:* typecheck passed; Electron opens with Game Plan and Tendencies.
 - [x] **10D.8 Docs.**
       *Evidence:* glossary, SPEC and BLUEPRINT describe the fixed structure and Page Break; labels match code; git diff --check passed.
-- [ ] **10D.9 End-to-end verification and completion report.**
-      *Evidence:* final live, PDF, regression and cleanup checks pending; see completion report.
+- [~] **10D.9 End-to-end verification and completion report.**
+      *Evidence:* build/sync, 15 tests, deterministic/GUI regressions, three live calls, PDF transitions and cleanup passed. Final PDFs: 7/5/8 pages; maximum-size summary corrected and verified on page 1. Grounding audit found unsupported prose; final prompt needs a clean live sample. Real data has 18 Snaps, so ≥200-Snap scale remains unverified. Completion report records all evidence and gaps.
 
 ---
 
