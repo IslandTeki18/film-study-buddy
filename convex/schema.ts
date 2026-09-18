@@ -257,6 +257,7 @@ export default defineSchema({
     intent: v.union(v.literal('coach'), v.literal('player')),
     showClipReferences: v.boolean(),
     blocks: v.array(v.union(
+      v.object({ id: v.string(), type: v.literal('pageBreak') }),
       v.object({ id: v.string(), type: v.literal('heading'), text: v.string() }),
       v.object({ id: v.string(), type: v.literal('text'), text: v.string() }),
       v.object({

@@ -9,9 +9,9 @@ export function playerReportName(name: string): string {
   return `${name.slice(0, NAME_MAX_LENGTH - ' (Player)'.length)} (Player)`
 }
 
-export type BlockType = 'heading' | 'text' | 'dataTable' | 'tendency' | 'diagram' | 'selectedPlays' | 'quickNotes'
+export type BlockType = 'pageBreak' | 'heading' | 'text' | 'dataTable' | 'tendency' | 'diagram' | 'selectedPlays' | 'quickNotes'
 export const BLOCK_TYPE_LABEL: Record<BlockType, string> = {
-  heading: 'Heading', text: 'Text / Coach Notes', dataTable: 'Opponent Data Table', tendency: 'Tendency / Alert',
+  pageBreak: 'Page Break', heading: 'Heading', text: 'Text / Coach Notes', dataTable: 'Opponent Data Table', tendency: 'Tendency / Alert',
   diagram: 'Play Diagram', selectedPlays: 'Selected Plays', quickNotes: 'Quick Notes',
 }
 export const HEADING_MAX_LENGTH = 120

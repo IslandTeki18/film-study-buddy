@@ -13,6 +13,9 @@ export function ReportBlockView({ block, showClipReferences, mode }: {
   readonly mode: 'builder' | 'print'
 }): ReactNode {
   switch (block.type) {
+    case 'pageBreak': return mode === 'builder' ? <Meta>Page break: the next Block starts on a new page</Meta> : <>
+      <div className="report-page-break" aria-hidden="true" /><div className="border-t border-dashed border-border print:hidden"><Meta>Page Break</Meta></div>
+    </>
     case 'heading': return block.text.trim() ? <h2 className="report-heading text-xl font-bold">{block.text}</h2> : mode === 'builder' ? <Meta>Empty Heading</Meta> : null
     case 'text': return block.text.trim() ? <p className="whitespace-pre-wrap">{block.text}</p> : mode === 'builder' ? <Meta>Empty Text / Coach Notes</Meta> : null
     case 'dataTable': return <figure className="space-y-2"><figcaption className="report-heading font-semibold">{block.title}</figcaption><SnapshotTable columns={block.columns} rows={block.rows} numericFrom={block.columns.length - 3} /></figure>

@@ -78,7 +78,7 @@ export function ReportBuilder({ workspaceId, reportId }: { readonly workspaceId:
       <Checkbox label="Show clip references" checked={report.showClipReferences} onChange={(event) => { void updateReport({ reportId: report._id, showClipReferences: event.target.checked }).catch(failure) }} />
     </header>
     <DropdownMenu label="Add block" triggerProps={{ disabled: pending }} items={(Object.keys(BLOCK_TYPE_LABEL) as BlockType[]).map((type) => ({ label: BLOCK_TYPE_LABEL[type], onSelect: () => {
-      if (type !== 'heading' && type !== 'text') { setPicker(type); return }
+      if (type !== 'heading' && type !== 'text' && type !== 'pageBreak') { setPicker(type); return }
       setPending(true)
       void insert({ reportId: report._id, source: { type } }).then(setFocusId).catch((error: unknown) => show({ message: `Could not add block. ${error instanceof Error ? error.message : String(error)}` })).finally(() => setPending(false))
     } }))} />

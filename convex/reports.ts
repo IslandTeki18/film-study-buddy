@@ -96,6 +96,7 @@ async function liveDiagram(ctx: QueryCtx, id: Id<'diagrams'>, workspaceId: Id<'w
 }
 
 export const blockSourceValidator = v.union(
+  v.object({ type: v.literal('pageBreak') }),
   v.object({ type: v.literal('heading') }), v.object({ type: v.literal('text') }),
   v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string() }),
   v.object({ type: v.literal('tendency'), tendencyId: v.id('tendencies') }),
@@ -108,6 +109,7 @@ type BlockSource = Infer<typeof blockSourceValidator>
 export async function buildBlock(ctx: MutationCtx, report: Pick<Doc<'reports'>, 'workspaceId'>, source: BlockSource): Promise<ReportBlock> {
   const id = crypto.randomUUID()
   switch (source.type) {
+    case 'pageBreak': return { id, type: 'pageBreak' }
     case 'heading': case 'text': return { id, type: source.type, text: '' }
     case 'dataTable': {
       if (source.title.length > TABLE_TITLE_MAX_LENGTH) throw new Error(`Title must be at most ${TABLE_TITLE_MAX_LENGTH} characters`)
