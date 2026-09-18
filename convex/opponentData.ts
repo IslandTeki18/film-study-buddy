@@ -6,7 +6,7 @@ import { isIncluded } from './sourceGames'
 import { templateTree } from './templates'
 import schema from './schema'
 
-async function loadScope(ctx: QueryCtx, workspaceId: Id<'workspaces'>) {
+export async function loadScope(ctx: QueryCtx, workspaceId: Id<'workspaces'>) {
   const workspace = await ctx.db.get(workspaceId)
   const season = workspace && workspace.deletedAt === undefined ? await ctx.db.get(workspace.seasonId) : null
   if (!season || season.deletedAt !== undefined) return null
@@ -25,6 +25,8 @@ async function loadScope(ctx: QueryCtx, workspaceId: Id<'workspaces'>) {
   return { games, templateFields, snaps }
 }
 
+export type OpponentScope = NonNullable<Awaited<ReturnType<typeof loadScope>>>
+
 export const listGroupingFields = query({
   args: { workspaceId: v.string() }, returns: v.array(v.object({ key: v.string(), label: v.string() })),
   handler: async (ctx, args) => {
@@ -34,8 +36,8 @@ export const listGroupingFields = query({
   },
 })
 
-export async function computeResult(ctx: QueryCtx, args: { workspaceId: Id<'workspaces'>; groupBy: string; groupBy2?: string }) {
-  const scope = await loadScope(ctx, args.workspaceId)
+export async function computeResult(ctx: QueryCtx, args: { workspaceId: Id<'workspaces'>; groupBy: string; groupBy2?: string; filter?: { groupBy: string; value: string }; scope?: OpponentScope }) {
+  const scope = args.scope ?? await loadScope(ctx, args.workspaceId)
   if (!scope || args.groupBy === args.groupBy2) return null
   const catalog = groupingFieldsFor([...scope.templateFields.values()])
   const keys = args.groupBy2 === undefined ? [args.groupBy] : [args.groupBy, args.groupBy2]
@@ -44,9 +46,14 @@ export async function computeResult(ctx: QueryCtx, args: { workspaceId: Id<'work
   const selected = fields.filter((field) => field !== undefined)
   const matches = new Map(scope.games.map((game) => [game._id, selected.map((field) =>
     scope.templateFields.get(game._id)?.find((candidate) => templateGroupingKey(candidate) === field.key)?._id)]))
+  const filterField = args.filter && catalog.find((field) => field.key === args.filter!.groupBy)
+  if (args.filter && (!filterField || keys.includes(args.filter.groupBy))) return null
+  const filterMatches = filterField && new Map(scope.games.map((game) => [game._id,
+    scope.templateFields.get(game._id)?.find((candidate) => templateGroupingKey(candidate) === filterField.key)?._id]))
+  const snaps = filterField ? scope.snaps.filter((snap) => groupingValuesOf(snap, filterField, filterMatches?.get(snap.sourceGameId)).includes(args.filter!.value)) : scope.snaps
   return {
     gameIds: scope.games.map((game) => game._id), groupLabels: selected.map((field) => field.label),
-    result: aggregateSnaps(scope.snaps.map((snap) => ({
+    result: aggregateSnaps(snaps.map((snap) => ({
       levels: selected.map((field, index) => groupingValuesOf(snap, field, matches.get(snap.sourceGameId)?.[index])),
       yards: snap.core.yards,
     }))),

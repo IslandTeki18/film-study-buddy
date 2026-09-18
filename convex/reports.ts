@@ -2,7 +2,7 @@ import { CORE_FIELDS, formatCoreValue } from './domain/coreFields.ts'
 import { analysisValueText, columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
 import { formatAvgYards, formatFrequency } from './domain/aggregate.ts'
 import { CLIP_REFERENCE_LABEL, playerReportName, HEADING_MAX_LENGTH, TEXT_BLOCK_MAX_LENGTH, CAPTION_MAX_LENGTH, REPORT_BLOCKS_MAX_BYTES, SELECTED_PLAYS_MAX_SNAPS, SELECTED_PLAYS_MAX_COLUMNS, QUICK_NOTES_BLOCK_MAX_NOTES, TABLE_TITLE_MAX_LENGTH, uniqueLabels } from './domain/reportBlocks.ts'
-import { computeResult } from './opponentData'
+import { computeResult, type OpponentScope } from './opponentData'
 import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
 import { templateTree } from './templates'
 import { v, type Infer } from 'convex/values'
@@ -98,7 +98,7 @@ async function liveDiagram(ctx: QueryCtx, id: Id<'diagrams'>, workspaceId: Id<'w
 export const blockSourceValidator = v.union(
   v.object({ type: v.literal('pageBreak') }),
   v.object({ type: v.literal('heading') }), v.object({ type: v.literal('text') }),
-  v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string() }),
+  v.object({ type: v.literal('dataTable'), groupBy: v.string(), groupBy2: v.optional(v.string()), title: v.string(), filter: v.optional(v.object({ groupBy: v.string(), value: v.string() })) }),
   v.object({ type: v.literal('tendency'), tendencyId: v.id('tendencies') }),
   v.object({ type: v.literal('diagram'), diagramId: v.id('diagrams') }),
   v.object({ type: v.literal('selectedPlays'), sourceGameId: v.id('sourceGames'), snapIds: v.array(v.id('snaps')), columnKeys: v.array(v.string()) }),
@@ -106,17 +106,17 @@ export const blockSourceValidator = v.union(
 )
 type BlockSource = Infer<typeof blockSourceValidator>
 
-export async function buildBlock(ctx: MutationCtx, report: Pick<Doc<'reports'>, 'workspaceId'>, source: BlockSource): Promise<ReportBlock> {
+export async function buildBlock(ctx: MutationCtx, report: Pick<Doc<'reports'>, 'workspaceId'>, source: BlockSource, scope?: OpponentScope): Promise<ReportBlock> {
   const id = crypto.randomUUID()
   switch (source.type) {
     case 'pageBreak': return { id, type: 'pageBreak' }
     case 'heading': case 'text': return { id, type: source.type, text: '' }
     case 'dataTable': {
       if (source.title.length > TABLE_TITLE_MAX_LENGTH) throw new Error(`Title must be at most ${TABLE_TITLE_MAX_LENGTH} characters`)
-      const computed = await computeResult(ctx, { workspaceId: report.workspaceId, groupBy: source.groupBy, ...(source.groupBy2 ? { groupBy2: source.groupBy2 } : {}) })
+      const computed = await computeResult(ctx, { workspaceId: report.workspaceId, groupBy: source.groupBy, ...(source.filter ? { filter: source.filter } : {}), ...(scope ? { scope } : {}), ...(source.groupBy2 ? { groupBy2: source.groupBy2 } : {}) })
       if (!computed) throw new Error('Grouping Field not available')
       if (!computed.result.totalSnaps) throw new Error('No Snaps in the included Source Games')
-      return { id, type: source.type, title: source.title || computed.groupLabels.join(' + ').slice(0, TABLE_TITLE_MAX_LENGTH), columns: [...computed.groupLabels, 'Snaps', 'Frequency', 'Avg. Yards'], rows: computed.result.rows.map((row) => [...row.values, String(row.snaps), formatFrequency(row.frequency), formatAvgYards(row.avgYards)]) }
+      return { id, type: source.type, title: source.title || `${source.filter ? `${source.filter.value}: ` : ''}${computed.groupLabels.join(' + ')}`.slice(0, TABLE_TITLE_MAX_LENGTH), columns: [...computed.groupLabels, 'Snaps', 'Frequency', 'Avg. Yards'], rows: computed.result.rows.map((row) => [...row.values, String(row.snaps), formatFrequency(row.frequency), formatAvgYards(row.avgYards)]) }
     }
     case 'tendency': {
       const tendency = await ctx.db.get(source.tendencyId)

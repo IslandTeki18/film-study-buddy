@@ -9,7 +9,7 @@ import { buildBlock, requireName, requireSize, type blockSourceValidator } from 
 import { CORE_FIELDS } from './domain/coreFields.ts'
 import { attachedSnapIds } from './domain/diagram.ts'
 import { columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
-import { computeResult } from './opponentData'
+import { computeResult, loadScope, type OpponentScope } from './opponentData'
 import schema from './schema'
 import { isIncluded } from './sourceGames'
 import { templateTree } from './templates'
@@ -32,13 +32,14 @@ export const briefValidator = v.object({
 })
 export type AiReportBrief = Infer<typeof briefValidator>
 
-export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>): Promise<AiReportBrief> {
+export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>, preloadedScope?: OpponentScope): Promise<AiReportBrief> {
   const workspace = await requireLiveWorkspace(ctx, workspaceId)
   const season = await ctx.db.get(workspace.seasonId)
+  const scope = preloadedScope ?? (await loadScope(ctx, workspaceId))!
   const [settings, allGames, groupingFields, allTendencies, allDiagrams, allPlayers] = await Promise.all([
     ctx.runQuery(api.settings.get, {}),
     ctx.runQuery(api.sourceGames.listByWorkspace, { workspaceId }),
-    ctx.runQuery(api.opponentData.listGroupingFields, { workspaceId }),
+    groupingFieldsFor([...scope.templateFields.values()]).map(({ key, label }) => ({ key, label })),
     ctx.runQuery(api.tendencies.listByWorkspace, { workspaceId }),
     ctx.runQuery(api.diagrams.listByWorkspace, { workspaceId }),
     ctx.runQuery(api.opponentPlayers.listByWorkspace, { workspaceId }),
@@ -49,7 +50,7 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>): P
   const diagramIds = new Set(diagrams.map((diagram) => diagram._id))
   // ponytail: the brief recomputes every single-field aggregate per generation; cache per Workspace if generation latency becomes the complaint.
   const groupings = await Promise.all(groupingFields.slice(0, AI_BRIEF_MAX_GROUPINGS).map(async (field) => {
-    const computed = await computeResult(ctx, { workspaceId, groupBy: field.key })
+    const computed = await computeResult(ctx, { workspaceId, groupBy: field.key, scope })
     return { ...field, totalSnaps: computed?.result.totalSnaps ?? 0, rows: computed?.result.rows.slice(0, AI_BRIEF_MAX_AGGREGATE_ROWS) ?? [] }
   }))
   const notes = (await Promise.all(games.map(async (game) =>
