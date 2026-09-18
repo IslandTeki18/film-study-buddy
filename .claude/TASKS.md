@@ -416,15 +416,18 @@ Evidence and remaining gates: [Phase 10D completion report](plans/phase-10d-comp
 
 ## Phase 11 — Hardening and Acceptance
 
+Completion evidence: [Phase 11 report](plans/phase-11-completion.md).
+
 - [ ] **11.1 Keyboard shortcut pass.** Every shortcut in BLUEPRINT §7.5 implemented and listed on
       a help overlay (SPEC §50).
 - [ ] **11.2 Loading, empty, and error states.** Every route has all three; the Convex
       disconnected banner behaves per BLUEPRINT §10.
 - [ ] **11.3 Accessibility pass.** Focus order, visible focus, labelled controls, keyboard paths
       for every drag interaction, table semantics.
-- [ ] **11.4 Soft-delete audit.** Confirm all eight record kinds of SPEC §86 soft-delete, cascade
+- [x] **11.4 Soft-delete audit.** Confirm all eight record kinds of SPEC §86 soft-delete, cascade
       per SPEC §87, and offer Undo per SPEC §88.
       *Verify:* one deliberate delete-and-undo per record kind.
+      *Evidence:* Eight fixture UI delete/Undo round trips passed; Workspace and Report Cmd+Z passed; real Snap/Report counts remained 18/2.
 - [ ] **11.5 Purge cron verification.** Records older than 24 hours are purged; undone records
       never are.
 - [ ] **11.6 Full type check and production build.** `npm run build` clean; the packaged app
