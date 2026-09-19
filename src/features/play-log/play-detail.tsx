@@ -179,8 +179,9 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
     </SectionPanel>
     <SectionPanel title="Play Diagram">
       {diagram === undefined ? <Meta>Loading…</Meta> : diagram ? <div className="space-y-2">
-        <Link className="block" to={`${base}/diagrams/${diagram._id}`} aria-label="Edit Play Diagram">
-          <DiagramSvg diagram={diagram} title="Play Diagram" className="rounded-xl border border-border" {...(diagram.hiddenSide ? { hideSide: diagram.hiddenSide } : {})} />
+        <p className="font-semibold">{diagram.name ?? 'Untitled Play Diagram'}</p>
+        <Link className="block" to={`${base}/diagrams/${diagram._id}`} aria-label={`Edit ${diagram.name ?? 'Play Diagram'}`}>
+          <DiagramSvg diagram={diagram} title={diagram.name ?? 'Play Diagram'} className="rounded-xl border border-border" {...(diagram.hiddenSide ? { hideSide: diagram.hiddenSide } : {})} />
         </Link>
         <Link className="underline" to={`${base}/diagrams/${diagram._id}`}>Edit Play Diagram</Link>
         {diagram.note && <p className="whitespace-pre-wrap">{diagram.note}</p>}
