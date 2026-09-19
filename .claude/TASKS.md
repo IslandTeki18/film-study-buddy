@@ -431,8 +431,9 @@ Completion evidence: [Phase 11 report](plans/phase-11-completion.md).
 - [x] **11.5 Purge cron verification.** Records older than 24 hours are purged; undone records
       never are.
       *Evidence:* A 522-record expired fixture purged across scheduled chunks; undone and fresh fixtures behaved correctly, and real live Snap/Report counts stayed 18/2.
-- [ ] **11.6 Full type check and production build.** `npm run build` clean; the packaged app
+- [x] **11.6 Full type check and production build.** `npm run build` clean; the packaged app
       launches.
+      *Evidence:* Build passed 15 tests; unsigned arm64 app/DMG built, launched with real data, opened shortcut help, navigated to Reports, and exported a 5-page PDF.
 - [ ] **11.7 Acceptance walk.** The SPEC §111 journey end to end on a real Hudl export: three
       source games, charting, notes, review, diagrams, opponent data, tendencies, a coach report,
       a player report, two PDFs, archive.

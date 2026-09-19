@@ -57,7 +57,8 @@ Convex specifically beyond the `convex/` directory and the hooks in `src/lib/db/
   dependency), `lucide-react` icons.
 - **Backend**: Convex — schema, queries, mutations, actions, crons.
 - **Added dependencies**: `react-router`, `@tanstack/react-table`, `papaparse`
-  (+ `@types/papaparse`), and `@anthropic-ai/sdk` for Phase 10C Report generation.
+  (+ `@types/papaparse`), `@anthropic-ai/sdk` for Phase 10C Report generation, and
+  `electron-builder` for packaging.
 
 ---
 

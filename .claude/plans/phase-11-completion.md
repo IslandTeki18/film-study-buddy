@@ -11,6 +11,7 @@ Work is proceeding in plan order on `main`; nothing has been pushed by git. The 
 | 11.3 | `4352134` | Designer keyboard paths, drag handle focus, named menus, roving segmented control and native Snap tables. Typecheck and 15 tests passed; focus, accessibility tree and persistence walk pending. |
 | 11.4 | This documentation commit | Eight delete/Undo UI round trips and live Convex checks passed. |
 | 11.5 | This code commit | Indexed batch lookup and bounded purge. Typecheck and Convex push passed; live purge fixture assertions passed. |
+| 11.6 | This build commit | Added only `electron-builder`, unsigned macOS app/DMG packaging, and Blueprint dependency documentation. Build, launch, navigation, shortcut overlay and PDF export passed. |
 
 ## 11.4 Soft-delete audit
 
@@ -38,3 +39,14 @@ Added `by_deleteBatchId` on all 14 soft-deletable tables and `by_createdAt` on `
 The temporary module seeded one expired, active Source Game batch with **520 Snaps, one Quick Note, and the Source Game** (522 records over three tables); one expired, undone Source Game batch; one fresh, active Source Game batch; and one expired bulk edit. After purge, every active expired fixture record and ledger row was gone, the undone Snap and Source Game were live with the same values and their old ledger was gone, the fresh batch and its ledger remained soft-deleted, and the bulk edit was gone. Undo on the fresh batch restored its Snap and Source Game. The timed fresh Undo round trip was **320 ms**. Convex logs recorded **140 purge invocations** in the verification chain, including work on preexisting expired ledgers; the 522-record batch required more than one invocation. All temporary fixture records and the temporary module were removed, then Convex was repushed.
 
 Real **live** Snap and Report counts stayed 18 and 2 before and after. The purge also processed preexisting expired deletion ledgers, so this count does not establish whether older already-deleted records outside the P11 fixture were present.
+
+## 11.6 Build and packaged app
+
+Installed `electron-builder` 26.15.3 as the only new dependency. `npm run build` passed TypeScript, all **15 existing tests**, and the Electron/Vite production build in about 6.4 seconds. The packaging script repeats that build, then created the unsigned arm64 artifacts:
+
+- `dist/mac-arm64/Film Study Buddy.app`: about 392 MB.
+- `dist/Film Study Buddy-0.1.0-arm64.dmg`: 154,848,666 bytes (about 148 MB), plus its block map.
+
+The packaged app launched from inside the `.app` with its `file://…/app.asar/out/renderer/index.html` URL, loaded the real Orem 2026 deployment data baked in from `.env.local`, opened the keyboard shortcut dialog, and navigated from Home to the Timpview Reports and AI Overview Report Preview. Export through the packaged IPC bridge produced a valid PDF 1.4 file with five pages and 56,296 bytes, confirming the `app.asar` sender URL check. The temporary PDF was deleted. Theme controls were already present in the packaged bundle but were not toggled in this check. Network-off disconnected-banner behavior remains pending with step 11.2 acceptance.
+
+Packaging used the default Electron icon and emitted informational warnings that package description and author are absent. Those fields and a custom icon were outside the approved configuration. Build output is unsigned, without notarization or auto-update. `VITE_CONVEX_URL` was inlined from the current local environment as expected.
