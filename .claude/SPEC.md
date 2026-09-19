@@ -1121,8 +1121,12 @@ The coach can:
 
 - View a diagram
 - Edit a diagram
+- Name a diagram
+- Find a diagram by name in the Source Game's gallery
 - Delete a diagram
 - Select a diagram for inclusion in a report
+
+A name is optional, up to 40 characters, and need not be unique.
 
 Diagrams are associated with plays and can later be reused as report content.
 

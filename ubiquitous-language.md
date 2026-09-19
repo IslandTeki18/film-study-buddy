@@ -137,7 +137,7 @@ _Avoid_: Review list, flagged plays, inbox.
 
 **Play Diagram**:
 A saved drawing of a play, attached to one or more Snaps, built from scratch in the Play Designer and
-reusable as report content.
+reusable as report content. Optionally carries a Diagram Name.
 _Avoid_: Diagram alone where Diagram Note is nearby, drawing, sketch, whiteboard.
 
 **Play Designer**:
@@ -156,8 +156,14 @@ Object's at-snap spot by a wavy line. Distinct from Motion, the Core Snap Data f
 _Avoid_: Motion alone where the Core Snap field is nearby, shift, animation.
 
 **Diagram Note**:
-The single free-text field belonging to a Play Diagram.
+The single free-text note belonging to a Play Diagram.
 _Avoid_: Caption, annotation, comment.
+
+**Diagram Name**:
+The optional short name a coach gives a Play Diagram (for example Trips Right Y-Cross), shown
+wherever the diagram appears and used to find it in the Play Diagrams gallery. Not unique.
+_Avoid_: Title, label (label belongs to Player Objects), caption (caption belongs to Report
+Blocks), Formation (a Core Snap Data field and a Play Designer preset).
 
 ## Opponent Players
 
