@@ -73,6 +73,7 @@ export const DIAGRAM_MAX_PLAYERS = 30
 export const DIAGRAM_MAX_SHAPES = 200
 export const FREEHAND_MAX_POINTS = 400
 export const FORMATION_NAME_MAX_LENGTH = 40
+export const DIAGRAM_NAME_MAX_LENGTH = 40
 
 export function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value))
@@ -167,12 +168,14 @@ export function normalizeDiagram(input: DiagramDoc): DiagramDoc {
   const shapes = input.shapes.map((shape) => normalizeShape(shape, ids))
   const note = input.note?.trim()
   if (note && note.length > DIAGRAM_NOTE_MAX_LENGTH) throw new Error(`Diagram note must be ${DIAGRAM_NOTE_MAX_LENGTH} characters or fewer`)
+  const name = input.name?.trim()
+  if (name && name.length > DIAGRAM_NAME_MAX_LENGTH) throw new Error(`Play Diagram name must be ${DIAGRAM_NAME_MAX_LENGTH} characters or fewer`)
 
   return {
     players,
     shapes,
     ...(note && { note }),
     ...(input.hiddenSide && { hiddenSide: input.hiddenSide }),
-    ...(input.name !== undefined && { name: input.name.trim() }),
+    ...(name && { name }),
   }
 }

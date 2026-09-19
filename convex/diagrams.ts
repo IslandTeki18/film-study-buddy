@@ -75,18 +75,19 @@ export const save = mutation({
     diagramId: v.id('diagrams'),
     players: schema.tables.diagrams.validator.fields.players,
     shapes: schema.tables.diagrams.validator.fields.shapes,
+    name: v.optional(v.string()),
     note: v.optional(v.string()),
     hiddenSide: schema.tables.diagrams.validator.fields.hiddenSide,
   }, returns: v.null(),
   handler: async (ctx, args) => {
     const diagram = await requireLiveDiagram(ctx, args.diagramId)
     const normalized = normalizeDiagram({
-      players: args.players, shapes: args.shapes, ...(args.note !== undefined ? { note: args.note } : {}),
+      players: args.players, shapes: args.shapes, ...(args.name !== undefined ? { name: args.name } : {}), ...(args.note !== undefined ? { note: args.note } : {}),
       ...(args.hiddenSide !== undefined ? { hiddenSide: args.hiddenSide } : {}),
     })
     await ctx.db.patch(diagram._id, {
       snapIds: attachedSnapIds(diagram), snapId: undefined,
-      players: normalized.players, shapes: normalized.shapes, note: normalized.note, hiddenSide: normalized.hiddenSide, updatedAt: Date.now(),
+      players: normalized.players, shapes: normalized.shapes, ...(args.name !== undefined ? { name: normalized.name } : {}), note: normalized.note, hiddenSide: normalized.hiddenSide, updatedAt: Date.now(),
     })
     return null
   },
