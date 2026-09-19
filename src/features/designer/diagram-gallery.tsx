@@ -6,10 +6,13 @@ import { attachedSnapIds } from '@convex/domain/diagram'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { DiagramSvg } from '@/components/diagram-svg'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Meta, Page, Panel } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
+
+const UNTITLED = 'Untitled Play Diagram'
 
 export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspaceId: string; readonly sourceGameId: string }): ReactNode {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
@@ -20,6 +23,7 @@ export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspa
   const [searchParams] = useSearchParams()
   const { show } = useToast()
   const [creating, setCreating] = useState(false)
+  const [query, setQuery] = useState('')
   const resolution = useRef<{ key: string; promise: Promise<string | null> | null } | null>(null)
   const base = `/w/${workspaceId}/games/${sourceGameId}`
   const snapParam = searchParams.get('snap')
@@ -59,6 +63,8 @@ export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspa
 
   const loadedDiagrams = diagrams ?? []
   const loadedSnaps = snaps ?? []
+  const needle = query.trim().toLowerCase()
+  const visible = needle ? loadedDiagrams.filter((diagram) => (diagram.name ?? '').toLowerCase().includes(needle)) : loadedDiagrams
   const snapLabels = new Map(loadedSnaps.map((snap) => [snap._id, snap.core.clipNumber ?? snap.order]))
   const occupied = new Set(loadedDiagrams.flatMap(attachedSnapIds))
   const pickSnap = !forceNew && loadedDiagrams.length > 0 ? loadedSnaps.find((snap) => snap._id === snapParam) : undefined
@@ -73,8 +79,10 @@ export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspa
   return <Page width="max-w-6xl">
     <header className="flex flex-wrap items-center gap-3">
       <h1 className="text-lg font-semibold">Play Diagrams</h1>
-      <Meta>{loadedDiagrams.length} Play {loadedDiagrams.length === 1 ? 'Diagram' : 'Diagrams'}</Meta>
+      <Meta>{loadedDiagrams.length} Play {loadedDiagrams.length === 1 ? 'Diagram' : 'Diagrams'}{needle && <> · {visible.length} shown</>}</Meta>
       <Button disabled={creating} onClick={() => newDiagram(pickSnap?._id)}>{creating ? 'Creating…' : 'New Play Diagram'}</Button>
+      {loadedDiagrams.length > 0 && <Input type="search" aria-label="Find Play Diagram by name" placeholder="Find by name" value={query}
+        onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') setQuery('') }} />}
     </header>
     {pickSnap && <Panel className="flex flex-wrap items-center gap-3 p-4">
       <p>Choose a Play Diagram for Snap {snapLabels.get(pickSnap._id)}</p>
@@ -83,7 +91,8 @@ export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspa
     </Panel>}
     {loadedDiagrams.length === 0
       ? <p>No Play Diagrams yet. Open the Play Designer from a Snap's row menu or create one here.</p>
-      : <ol className="grid gap-4 md:grid-cols-2">{loadedDiagrams.map((diagram) => <DiagramCard
+      : visible.length === 0 ? <div className="flex items-center gap-2"><p>No Play Diagrams named “{query.trim()}”.</p><Button variant="ghost" onClick={() => setQuery('')}>Clear</Button></div>
+      : <ol className="grid gap-4 md:grid-cols-2">{visible.map((diagram) => <DiagramCard
           key={diagram._id}
           diagram={diagram}
           base={base}
@@ -114,9 +123,7 @@ function DiagramCard({ diagram, base, snapLabels, availableSnaps, pickSnap }: {
   const { show } = useToast()
   const [pending, setPending] = useState(false)
   const snapIds = attachedSnapIds(diagram)
-  const editLabel = snapIds.length
-    ? `Edit Play Diagram for Snaps ${snapIds.map((id) => snapLabels.get(id) ?? 'removed').join(', ')}`
-    : 'Edit Play Diagram'
+  const editLabel = `Edit ${diagram.name ?? 'Play Diagram'}${snapIds.length ? ` for Snaps ${snapIds.map((id) => snapLabels.get(id) ?? 'removed').join(', ')}` : ''}`
   function run(action: () => Promise<unknown>, verb: string): void {
     if (pending) return
     setPending(true)
@@ -127,6 +134,7 @@ function DiagramCard({ diagram, base, snapLabels, availableSnaps, pickSnap }: {
       <DiagramSvg diagram={diagram} title={editLabel} className="rounded-xl border border-border" {...(diagram.hiddenSide ? { hideSide: diagram.hiddenSide } : {})} />
     </Link>
     <div>
+      <h2 className={diagram.name ? 'font-semibold' : 'font-semibold text-muted-foreground'}>{diagram.name ?? UNTITLED}</h2>
       <div className="flex flex-wrap items-center gap-2">
         {snapIds.length ? snapIds.map((snapId) => <span key={snapId} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
           {snapLabels.has(snapId)
