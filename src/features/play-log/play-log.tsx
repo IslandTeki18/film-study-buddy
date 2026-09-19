@@ -15,6 +15,7 @@ import { applicableColumns, carryForwardDraft, hasAnyValue, toCreateArgs, type D
 import { SnapPalette } from './snap-palette'
 import { ChartedSnaps } from './charted-snaps'
 import { ChartingAside } from './charting-aside'
+import { ThisWeek } from './this-week'
 
 type PlayLogProps = { readonly workspaceId: string; readonly sourceGameId: string }
 
@@ -106,7 +107,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
           to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>}
       </div>
       {dataTab === 'charting' ? <div className="mt-3.5 flex flex-wrap items-stretch gap-px bg-border">
-        <section className="min-w-0 flex-[1_1_620px] bg-background px-5 pt-4 pb-6">
+        <section className="min-w-0 flex-[1_1_560px] bg-background px-5 pt-4 pb-6">
           <SnapPalette columns={visibleColumns} terminology={terminology ?? []} draft={draft} onDraftChange={setDraft}
             nextSnapNumber={(snaps?.length ?? 0) + 1} mustReview={mustReview} onMustReviewChange={setMustReview}
             saving={pending} onSave={() => { void save() }} onClear={() => { setDraft({}); setMustReview(false) }}
@@ -128,12 +129,14 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
                 throw error
               }
             }} />
+          <ThisWeek workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} />
+        </section>
+        <aside aria-label="Charted snaps and player notes" className="grid min-w-0 flex-[1_1_300px] content-start gap-5 bg-card px-[18px] pt-[18px] pb-[26px]">
           <ChartedSnaps snaps={snaps ?? []} freshId={createdId} base={`/w/${workspaceId}/games/${game._id}`}
             workspaceId={workspaceId} sourceGameId={game._id} onDuplicated={setCreatedId} />
-        </section>
-        <ChartingAside chartedCount={snaps?.length ?? 0} mustReviewCount={snaps?.filter((snap) => snap.mustReview).length ?? 0}
-          mode={mode} onOpenPlayers={() => setDataTab('players')} workspaceId={game.workspaceId} sourceGameId={game._id}
-          snaps={snaps ?? []} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />
+          <ChartingAside mode={mode} onOpenPlayers={() => setDataTab('players')} workspaceId={game.workspaceId} sourceGameId={game._id}
+            snaps={snaps ?? []} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />
+        </aside>
       </div> : <PlayerNotes workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />}
     </div>
     <Dialog open={finishing} onOpenChange={setFinishing} aria-label="Completeness Warning">
