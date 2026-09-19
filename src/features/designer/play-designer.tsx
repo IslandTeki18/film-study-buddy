@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
-import { attachedSnapIds, DIAGRAM_NOTE_MAX_LENGTH, FORMATION_NAME_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, YARD_PX, type DiagramDoc, type DiagramPlayer, type PlayerSide } from '@convex/domain/diagram'
+import { attachedSnapIds, DIAGRAM_NAME_MAX_LENGTH, DIAGRAM_NOTE_MAX_LENGTH, FORMATION_NAME_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, YARD_PX, type DiagramDoc, type DiagramPlayer, type PlayerSide } from '@convex/domain/diagram'
 import { DiagramSvg } from '@/components/diagram-svg'
 import { Button } from '@/components/ui/button'
 import { Eyebrow, Meta, Page, Panel } from '@/components/ui/panel'
@@ -48,7 +48,7 @@ export function PlayDesigner({ workspaceId, sourceGameId, diagramId }: {
 
 function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
   readonly workspaceId: string; readonly sourceGameId: Id<'sourceGames'>; readonly opponentName: string
-  readonly diagram: Pick<Doc<'diagrams'>, '_id' | 'updatedAt' | 'players' | 'shapes' | 'note' | 'snapId' | 'snapIds' | 'hiddenSide'>
+  readonly diagram: Pick<Doc<'diagrams'>, '_id' | 'updatedAt' | 'players' | 'shapes' | 'name' | 'note' | 'snapId' | 'snapIds' | 'hiddenSide'>
 }): ReactNode {
   const save = useMutation(api.diagrams.save)
   const saveFormation = useMutation(api.formations.save)
@@ -57,9 +57,9 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
   const snaps = useQuery(api.snaps.listBySourceGame, { sourceGameId })
   const snapIds = attachedSnapIds(diagram)
   const { show } = useToast()
-  const serverDoc = useMemo<DiagramDoc>(() => ({ players: diagram.players, shapes: diagram.shapes, ...(diagram.note ? { note: diagram.note } : {}), ...(diagram.hiddenSide ? { hiddenSide: diagram.hiddenSide } : {}) }), [diagram.updatedAt])
+  const serverDoc = useMemo<DiagramDoc>(() => ({ players: diagram.players, shapes: diagram.shapes, ...(diagram.name ? { name: diagram.name } : {}), ...(diagram.note ? { note: diagram.note } : {}), ...(diagram.hiddenSide ? { hiddenSide: diagram.hiddenSide } : {}) }), [diagram.updatedAt])
   const { draft, setDraft, flush, status } = useAutosave(serverDoc, async (next) => {
-    await save({ diagramId: diagram._id, players: next.players, shapes: next.shapes, ...(next.note !== undefined ? { note: next.note } : {}), ...(next.hiddenSide ? { hiddenSide: next.hiddenSide } : {}) })
+    await save({ diagramId: diagram._id, players: next.players, shapes: next.shapes, ...(next.name !== undefined ? { name: next.name } : {}), ...(next.note !== undefined ? { note: next.note } : {}), ...(next.hiddenSide ? { hiddenSide: next.hiddenSide } : {}) })
   })
   const draftRef = useRef(draft)
   draftRef.current = draft
@@ -310,6 +310,9 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
       <header className="flex flex-wrap items-center gap-3 border-b border-border bg-accent/60 px-4 py-3">
         <Eyebrow>Play designer</Eyebrow>
         <span className="text-border-strong">/</span>
+        <input aria-label="Play Diagram name" placeholder="name this Play Diagram, e.g. Trips Right Y-Cross" maxLength={DIAGRAM_NAME_MAX_LENGTH} value={draft.name ?? ''}
+          onChange={(event) => setDraft({ ...draftRef.current, name: event.target.value })} onBlur={flush} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
+          className="min-w-[16ch] rounded-[7px] border border-border-strong bg-muted px-2.5 py-2 font-mono text-[11.5px] font-semibold outline-none focus-visible:border-muted-foreground/60" />
         <span className="text-[13px] font-semibold">{opponentName} — {snapIds.length ? <>Attached to Snap {snapIds.map((id, index) => {
           const snap = snaps?.find((item) => item._id === id)
           return <span key={id}>{index > 0 && ', '}<Link className="underline" to={`${base}/snap/${id}`}>{snap ? snap.core.clipNumber ?? snap.order : 'removed'}</Link></span>
