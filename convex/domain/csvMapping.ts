@@ -160,6 +160,10 @@ export function coerceRow(
       imported[target] = target === 'playNumber' ? String(result.value) : formatCoreValue(target, result.value)
     }
   }
+  if (core.clipNumber === undefined && core.playNumber !== undefined) {
+    core.clipNumber = core.playNumber
+    imported.clipNumber = core.playNumber
+  }
   const flag = core.odk !== undefined && core.odk !== 'O' && core.odk !== 'D' ? 'specialTeams'
     : core.down === undefined && core.distance === undefined && core.playType === undefined ? 'noPlay' : null
   return { index, core, imported, rejected, flag }

@@ -15,6 +15,23 @@ test('maps ODK into core and flags special teams', () => {
   assert.equal(coerceRow({ 'PLAY #': '2', ODK: 'K', DN: '4' }, mapping, 1).flag, 'specialTeams')
 })
 
+test('uses Play # as the Source / Clip # when no clip column is mapped', () => {
+  const row = coerceRow({ 'PLAY #': '42' }, { 'PLAY #': 'playNumber' }, 0)
+
+  assert.equal(row.core.clipNumber, '42')
+  assert.equal(row.imported.clipNumber, '42')
+})
+
+test('preserves an explicitly mapped Clip #', () => {
+  const row = coerceRow(
+    { 'PLAY #': '42', 'CLIP #': 'A-7' },
+    { 'PLAY #': 'playNumber', 'CLIP #': 'clipNumber' },
+    0,
+  )
+
+  assert.equal(row.core.clipNumber, 'A-7')
+})
+
 test('recognizes every ODK header alias', () => {
   assert.equal(isOdkHeader(' O/D/K '), true)
   assert.equal(isOdkHeader('unit'), true)
