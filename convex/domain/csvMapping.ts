@@ -15,7 +15,6 @@ export const IMPORT_TARGETS: readonly { key: ImportTarget; label: string }[] = [
 ]
 export type ColumnMapping = Readonly<Record<string, ImportTarget | null>>
 export const REQUIRED_TARGET_GROUPS: readonly (readonly ImportTarget[])[] = [['clipNumber', 'playNumber']]
-export const ODK_HEADER = 'ODK'
 
 type SnapCore = Partial<Record<CoreFieldKey, CoreValue> & { playNumber: string }>
 
@@ -31,6 +30,7 @@ const HEADER_ALIASES: Readonly<Record<string, ImportTarget>> = {
   'PLAY #': 'playNumber', PLAY: 'playNumber', 'PLAY NUMBER': 'playNumber',
   'CLIP #': 'clipNumber', CLIP: 'clipNumber', 'CLIP NUMBER': 'clipNumber',
   QTR: 'quarter', QUARTER: 'quarter', CLOCK: 'clock', TIME: 'clock',
+  ODK: 'odk', 'O/D/K': 'odk', UNIT: 'odk',
   DN: 'down', DOWN: 'down', DIST: 'distance', DISTANCE: 'distance',
   'YARD LN': 'yardLine', 'YARD LINE': 'yardLine', 'YD LN': 'yardLine', HASH: 'hash',
   PERSONNEL: 'personnel', 'OFF PERS': 'personnel', 'OFF PERSONNEL': 'personnel',
@@ -61,11 +61,6 @@ export function missingRequiredTargets(mapping: ColumnMapping): ImportTarget[][]
   const mapped = new Set(Object.values(mapping))
   return REQUIRED_TARGET_GROUPS.filter((group) => !group.some((target) => mapped.has(target)))
     .map((group) => [...group])
-}
-
-export function findOdkHeader(headers: readonly string[]): string | null {
-  const matches = headers.filter((header) => normalizeHeader(header) === ODK_HEADER)
-  return matches.length === 1 ? matches[0] ?? null : null
 }
 
 export type CoerceResult =
@@ -122,11 +117,10 @@ export interface CoercedRow {
   readonly imported: Record<string, string>
   readonly rejected: readonly { target: ImportTarget; label: string; raw: string }[]
   readonly flag: 'specialTeams' | 'noPlay' | null
-  readonly odk: string | null
 }
 
 export function coerceRow(
-  row: Record<string, string>, mapping: ColumnMapping, odkHeader: string | null, index: number,
+  row: Record<string, string>, mapping: ColumnMapping, index: number,
 ): CoercedRow {
   const core: SnapCore = {}
   const imported: Record<string, string> = {}
@@ -147,11 +141,9 @@ export function coerceRow(
       imported[target] = target === 'playNumber' ? String(result.value) : formatCoreValue(target, result.value)
     }
   }
-  const odkKey = odkHeader && Object.keys(row).find((header) => normalizeHeader(header) === normalizeHeader(odkHeader))
-  const odk = odkKey ? row[odkKey]?.trim() || null : null
-  const flag = odk && !['O', 'D'].includes(odk.toUpperCase()) ? 'specialTeams'
+  const flag = core.odk !== undefined && core.odk !== 'O' && core.odk !== 'D' ? 'specialTeams'
     : core.down === undefined && core.distance === undefined && core.playType === undefined ? 'noPlay' : null
-  return { index, core, imported, rejected, flag, odk }
+  return { index, core, imported, rejected, flag }
 }
 
 export type DuplicateReason = 'clipNumber' | 'playNumber' | 'quarterClock'

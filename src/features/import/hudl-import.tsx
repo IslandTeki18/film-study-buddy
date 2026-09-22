@@ -8,7 +8,6 @@ import {
   autoMap,
   coerceRow,
   findLikelyDuplicates,
-  findOdkHeader,
   headerSignature,
   IMPORT_TARGETS,
   missingRequiredTargets,
@@ -18,7 +17,7 @@ import {
 } from '../../../convex/domain/csvMapping.ts'
 import { MappingStep } from './mapping-step'
 import type { ParsedCsv } from './parse-csv'
-import { PreviewStep } from './preview-step'
+import { PreviewStep, type OdkFilter } from './preview-step'
 import { UploadStep } from './upload-step'
 
 type Step = 'upload' | 'mapping' | 'preview'
@@ -40,6 +39,7 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   const [csv, setCsv] = useState<ParsedCsv | null>(null)
   const [mapping, setMapping] = useState<ColumnMapping | null>(null)
   const [included, setIncluded] = useState<Set<number>>(new Set())
+  const [odkFilter, setOdkFilter] = useState<OdkFilter>('all')
   const [usingRemembered, setUsingRemembered] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +49,7 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   const remembered = useQuery(api.hudlImport.getRememberedMapping, signature ? { signature } : 'skip')
   const existingSnaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
   const rows = useMemo(() => csv && mapping
-    ? csv.rows.map((row, index) => coerceRow(row, mapping, findOdkHeader(csv.headers), index))
+    ? csv.rows.map((row, index) => coerceRow(row, mapping, index))
     : [], [csv, mapping])
   const duplicates = useMemo(
     () => findLikelyDuplicates(existingSnaps ?? [], rows),
@@ -80,8 +80,10 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   }
 
   useEffect(() => {
-    setIncluded(new Set(rows.filter(({ flag }) => flag === null).map(({ index }) => index)))
-  }, [rows])
+    setIncluded(new Set(rows.filter(({ core, flag }) => odkFilter === 'all'
+      ? flag === null
+      : core.odk === odkFilter && flag !== 'noPlay').map(({ index }) => index)))
+  }, [rows, odkFilter])
 
   useEffect(() => {
     if (searchParams.get('step') === 'preview' && !csv) setSearchParams({}, { replace: true })
@@ -112,6 +114,7 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   return <Page>
     {step === 'upload' && <UploadStep sourceGameLabel={game.label} reloadMessage={reloadMessage} onParsed={(parsed) => {
       setCsv(parsed)
+      setOdkFilter('all')
       setMapping(null)
       setReloadMessage(undefined)
       setStep('mapping')
@@ -123,7 +126,8 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
     {step === 'preview' && csv && mapping && existingSnaps === undefined
       ? <div role="status" aria-label="Checking for duplicate Snaps" className="h-32 animate-pulse rounded bg-muted" />
       : step === 'preview' && csv && mapping && <PreviewStep rows={rows} duplicates={duplicates} mappedTargets={mappedTargets}
-      included={included} usingRemembered={usingRemembered} onIncludedChange={setIncluded}
+      included={included} usingRemembered={usingRemembered} odkFilter={odkFilter}
+      onIncludedChange={setIncluded} onOdkFilterChange={setOdkFilter}
       pending={pending} error={error} onImport={() => { void importRows() }}
       onBack={() => {
         setStep(usingRemembered ? 'upload' : 'mapping')

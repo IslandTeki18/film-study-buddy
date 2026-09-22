@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Chip, Panel } from '@/components/ui/panel'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ODK_VALUES, type OdkValue } from '../../../convex/domain/coreFields.ts'
 import {
   IMPORT_TARGETS,
   type CoercedRow,
@@ -10,21 +11,28 @@ import {
   type ImportTarget,
 } from '../../../convex/domain/csvMapping.ts'
 
+export type OdkFilter = 'all' | OdkValue
+const ODK_FILTER_LABELS: Readonly<Record<OdkFilter, string>> = {
+  all: 'All rows', O: 'Offense (O)', D: 'Defense (D)', K: 'Special teams (K)',
+}
+
 const DUPLICATE_LABELS: Readonly<Record<DuplicateReason, string>> = {
   playNumber: 'Likely duplicate (Play #)',
   clipNumber: 'Likely duplicate (Clip #)',
   quarterClock: 'Likely duplicate (Quarter + Clock)',
 }
 
-export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRemembered, pending, error, onIncludedChange, onBack, onChangeMapping, onImport }: {
+export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRemembered, odkFilter, pending, error, onIncludedChange, onOdkFilterChange, onBack, onChangeMapping, onImport }: {
   readonly rows: readonly CoercedRow[]
   readonly duplicates: ReadonlyMap<number, DuplicateReason>
   readonly mappedTargets: ReadonlySet<ImportTarget>
   readonly included: ReadonlySet<number>
   readonly usingRemembered: boolean
+  readonly odkFilter: OdkFilter
   readonly pending: boolean
   readonly error: string | null
   readonly onIncludedChange: (included: Set<number>) => void
+  readonly onOdkFilterChange: (filter: OdkFilter) => void
   readonly onBack: () => void
   readonly onChangeMapping: () => void
   readonly onImport: () => void
@@ -41,6 +49,15 @@ export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRe
       <div>
         <h1 className="text-2xl font-semibold">Preview import</h1>
         <p className="mt-1 text-sm text-muted-foreground">{included.size} of {rows.length} rows will import</p>
+        {mappedTargets.has('odk') && <fieldset className="mt-2 flex flex-wrap gap-3 text-sm" disabled={pending}>
+          <legend className="sr-only">Import only</legend>
+          {(['all', ...ODK_VALUES] as const).map((value) => <label key={value} className="flex items-center gap-1">
+            <input type="radio" name="odk-filter" value={value} checked={odkFilter === value}
+              className="size-4 accent-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onChange={() => onOdkFilterChange(value)} />
+            {ODK_FILTER_LABELS[value]}
+          </label>)}
+        </fieldset>}
         {duplicates.size > 0 && <p className="mt-1 text-sm text-muted-foreground">
           {duplicates.size} rows look like Snaps already in this Source Game.
         </p>}
@@ -75,7 +92,7 @@ export function PreviewStep({ rows, duplicates, mappedTargets, included, usingRe
             <TableCell className="font-medium">{row.imported.playNumber ?? row.imported.clipNumber ?? ''}</TableCell>
             {IMPORT_TARGETS.filter(({ key }) => mappedTargets.has(key)).map(({ key }) => <TableCell key={key}>{row.imported[key] ?? ''}</TableCell>)}
             <TableCell><div className="flex min-w-44 flex-wrap gap-1">
-              {row.flag === 'specialTeams' && <Chip>Likely special teams (ODK = {row.odk})</Chip>}
+              {row.flag === 'specialTeams' && <Chip>Likely special teams (ODK = {String(row.core.odk)})</Chip>}
               {row.flag === 'noPlay' && <Chip>Likely no play</Chip>}
               {duplicates.has(row.index) && <Chip>{DUPLICATE_LABELS[duplicates.get(row.index)!]}</Chip>}
               {row.rejected.map(({ target, label, raw }) => <Chip key={`${target}:${raw}`}>{label}: &quot;{raw}&quot; not imported</Chip>)}
