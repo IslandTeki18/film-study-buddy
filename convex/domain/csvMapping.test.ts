@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { autoMap, coerceRow, includeForOdkFilter, isOdkHeader } from './csvMapping.ts'
+import { autoMap, coerceRow, coerceValue, includeForOdkFilter, isOdkHeader } from './csvMapping.ts'
+
+test('interprets signed Hudl yard lines from the offense perspective', () => {
+  assert.deepEqual(coerceValue('yardLine', '-45'), { ok: true, value: { side: 'own', yard: 45 } })
+  assert.deepEqual(coerceValue('yardLine', '37'), { ok: true, value: { side: 'opp', yard: 37 } })
+})
 
 test('maps ODK into core and flags special teams', () => {
   const mapping = autoMap(['PLAY #', 'ODK', 'DN'])
