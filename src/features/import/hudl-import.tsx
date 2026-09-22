@@ -9,10 +9,11 @@ import {
   coerceRow,
   findLikelyDuplicates,
   headerSignature,
+  includeForOdkFilter,
   IMPORT_TARGETS,
-  isOdkHeader,
   missingRequiredTargets,
   normalizeHeader,
+  preferredOdkHeader,
   type ColumnMapping,
   type ImportTarget,
 } from '../../../convex/domain/csvMapping.ts'
@@ -81,10 +82,10 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
   }
 
   useEffect(() => {
-    setIncluded(new Set(rows.filter(({ core, flag }) => odkFilter === 'all'
-      ? flag === null
-      : core.odk === odkFilter && flag !== 'noPlay').map(({ index }) => index)))
-  }, [rows, odkFilter])
+    setIncluded(new Set(rows.filter((row) => includeForOdkFilter(
+      row, odkFilter, mappedTargets.has('odk'),
+    )).map(({ index }) => index)))
+  }, [rows, odkFilter, mappedTargets])
 
   useEffect(() => {
     if (searchParams.get('step') === 'preview' && !csv) setSearchParams({}, { replace: true })
@@ -156,11 +157,10 @@ function reconcileRememberedMapping(
     reconciled[currentHeader] = target as ImportTarget | null
   }
   // ponytail: mappings saved before the ODK target existed map that header to null; claim it once.
-  for (const [header, target] of Object.entries(reconciled)) {
-    if (target === null && isOdkHeader(header) && !claimed.has('odk')) {
-      reconciled[header] = 'odk'
-      claimed.add('odk')
-    }
+  const odkHeader = preferredOdkHeader(headers)
+  if (odkHeader && reconciled[odkHeader] === null && !claimed.has('odk')) {
+    reconciled[odkHeader] = 'odk'
+    claimed.add('odk')
   }
   return Object.keys(reconciled).length === headers.length && !missingRequiredTargets(reconciled).length
     ? reconciled : null

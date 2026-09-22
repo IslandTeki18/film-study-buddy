@@ -3,15 +3,16 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Chip, Panel } from '@/components/ui/panel'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ODK_VALUES, type OdkValue } from '../../../convex/domain/coreFields.ts'
+import { ODK_VALUES } from '../../../convex/domain/coreFields.ts'
 import {
   IMPORT_TARGETS,
   type CoercedRow,
   type DuplicateReason,
   type ImportTarget,
+  type OdkFilter,
 } from '../../../convex/domain/csvMapping.ts'
 
-export type OdkFilter = 'all' | OdkValue
+export type { OdkFilter } from '../../../convex/domain/csvMapping.ts'
 const ODK_FILTER_LABELS: Readonly<Record<OdkFilter, string>> = {
   all: 'All rows', O: 'Offense (O)', D: 'Defense (D)', K: 'Special teams (K)',
 }

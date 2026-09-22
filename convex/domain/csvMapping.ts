@@ -5,6 +5,7 @@ import {
   normalizeCoreValue,
   type CoreFieldKey,
   type CoreValue,
+  type OdkValue,
 } from './coreFields.ts'
 import { parseYardLine } from './fieldZone.ts'
 
@@ -40,8 +41,17 @@ const HEADER_ALIASES: Readonly<Record<string, ImportTarget>> = {
   'PLAY DIR': 'direction', DIRECTION: 'direction', 'PLAY DIRECTION': 'direction',
   'GN/LS': 'yards', 'GAIN/LOSS': 'yards', YARDS: 'yards', GAIN: 'yards',
 }
+const ODK_HEADER_ALIASES = ['ODK', 'O/D/K', 'UNIT'] as const
 
 export const isOdkHeader = (header: string): boolean => HEADER_ALIASES[normalizeHeader(header)] === 'odk'
+
+export function preferredOdkHeader(headers: readonly string[]): string | null {
+  for (const alias of ODK_HEADER_ALIASES) {
+    const matches = headers.filter((header) => normalizeHeader(header) === alias)
+    if (matches.length === 1) return matches[0] ?? null
+  }
+  return null
+}
 
 export function autoMap(headers: readonly string[]): ColumnMapping {
   const counts = new Map<string, number>()
@@ -49,11 +59,12 @@ export function autoMap(headers: readonly string[]): ColumnMapping {
     const normalized = normalizeHeader(header)
     counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
   }
+  const odkHeader = preferredOdkHeader(headers)
   const claimed = new Set<ImportTarget>()
   return Object.fromEntries(headers.map((header) => {
     const normalized = normalizeHeader(header)
     const target = counts.get(normalized) === 1 ? HEADER_ALIASES[normalized] : undefined
-    if (!target || claimed.has(target)) return [header, null]
+    if (!target || claimed.has(target) || (target === 'odk' && header !== odkHeader)) return [header, null]
     claimed.add(target)
     return [header, target]
   }))
@@ -119,6 +130,12 @@ export interface CoercedRow {
   readonly imported: Record<string, string>
   readonly rejected: readonly { target: ImportTarget; label: string; raw: string }[]
   readonly flag: 'specialTeams' | 'noPlay' | null
+}
+export type OdkFilter = 'all' | OdkValue
+
+export function includeForOdkFilter(row: CoercedRow, filter: OdkFilter, hasOdkMapping: boolean): boolean {
+  return filter === 'all' || !hasOdkMapping ? row.flag === null
+    : row.core.odk === filter && row.flag !== 'noPlay'
 }
 
 export function coerceRow(
