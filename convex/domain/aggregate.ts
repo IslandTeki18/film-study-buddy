@@ -5,7 +5,7 @@ import { downDistanceSituationOf } from './situation.ts'
 
 export const NONE_GROUP = '(none)'
 export const CORE_GROUPING_KEYS = [
-  'personnel', 'formation', 'motion', 'playType', 'playConcept', 'direction', 'hash',
+  'odk', 'personnel', 'formation', 'motion', 'playType', 'playConcept', 'direction', 'hash',
 ] as const satisfies readonly CoreFieldKey[]
 export type CoreGroupingKey = (typeof CORE_GROUPING_KEYS)[number]
 export const DERIVED_GROUPING_KEYS = ['downDistanceSituation', 'fieldZone'] as const
