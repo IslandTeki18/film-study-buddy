@@ -33,7 +33,7 @@ Play Diagram), never for the record.
 ## Snap Data
 
 **Core Snap Data**:
-The standardized, template-independent fields on every Snap: Source / Clip #, Quarter, Clock,
+The standardized, template-independent fields on every Snap: Source / Clip #, Quarter, Clock, ODK,
 Down, Distance, Yard Line, Hash, Personnel, Formation, Motion, Play Type, Play Concept,
 Direction, Yards Gained / Lost. Coaches cannot add fields to it.
 _Avoid_: Standard fields, base fields, system fields.
