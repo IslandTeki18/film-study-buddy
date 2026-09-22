@@ -2,7 +2,7 @@ import { POSITION_GROUPS, PLAYER_GRADES } from './domain/opponentPlayers.ts'
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { TEMPLATE_FIELD_TYPES } from './domain/templateFields.ts'
-import { DIRECTIONS, HASHES, PLAY_TYPES } from './domain/coreFields.ts'
+import { DIRECTIONS, HASHES, ODK_VALUES, PLAY_TYPES } from './domain/coreFields.ts'
 
 const softDelete = {
   deletedAt: v.optional(v.number()),
@@ -13,6 +13,7 @@ export const positionGroupValidator = v.union(...POSITION_GROUPS.map(({ key }) =
 export const gradeValidator = v.union(...PLAYER_GRADES.map((grade) => v.literal(grade)))
 
 const hashValidator = v.union(...HASHES.map((value) => v.literal(value)))
+const odkValidator = v.union(...ODK_VALUES.map((value) => v.literal(value)))
 const playTypeValidator = v.union(...PLAY_TYPES.map((value) => v.literal(value)))
 const directionValidator = v.union(...DIRECTIONS.map((value) => v.literal(value)))
 
@@ -152,6 +153,7 @@ export default defineSchema({
       playNumber: v.optional(v.string()),
       quarter: v.optional(v.number()),
       clock: v.optional(v.string()),
+      odk: v.optional(odkValidator),
       down: v.optional(v.number()),
       distance: v.optional(v.number()),
       yardLine: v.optional(v.object({

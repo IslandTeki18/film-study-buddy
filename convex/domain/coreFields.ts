@@ -1,4 +1,4 @@
-/** Fourteen charting fields; Play # remains a Hudl Reference outside this registry.
+/** Fifteen charting fields; Play # remains a Hudl Reference outside this registry.
  * Clock stays plain text; number ranges belong to the cell editor.
  */
 import { formatYardLine, isValidYardLine, parseYardLine, type YardLine } from './fieldZone.ts'
@@ -9,10 +9,12 @@ export const PLAY_TYPES = [
   'Run', 'Pass', 'RPO', 'Play Action', 'Screen', 'Draw', 'QB Run', 'Special / Trick', 'Other',
 ] as const
 export const DIRECTIONS = ['Left', 'Right', 'Middle', 'Field', 'Boundary', 'Strong', 'Weak', 'N/A'] as const
+export const ODK_VALUES = ['O', 'D', 'K'] as const
 
 export type Hash = (typeof HASHES)[number]
 export type PlayType = (typeof PLAY_TYPES)[number]
 export type Direction = (typeof DIRECTIONS)[number]
+export type OdkValue = (typeof ODK_VALUES)[number]
 
 export type CoreFieldInput =
   | { readonly kind: 'shortText' }
@@ -31,6 +33,7 @@ export const CORE_FIELDS = [
   { key: 'clipNumber', label: 'Source / Clip #', input: { kind: 'shortText' } },
   { key: 'quarter', label: 'Quarter', input: { kind: 'number' } },
   { key: 'clock', label: 'Clock', input: { kind: 'shortText' } },
+  { key: 'odk', label: 'ODK', input: { kind: 'select', options: ODK_VALUES } },
   { key: 'down', label: 'Down', input: { kind: 'number' } },
   { key: 'distance', label: 'Distance', input: { kind: 'number' } },
   { key: 'yardLine', label: 'Yard Line', input: { kind: 'fieldPosition' } },
