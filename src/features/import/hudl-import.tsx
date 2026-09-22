@@ -10,6 +10,7 @@ import {
   findLikelyDuplicates,
   headerSignature,
   IMPORT_TARGETS,
+  isOdkHeader,
   missingRequiredTargets,
   normalizeHeader,
   type ColumnMapping,
@@ -153,6 +154,13 @@ function reconcileRememberedMapping(
     if (!currentHeader || (target !== null && (!validTargets.has(target) || claimed.has(target)))) return null
     if (target !== null) claimed.add(target)
     reconciled[currentHeader] = target as ImportTarget | null
+  }
+  // ponytail: mappings saved before the ODK target existed map that header to null; claim it once.
+  for (const [header, target] of Object.entries(reconciled)) {
+    if (target === null && isOdkHeader(header) && !claimed.has('odk')) {
+      reconciled[header] = 'odk'
+      claimed.add('odk')
+    }
   }
   return Object.keys(reconciled).length === headers.length && !missingRequiredTargets(reconciled).length
     ? reconciled : null

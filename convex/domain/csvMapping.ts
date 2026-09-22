@@ -41,6 +41,8 @@ const HEADER_ALIASES: Readonly<Record<string, ImportTarget>> = {
   'GN/LS': 'yards', 'GAIN/LOSS': 'yards', YARDS: 'yards', GAIN: 'yards',
 }
 
+export const isOdkHeader = (header: string): boolean => HEADER_ALIASES[normalizeHeader(header)] === 'odk'
+
 export function autoMap(headers: readonly string[]): ColumnMapping {
   const counts = new Map<string, number>()
   for (const header of headers) {
