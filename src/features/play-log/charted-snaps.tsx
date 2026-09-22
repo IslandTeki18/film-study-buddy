@@ -102,7 +102,7 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
     </div>}
     {snaps.length === 0 ? <div className="rounded-[10px] border border-border px-4 py-6">
         <h2 className="font-semibold">No Snaps yet</h2>
-        <Link className="underline" to={`${base}/import`}>Import Hudl CSV</Link>
+        <Link className="underline" to={`${base}/import`}>Import Hudl file</Link>
       </div> : <ul aria-label="Charted snaps" className="grid max-h-[560px] gap-1.5 overflow-y-auto pr-0.5">
           {shown.map((snap) => {
             const { core } = snap

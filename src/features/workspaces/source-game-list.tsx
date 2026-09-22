@@ -60,7 +60,7 @@ export function SourceGameList({ workspaceId }: { readonly workspaceId: string }
     {games.length === 0 ? <section className="grid gap-3">
       <h3 className="font-semibold">No source games yet</h3>
       <div className="flex gap-2">
-        <Link className={buttonVariants()} to={`${path}/new?intent=import`}>Import Hudl CSV</Link>
+        <Link className={buttonVariants()} to={`${path}/new?intent=import`}>Import Hudl file</Link>
         <Link className={buttonVariants({ variant: 'outline' })} to={`${path}/new?intent=manual`}>Create manually</Link>
       </div>
     </section> : <div className="overflow-x-auto rounded-[11px] border border-border">

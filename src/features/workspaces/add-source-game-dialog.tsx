@@ -64,7 +64,7 @@ export function AddSourceGameDialog({ workspaceId }: { readonly workspaceId: str
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={close}>Cancel</Button>
-        <Button type="submit" value="import" autoFocus={intent !== 'manual'} disabled={pending || normalized === null || !template}>Import Hudl CSV</Button>
+        <Button type="submit" value="import" autoFocus={intent !== 'manual'} disabled={pending || normalized === null || !template}>Import Hudl file</Button>
         <Button type="submit" value="manual" variant="outline" autoFocus={intent === 'manual'} disabled={pending || normalized === null || !template}>Create Manually</Button>
       </div>
     </form>

@@ -108,7 +108,7 @@ function GameHudlImport({ workspaceId, gameId }: { readonly workspaceId: string;
     }
   }, [csv, remembered, setSearchParams])
 
-  if (game === undefined) return <div role="status" aria-label="Loading Hudl CSV Import" className="m-6 h-32 animate-pulse rounded bg-muted" />
+  if (game === undefined) return <div role="status" aria-label="Loading Hudl file import" className="m-6 h-32 animate-pulse rounded bg-muted" />
   if (!game || game.workspaceId !== workspaceId) return <main className="space-y-3 p-6">
     <h1>Source Game not found</h1><Link className="underline" to={`/w/${workspaceId}/games`}>Source Games</Link>
   </main>

@@ -104,7 +104,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
           else setFinishing(true)
         }}>Finish study session</Button>
         {(snaps?.length ?? 0) > 0 && <Link className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl CSV</Link>}
+          to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl file</Link>}
       </div>
       {dataTab === 'charting' ? <div className="mt-3.5 flex flex-wrap items-stretch gap-px bg-border">
         <section className="min-w-0 flex-[1_1_560px] bg-background px-5 pt-4 pb-6">
