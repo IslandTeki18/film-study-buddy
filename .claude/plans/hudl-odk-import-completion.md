@@ -12,10 +12,11 @@ unchanged and excluded from commits. No dependencies or migrations were added.
 | 4 | `db14043` | Upgraded legacy remembered mappings by claiming one recognized ODK header. Typecheck and all tests passed. |
 | 5 | `aa252bd` | Added ODK to the Core Snap Data glossary. |
 | 6 fix | `8304f03` | Added ODK to the explicit Opponent Data grouping catalog after manual verification exposed that it does not derive directly from `CORE_FIELDS`. Typecheck and all tests passed. |
+| Final review | `c104784` | Reset hidden stale filters when ODK is unmapped and made duplicate ODK aliases prefer `ODK`, then `O/D/K`, then `UNIT`. Added focused regressions; all tests passed. |
 
 ## Verification commands and results
 
-- `npm run build`: passed strict TypeScript, all 19 tests, and Electron/Vite production builds.
+- `npm run build`: passed strict TypeScript, all 21 tests, and Electron/Vite production builds.
 - `git diff --check ce0ce7b..HEAD`: passed.
 - `npx convex dev --once`: blocked because the configured account cannot access the selected
   Convex project; no project configuration was changed.
@@ -42,7 +43,8 @@ unchanged and excluded from commits. No dependencies or migrations were added.
 - The filter is native, session-only UI state and changes only the included checkbox set; rows are
   never hidden and manually checking a row remains possible.
 - Invalid ODK values reuse the existing select rejection path instead of adding special validation.
-- Remembered mappings claim only the first recognized null ODK header, preserving unique targets.
+- Auto and remembered mappings prefer `ODK`, then `O/D/K`, then `UNIT`, preserving unique targets
+  regardless of CSV column order.
 - `String(row.core.odk)` is used only at the chip boundary because the existing `SnapCore` model
   intentionally exposes the broad `CoreValue` union; no unrelated keyed-type refactor was added.
 
