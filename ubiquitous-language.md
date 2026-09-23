@@ -21,7 +21,7 @@ unambiguous.
 
 **Source Game**:
 One piece of opponent film studied inside a Workspace, identified by its matchup. Holds a Play
-Log, Quick Notes, a Must Review queue, and Play Diagrams, and uses exactly one Coaching
+Log, Quick Notes, and a Must Review queue, and uses exactly one Coaching
 Template.
 _Avoid_: Game, film, opponent game, clip set.
 
@@ -136,8 +136,9 @@ Mode.
 _Avoid_: Review list, flagged plays, inbox.
 
 **Play Diagram**:
-A saved drawing of a play, attached to one or more Snaps, built from scratch in the Play Designer and
-reusable as report content. Optionally carries a Diagram Name.
+A saved drawing of a play that belongs to a Weekly Opponent Workspace and is shared by every
+Source Game of that Workspace. It is attached to one or more Snaps, built from scratch in the
+Play Designer, reusable as report content, and optionally carries a Diagram Name.
 _Avoid_: Diagram alone where Diagram Note is nearby, drawing, sketch, whiteboard.
 
 **Play Designer**:

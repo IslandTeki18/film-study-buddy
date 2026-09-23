@@ -1113,9 +1113,9 @@ No arbitrary text-placement tool is required in V1.
 
 ## 55. Play Diagrams
 
-A Play Diagram may be attached to several Snaps in the same Source Game; a Snap has at most one Play Diagram.
+A Play Diagram may be attached to several Snaps in the same Weekly Opponent Workspace; a Snap has at most one Play Diagram.
 
-Each Source Game contains a Play Diagrams gallery.
+Each Weekly Opponent Workspace has one Play Diagrams gallery, reachable from every Source Game.
 
 The coach can:
 
@@ -1696,12 +1696,13 @@ Soft Delete:
     ├── Quick Notes
     ├── Must Review Flags
     ├── Cell Notes
-    ├── Template Analysis
-    └── Play Diagrams
+    └── Template Analysis
 ```
 
 Undo restores the entire hierarchy.
-The same rule applies to deleting a Weekly Opponent Workspace.
+Deleting a Weekly Opponent Workspace also soft-deletes its Play Diagrams. Deleting a Snap never
+deletes a diagram still attached to another live Snap; when no live Snaps remain, the coach's
+answer to "Keep the Play Diagram?" decides whether the diagram is kept or deleted.
 
 ---
 
@@ -2049,9 +2050,9 @@ App
         │   └── Source Game
         │       ├── Play Log
         │       ├── Quick Notes
-        │       ├── Must Review
-        │       └── Play Diagrams
+        │       └── Must Review
         │
+        ├── Play Diagrams
         ├── Opponent Data
         ├── Tendencies / Alerts
         └── Reports

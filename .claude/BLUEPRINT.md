@@ -224,10 +224,10 @@ Indexes `by_workspace`, `by_player`. Chronological entries with at most 20 linke
 the same Workspace. Reads omit dead Snaps and deleted Source Games; `clipCount` counts distinct
 live linked Snaps per Opponent Player. Both tables join Workspace Soft Deletion and Undo.
 
-**`diagrams`** — `sourceGameId`, `snapId?`, `name?`, `note?`,
+**`diagrams`** — `workspaceId`, origin `sourceGameId`, `snapIds: Id<'snaps'>[]`, `name?`, `note?`,
 `players: Array<{ id, side: 'offense' | 'defense', x: number, y: number, label?, jersey? }>`,
 `shapes: Array<{ id, tool: 'arrow' | 'curve' | 'block' | 'dashed' | 'free', points: number[] }>`,
-`updatedAt`. Indexes `by_sourceGame`, `by_snap`. Coordinates are normalized 0–1 so the same
+`updatedAt`. Indexes `by_workspace`, `by_sourceGame`, `by_snap`. Coordinates are normalized 0–1 so the same
 document renders at any size, including the PDF.
 
 ### 5.6 Analysis and Reporting
@@ -297,7 +297,7 @@ its arguments with Convex validators and filters `deletedAt === undefined` on re
 | `import` | `getRememberedMapping`, `detectDuplicates`, `commit`, `rememberMapping` |
 | `notes` | `listQuickNotes`, `createQuickNote`, `updateQuickNote`, `removeQuickNote`, `listCellNotes`, `setCellNote` |
 | `opponentPlayers` | `listByWorkspace`, `create`, `update`, `remove`, `createNote`, `updateNote`, `removeNote` |
-| `diagrams` | `listBySourceGame`, `get`, `create`, `save`, `remove` |
+| `diagrams` | `listByWorkspace`, `get`, `create`, `save`, `attach`, `detach`, `remove` |
 | `opponentData` | `aggregate({ workspaceId, gameIds, groupBy, groupBy2? })`, `listGroupingFields({ workspaceId })` |
 | `tendencies` | `listByWorkspace`, `create`, `update`, `remove`, `listCategories`, `createCategory` |
 | `reports` | `listByWorkspace`, `get`, `create`, `duplicateAsPlayerReport`, `rename`, `setBlocks`, `remove` |
@@ -325,9 +325,9 @@ UI shows a toast with a single Undo action wired to `deletions.undo`. Bulk edits
 toast shape backed by `snaps.undoBulkUpdate`.
 
 Hierarchies that cascade as one batch:
-- Workspace → Source Games → Snaps, Quick Notes, Cell Notes, Diagrams; plus Tendencies, Reports, Opponent Players and Player Notes
-- Source Game → Snaps, Quick Notes, Cell Notes, Diagrams
-- Snap → Cell Notes, its Diagram, Quick Notes bound to it
+- Workspace → Source Games → Snaps, Quick Notes and Cell Notes; plus Diagrams, Tendencies, Reports, Opponent Players and Player Notes
+- Source Game → Snaps, Quick Notes and Cell Notes
+- Snap → Cell Notes, Quick Notes bound to it, and optionally any Play Diagram left with no other live Snap
 - Template → Sections → Fields → Views (Snap analysis values are left in place, recoverable)
 - Template Field → the field only; values stay as orphans in `snaps.analysis`
 
