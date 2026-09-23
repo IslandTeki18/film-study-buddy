@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
-import { mutation, query, type MutationCtx } from './_generated/server'
+import { internalMutation, mutation, query, type MutationCtx } from './_generated/server'
 import { softDeleteBatch } from './deletions'
 import { attachedSnapIds, normalizeDiagram } from './domain/diagram.ts'
 import schema from './schema'
@@ -64,9 +64,28 @@ export const create = mutation({
       if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id)) throw new Error('This Snap already has a Play Diagram')
     }
     return ctx.db.insert('diagrams', {
-      sourceGameId: game._id, snapIds: args.snapId ? [args.snapId] : [],
+      sourceGameId: game._id, workspaceId: game.workspaceId, snapIds: args.snapId ? [args.snapId] : [],
       players: [], shapes: [], updatedAt: Date.now(),
     })
+  },
+})
+
+// ponytail: one-off backfill for workspace-shared diagrams; delete after every deployment reports patched=0.
+export const backfillWorkspaceId = internalMutation({
+  args: {}, returns: v.object({ patched: v.number(), orphaned: v.number() }),
+  handler: async (ctx) => {
+    let patched = 0
+    let orphaned = 0
+    for (const diagram of await ctx.db.query('diagrams').collect()) {
+      if (diagram.workspaceId !== undefined) continue
+      const game = await ctx.db.get(diagram.sourceGameId)
+      if (!game) orphaned += 1
+      else {
+        await ctx.db.patch(diagram._id, { workspaceId: game.workspaceId })
+        patched += 1
+      }
+    }
+    return { patched, orphaned }
   },
 })
 

@@ -216,6 +216,7 @@ export default defineSchema({
   }).index('by_workspace', ['workspaceId']).index('by_player', ['playerId']).index('by_deleteBatchId', ['deleteBatchId']),
   diagrams: defineTable({
     sourceGameId: v.id('sourceGames'),
+    workspaceId: v.optional(v.id('workspaces')),
     snapId: v.optional(v.id('snaps')),
     snapIds: v.optional(v.array(v.id('snaps'))),
     name: v.optional(v.string()),
@@ -229,6 +230,7 @@ export default defineSchema({
     ...softDelete,
   })
     .index('by_sourceGame', ['sourceGameId'])
+    .index('by_workspace', ['workspaceId'])
     .index('by_snap', ['snapId'])
     .index('by_deleteBatchId', ['deleteBatchId']),
   // Coach-saved offensive alignments for the Play Designer "Start from" strip. Offense players only.
