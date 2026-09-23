@@ -16,13 +16,8 @@ const diagramValidator = v.object({
 async function requireLiveDiagram(ctx: MutationCtx, id: Id<'diagrams'>): Promise<Doc<'diagrams'>> {
   const diagram = await ctx.db.get(id)
   if (!diagram || diagram.deletedAt !== undefined) throw new Error('Play Diagram not found')
-  await requireLiveWorkspace(ctx, workspaceIdOf(diagram))
+  await requireLiveWorkspace(ctx, diagram.workspaceId)
   return diagram
-}
-
-function workspaceIdOf(diagram: Doc<'diagrams'>): Id<'workspaces'> {
-  if (!diagram.workspaceId) throw new Error('Play Diagram not found')
-  return diagram.workspaceId
 }
 
 async function isLiveWorkspace(ctx: QueryCtx, id: Id<'workspaces'>): Promise<boolean> {
@@ -43,7 +38,7 @@ export const get = query({
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId('diagrams', args.diagramId)
     const diagram = id ? await ctx.db.get(id) : null
-    if (!diagram || diagram.deletedAt !== undefined || !diagram.workspaceId || !await isLiveWorkspace(ctx, diagram.workspaceId)) return null
+    if (!diagram || diagram.deletedAt !== undefined || !await isLiveWorkspace(ctx, diagram.workspaceId)) return null
     return diagram
   },
 })
@@ -125,7 +120,7 @@ export const attach = mutation({
     const diagram = await requireLiveDiagram(ctx, args.diagramId)
     const snap = await requireLiveSnap(ctx, args.snapId)
     const game = await requireLiveSourceGame(ctx, snap.sourceGameId)
-    if (game.workspaceId !== workspaceIdOf(diagram)) throw new Error('Snap belongs to a different Weekly Opponent Workspace')
+    if (game.workspaceId !== diagram.workspaceId) throw new Error('Snap belongs to a different Weekly Opponent Workspace')
     if (await hasLiveDiagramForSnap(ctx, game.workspaceId, snap._id, diagram._id)) throw new Error('This Snap already has a Play Diagram')
     await ctx.db.patch(diagram._id, {
       snapIds: [...new Set([...attachedSnapIds(diagram), snap._id])], snapId: undefined, updatedAt: Date.now(),

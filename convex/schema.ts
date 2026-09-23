@@ -216,7 +216,7 @@ export default defineSchema({
   }).index('by_workspace', ['workspaceId']).index('by_player', ['playerId']).index('by_deleteBatchId', ['deleteBatchId']),
   diagrams: defineTable({
     sourceGameId: v.id('sourceGames'),
-    workspaceId: v.optional(v.id('workspaces')),
+    workspaceId: v.id('workspaces'),
     snapId: v.optional(v.id('snaps')),
     snapIds: v.optional(v.array(v.id('snaps'))),
     name: v.optional(v.string()),
