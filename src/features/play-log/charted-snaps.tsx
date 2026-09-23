@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { Dialog } from '@/components/ui/dialog'
@@ -59,6 +59,7 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
   const [error, setError] = useState('')
   const { show } = useToast()
   const liveSelected = new Set(snaps.filter((snap) => selected.has(snap._id)).map((snap) => snap._id))
+  const orphaned = useQuery(api.diagrams.countOrphanedBy, confirming ? { snapIds: [...liveSelected] } : 'skip')
   const remove = useMutation(api.snaps.removeMany).withOptimisticUpdate((store, args) => {
     const query = { sourceGameId: args.sourceGameId }
     const current = store.getQuery(api.snaps.listBySourceGame, query)
@@ -66,8 +67,8 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
     if (current) store.setQuery(api.snaps.listBySourceGame, query, current.filter((snap) => !ids.has(snap._id)))
   })
   const undo = useMutation(api.deletions.undo)
-  const deleteSnaps = useUndoableMutation((snapIds: Id<'snaps'>[]) => remove({ sourceGameId, snapIds }),
-    async (args) => { await undo(args) }, (snapIds) => `Deleted ${snapIds.length} ${snapIds.length === 1 ? 'Snap' : 'Snaps'}`)
+  const deleteSnaps = useUndoableMutation(({ snapIds, keepDiagrams }: { snapIds: Id<'snaps'>[]; keepDiagrams: boolean }) => remove({ sourceGameId, snapIds, keepDiagrams }),
+    async (args) => { await undo(args) }, ({ snapIds }) => `Deleted ${snapIds.length} ${snapIds.length === 1 ? 'Snap' : 'Snaps'}`)
   const shown = [...snaps].reverse().filter((snap) => !onlyReview || snap.mustReview)
   const imports = importGroups(snaps)
   const shownSelected = shown.filter((snap) => liveSelected.has(snap._id)).length
@@ -76,6 +77,17 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
   }, [shownSelected, shown.length])
   const count = pending ? selected.size : liveSelected.size
   const selectionLabel = `${count} ${count === 1 ? 'Snap' : 'Snaps'}`
+  function runDelete(keepDiagrams: boolean): void {
+    if (pending || orphaned === undefined || !liveSelected.size) return
+    const snapIds = [...liveSelected]
+    setSelected(new Set(snapIds)); setPending(true); setError('')
+    void deleteSnaps({ snapIds, keepDiagrams }).then(() => {
+      setConfirming(false); setSelected(new Set()); anchor.current = null
+    }).catch((error: unknown) => {
+      const message = `Could not delete Snaps. ${error instanceof Error ? error.message : String(error)}`
+      setError(message); show({ message })
+    }).finally(() => setPending(false))
+  }
   return <div>
     <div className="mb-2.5 flex flex-wrap items-center gap-2">
       {snaps.length > 0 && <input ref={allCheckbox} type="checkbox" aria-label="Select all shown Snaps"
@@ -140,21 +152,16 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
       onCancel={(event) => { if (pending) event.preventDefault() }}>
       {confirming && <div className="space-y-4">
         <h2 className="text-lg font-semibold">Delete {selectionLabel}?</h2>
-        <p>Their Cell Notes, Quick Notes and Play Diagrams are soft-deleted with them. Undo restores them together.</p>
+        {orphaned === undefined ? <p role="status">Checking for Play Diagrams…</p> : orphaned > 0
+          ? <p>{orphaned} Play {orphaned === 1 ? 'Diagram is' : 'Diagrams are'} attached only to these Snaps. Keep the Play Diagrams?</p>
+          : <p>Their Cell Notes and Quick Notes are soft-deleted with them. Undo restores them together.</p>}
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button autoFocus variant="outline" disabled={pending} onClick={() => setConfirming(false)}>Cancel</Button>
-          <Button disabled={pending || !liveSelected.size} onClick={() => {
-            if (pending || !liveSelected.size) return
-            const ids = [...liveSelected]
-            setSelected(new Set(ids)); setPending(true); setError('')
-            void deleteSnaps(ids).then(() => {
-              setConfirming(false); setSelected(new Set()); anchor.current = null
-            }).catch((error: unknown) => {
-              const message = `Could not delete Snaps. ${error instanceof Error ? error.message : String(error)}`
-              setError(message); show({ message })
-            }).finally(() => setPending(false))
-          }}>Delete {selectionLabel}</Button>
+          {orphaned !== undefined && orphaned > 0
+            ? <><Button disabled={pending} onClick={() => runDelete(true)}>Keep Play Diagrams</Button>
+              <Button disabled={pending} onClick={() => runDelete(false)}>Delete Play Diagrams too</Button></>
+            : <Button disabled={pending || orphaned === undefined || !liveSelected.size} onClick={() => runDelete(false)}>Delete {selectionLabel}</Button>}
         </div>
       </div>}
     </Dialog>

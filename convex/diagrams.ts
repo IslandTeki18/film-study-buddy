@@ -5,7 +5,7 @@ import { softDeleteBatch } from './deletions'
 import { attachedSnapIds, normalizeDiagram } from './domain/diagram.ts'
 import schema from './schema'
 import { requireLiveSnap } from './snaps'
-import { requireLiveSourceGame } from './sourceGames'
+import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
 import { requireLiveWorkspace } from './workspaces'
 
 const diagramValidator = v.object({
@@ -32,6 +32,41 @@ async function hasLiveDiagramForSnap(ctx: MutationCtx, workspaceId: Id<'workspac
   const diagrams = await ctx.db.query('diagrams').withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId)).collect()
   return diagrams.some((diagram) => diagram.deletedAt === undefined && diagram._id !== exceptId && attachedSnapIds(diagram).includes(snapId))
 }
+
+export async function diagramsOrphanedBy(
+  ctx: QueryCtx | MutationCtx, workspaceId: Id<'workspaces'>, snapIds: ReadonlySet<Id<'snaps'>>,
+): Promise<Doc<'diagrams'>[]> {
+  const diagrams = await ctx.db.query('diagrams').withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId)).collect()
+  const orphaned = []
+  for (const diagram of diagrams) {
+    if (diagram.deletedAt !== undefined) continue
+    const liveSnapIds = []
+    for (const snapId of attachedSnapIds(diagram)) {
+      const snap = await ctx.db.get(snapId)
+      if (snap && snap.deletedAt === undefined && await isLiveSourceGame(ctx, snap.sourceGameId)) liveSnapIds.push(snapId)
+    }
+    if (liveSnapIds.length > 0 && liveSnapIds.every((snapId) => snapIds.has(snapId))) orphaned.push(diagram)
+  }
+  return orphaned
+}
+
+export const countOrphanedBy = query({
+  args: { snapIds: v.array(v.id('snaps')) }, returns: v.number(),
+  handler: async (ctx, args) => {
+    let workspaceId: Id<'workspaces'> | undefined
+    const liveSnapIds = new Set<Id<'snaps'>>()
+    for (const snapId of args.snapIds) {
+      const snap = await ctx.db.get(snapId)
+      if (!snap || snap.deletedAt !== undefined || !await isLiveSourceGame(ctx, snap.sourceGameId)) continue
+      const game = await ctx.db.get(snap.sourceGameId)
+      if (!game) continue
+      if (workspaceId && game.workspaceId !== workspaceId) throw new Error('Snap belongs to a different Weekly Opponent Workspace')
+      workspaceId = game.workspaceId
+      liveSnapIds.add(snapId)
+    }
+    return workspaceId ? (await diagramsOrphanedBy(ctx, workspaceId, liveSnapIds)).length : 0
+  },
+})
 
 export const get = query({
   args: { diagramId: v.string() }, returns: v.union(diagramValidator, v.null()),

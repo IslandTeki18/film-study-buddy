@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
@@ -21,6 +21,7 @@ export function RowActions({ snap, base, onDuplicated }: {
   const [confirming, setConfirming] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const orphaned = useQuery(api.diagrams.countOrphanedBy, confirming ? { snapIds: [snap._id] } : 'skip')
   const mark = useSetMustReview(snap.sourceGameId)
   const remove = useMutation(api.snaps.remove).withOptimisticUpdate((store, args) => {
     const query = { sourceGameId: snap.sourceGameId }
@@ -40,7 +41,18 @@ export function RowActions({ snap, base, onDuplicated }: {
     store.setQuery(api.snaps.listBySourceGame, query, [...current, copy].sort((a, b) => a.order - b.order))
   })
   const undo = useMutation(api.deletions.undo)
-  const deleteSnap = useUndoableMutation(() => remove({ snapId: snap._id }), async (args) => { await undo(args) }, () => `Deleted Snap ${label}`)
+  const deleteSnap = useUndoableMutation((keepDiagrams: boolean) => remove({ snapId: snap._id, keepDiagrams }), async (args) => { await undo(args) }, () => `Deleted Snap ${label}`)
+  function runDelete(keepDiagrams: boolean): void {
+    if (pending || orphaned === undefined) return
+    setPending(true)
+    void deleteSnap(keepDiagrams).then(() => setConfirming(false))
+      .catch((error: unknown) => {
+        const message = `Could not delete Snap. ${error instanceof Error ? error.message : String(error)}`
+        setError(message)
+        show({ message })
+      })
+      .finally(() => setPending(false))
+  }
   return <>
     <DropdownMenu label="⋯" triggerProps={{ variant: 'ghost', size: 'sm', className: 'h-7 px-2', 'aria-label': `Actions for Snap ${label}` }} items={[
       { label: 'Open Play Detail', onSelect: () => navigate(`${base}/snap/${snap._id}`) },
@@ -61,21 +73,16 @@ export function RowActions({ snap, base, onDuplicated }: {
     <Dialog open={confirming} onOpenChange={setConfirming} aria-label={`Delete Snap ${label}`}>
       {confirming && <div className="space-y-4">
         <h2 className="text-lg font-semibold">Delete Snap {label}?</h2>
-        <p>Its Cell Notes, Quick Notes and Play Diagram are soft-deleted with it. Undo restores them together.</p>
+        {orphaned === undefined ? <p role="status">Checking for Play Diagrams…</p> : orphaned > 0
+          ? <p>This Snap's Play Diagram is not attached to any other Snap. Keep the Play Diagram?</p>
+          : <p>Its Cell Notes and Quick Notes are soft-deleted with it. Undo restores them together.</p>}
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button autoFocus variant="outline" onClick={() => setConfirming(false)}>Cancel</Button>
-          <Button disabled={pending} onClick={() => {
-            if (pending) return
-            setPending(true)
-            void deleteSnap(undefined).then(() => setConfirming(false))
-              .catch((error: unknown) => {
-                const message = `Could not delete Snap. ${error instanceof Error ? error.message : String(error)}`
-                setError(message)
-                show({ message })
-              })
-              .finally(() => setPending(false))
-          }}>Delete Snap</Button>
+          {orphaned !== undefined && orphaned > 0
+            ? <><Button disabled={pending} onClick={() => runDelete(true)}>Keep Play Diagram</Button>
+              <Button disabled={pending} onClick={() => runDelete(false)}>Delete Play Diagram too</Button></>
+            : <Button disabled={pending || orphaned === undefined} onClick={() => runDelete(false)}>Delete Snap</Button>}
         </div>
       </div>}
     </Dialog>

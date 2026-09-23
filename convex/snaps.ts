@@ -7,6 +7,7 @@ import type { Doc, Id } from './_generated/dataModel'
 import { collectSnapCascade } from './workspaces'
 import { softDeleteBatch } from './deletions'
 import { requireLiveSourceGame } from './sourceGames'
+import { diagramsOrphanedBy } from './diagrams'
 import { CARRY_FORWARD_CORE_KEYS, getCoreField, isCoreFieldKey, normalizeCoreValue } from './domain/coreFields.ts'
 import { sectionAppliesTo } from './domain/playSide.ts'
 import { restoredValueFor } from './domain/provenance.ts'
@@ -265,18 +266,23 @@ export const setMustReview = mutation({
 })
 
 export const remove = mutation({
-  args: { snapId: v.id('snaps') }, returns: v.string(),
+  args: { snapId: v.id('snaps'), keepDiagrams: v.optional(v.boolean()) }, returns: v.string(),
   handler: async (ctx, args) => {
     const snap = await requireLiveSnap(ctx, args.snapId)
+    const game = await requireLiveSourceGame(ctx, snap.sourceGameId)
+    const records = await collectSnapCascade(ctx, snap)
+    if (args.keepDiagrams !== true) {
+      for (const diagram of await diagramsOrphanedBy(ctx, game.workspaceId, new Set([snap._id]))) records.push({ table: 'diagrams', id: diagram._id })
+    }
     return softDeleteBatch(ctx, { kind: 'snap', label: snap.core.clipNumber ?? `Snap ${snap.order}`,
-      records: await collectSnapCascade(ctx, snap) })
+      records })
   },
 })
 
 const BULK_DELETE_MAX = 500
 
 export const removeMany = mutation({
-  args: { sourceGameId: v.id('sourceGames'), snapIds: v.array(v.id('snaps')) },
+  args: { sourceGameId: v.id('sourceGames'), snapIds: v.array(v.id('snaps')), keepDiagrams: v.optional(v.boolean()) },
   returns: v.string(),
   handler: async (ctx, args) => {
     const game = await requireLiveSourceGame(ctx, args.sourceGameId)
@@ -288,6 +294,9 @@ export const removeMany = mutation({
     const records: Parameters<typeof softDeleteBatch>[1]['records'][number][] = []
     // ponytail: collectSnapCascade rescans the game's Quick Notes per Snap; hoist that load out of the loop if bulk deletes hit Convex read limits.
     for (const snap of snaps) records.push(...await collectSnapCascade(ctx, snap))
+    if (args.keepDiagrams !== true) {
+      for (const diagram of await diagramsOrphanedBy(ctx, game.workspaceId, new Set(ids))) records.push({ table: 'diagrams', id: diagram._id })
+    }
     return softDeleteBatch(ctx, { kind: 'snaps', label: ids.length === 1 ? (snaps[0]!.core.clipNumber ?? `Snap ${snaps[0]!.order}`) : `${ids.length} Snaps`, records })
   },
 })
