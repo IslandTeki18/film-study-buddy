@@ -101,7 +101,7 @@ async function restoreTable(ctx: MutationCtx, table: SoftDeleteTable, batchId: s
       .collect()
     for (const diagram of diagrams) {
       const attached = await ctx.db.query('diagrams')
-        .withIndex('by_sourceGame', (query) => query.eq('sourceGameId', diagram.sourceGameId)).collect()
+        .withIndex('by_workspace', (query) => query.eq('workspaceId', diagram.workspaceId)).collect()
       const occupied = new Set(attached.filter((other) => other._id !== diagram._id && other.deletedAt === undefined).flatMap(attachedSnapIds))
       await ctx.db.patch(diagram._id, {
         deletedAt: undefined, deleteBatchId: undefined,

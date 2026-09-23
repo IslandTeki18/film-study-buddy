@@ -2,7 +2,6 @@ import { v } from 'convex/values'
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import schema from './schema'
-import { attachedSnapIds } from './domain/diagram.ts'
 import { normalizeName } from './domain/names.ts'
 import { requireLiveSeason } from './seasons'
 import { softDeleteBatch } from './deletions'
@@ -106,20 +105,10 @@ export const update = mutation({
   },
 })
 
-export async function collectSnapCascade(ctx: MutationCtx, snap: Doc<'snaps'>, deletingSourceGame = false): Promise<CascadeRecords> {
+export async function collectSnapCascade(ctx: MutationCtx, snap: Doc<'snaps'>): Promise<CascadeRecords> {
   const records: CascadeRecords = [{ table: 'snaps', id: snap._id }]
   const notes = await ctx.db.query('cellNotes').withIndex('by_snap', (q) => q.eq('snapId', snap._id)).collect()
   for (const note of notes) if (note.deletedAt === undefined) records.push({ table: 'cellNotes', id: note._id })
-  if (!deletingSourceGame) {
-    const diagrams = await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', snap.sourceGameId)).collect()
-    for (const diagram of diagrams) {
-      const snapIds = attachedSnapIds(diagram)
-      if (diagram.deletedAt !== undefined || !snapIds.includes(snap._id)) continue
-      if (snapIds.length === 1) records.push({ table: 'diagrams', id: diagram._id })
-      // ponytail: shared detach is not restored by Undo; ledger the attachment if that becomes required.
-      else await ctx.db.patch(diagram._id, { snapIds: snapIds.filter((id) => id !== snap._id), snapId: undefined, updatedAt: Date.now() })
-    }
-  }
   // ponytail: scans the game's Quick Notes per Snap; add a by_snap index if cascades exceed V1 volume.
   const quickNotes = await ctx.db.query('quickNotes').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', snap.sourceGameId)).collect()
   for (const note of quickNotes) if (note.snapId === snap._id && note.deletedAt === undefined) records.push({ table: 'quickNotes', id: note._id })
@@ -136,8 +125,9 @@ export async function collectSourceGameCascade(
   const snaps = (await ctx.db.query('snaps')
     .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', sourceGameId)).collect())
     .filter((snap) => snap.deletedAt === undefined)
-  for (const snap of snaps) records.push(...await collectSnapCascade(ctx, snap, true))
-  for (const table of ['quickNotes', 'diagrams'] as const) {
+  for (const snap of snaps) records.push(...await collectSnapCascade(ctx, snap))
+  // Play Diagrams belong to the Workspace; deleting a Source Game only hides its Snaps' attachments.
+  for (const table of ['quickNotes'] as const) {
     const rows = await ctx.db.query(table)
       .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', sourceGameId)).collect()
     for (const row of rows) {
@@ -157,7 +147,7 @@ export async function collectWorkspaceCascade(
   for (const game of games) {
     if (game.deletedAt === undefined) records.push(...await collectSourceGameCascade(ctx, game._id))
   }
-  for (const table of ['tendencies', 'reports', 'opponentPlayers', 'playerNotes'] as const) {
+  for (const table of ['tendencies', 'reports', 'opponentPlayers', 'playerNotes', 'diagrams'] as const) {
     const rows = await ctx.db.query(table)
       .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId)).collect()
     for (const row of rows) {

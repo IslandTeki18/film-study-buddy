@@ -286,7 +286,7 @@ export const removeMany = mutation({
     const snaps = await Promise.all(ids.map((id) => requireLiveSnap(ctx, id)))
     if (snaps.some((snap) => snap.sourceGameId !== game._id)) throw new Error('Snap belongs to another Source Game')
     const records: Parameters<typeof softDeleteBatch>[1]['records'][number][] = []
-    // ponytail: collectSnapCascade rescans the game's Quick Notes and diagrams per Snap; hoist those loads out of the loop if bulk deletes hit Convex read limits.
+    // ponytail: collectSnapCascade rescans the game's Quick Notes per Snap; hoist that load out of the loop if bulk deletes hit Convex read limits.
     for (const snap of snaps) records.push(...await collectSnapCascade(ctx, snap))
     return softDeleteBatch(ctx, { kind: 'snaps', label: ids.length === 1 ? (snaps[0]!.core.clipNumber ?? `Snap ${snaps[0]!.order}`) : `${ids.length} Snaps`, records })
   },
