@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
+import type { FunctionReturnType } from 'convex/server'
 import { api } from '@convex/_generated/api'
 import { attachedSnapIds } from '@convex/domain/diagram'
 import type { Doc, Id } from '@convex/_generated/dataModel'
@@ -13,10 +14,11 @@ import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
 
 const UNTITLED = 'Untitled Play Diagram'
+type WorkspaceDiagram = FunctionReturnType<typeof api.diagrams.listByWorkspace>[number]
 
 export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspaceId: string; readonly sourceGameId: string }): ReactNode {
   const game = useQuery(api.sourceGames.get, { sourceGameId })
-  const diagrams = useQuery(api.diagrams.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
+  const diagrams = useQuery(api.diagrams.listByWorkspace, game ? { workspaceId: game.workspaceId } : 'skip')
   const snaps = useQuery(api.snaps.listBySourceGame, game ? { sourceGameId: game._id } : 'skip')
   const create = useMutation(api.diagrams.create)
   const navigate = useNavigate()
@@ -96,6 +98,8 @@ export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspa
           key={diagram._id}
           diagram={diagram}
           base={base}
+          workspaceId={game.workspaceId}
+          sourceGameId={game._id}
           snapLabels={snapLabels}
           pickSnap={pickSnap}
           availableSnaps={loadedSnaps.filter((snap) => !occupied.has(snap._id))}
@@ -103,9 +107,11 @@ export function DiagramGallery({ workspaceId, sourceGameId }: { readonly workspa
   </Page>
 }
 
-function DiagramCard({ diagram, base, snapLabels, availableSnaps, pickSnap }: {
-  readonly diagram: Doc<'diagrams'>
+function DiagramCard({ diagram, base, workspaceId, sourceGameId, snapLabels, availableSnaps, pickSnap }: {
+  readonly diagram: WorkspaceDiagram
   readonly base: string
+  readonly workspaceId: Id<'workspaces'>
+  readonly sourceGameId: Id<'sourceGames'>
   readonly snapLabels: ReadonlyMap<string, string | number>
   readonly pickSnap: Doc<'snaps'> | undefined
   readonly availableSnaps: readonly Doc<'snaps'>[]
@@ -114,16 +120,15 @@ function DiagramCard({ diagram, base, snapLabels, availableSnaps, pickSnap }: {
   const attach = useMutation(api.diagrams.attach)
   const detach = useMutation(api.diagrams.detach)
   const remove = useMutation(api.diagrams.remove).withOptimisticUpdate((store, args) => {
-    const query = { sourceGameId: diagram.sourceGameId }
-    const current = store.getQuery(api.diagrams.listBySourceGame, query)
-    if (current) store.setQuery(api.diagrams.listBySourceGame, query, current.filter((item) => item._id !== args.diagramId))
+    const query = { workspaceId }
+    const current = store.getQuery(api.diagrams.listByWorkspace, query)
+    if (current) store.setQuery(api.diagrams.listByWorkspace, query, current.filter((item) => item._id !== args.diagramId))
   })
   const undo = useMutation(api.deletions.undo)
   const deleteDiagram = useUndoableMutation(() => remove({ diagramId: diagram._id }), async (args) => { await undo(args) }, () => 'Deleted Play Diagram')
   const { show } = useToast()
   const [pending, setPending] = useState(false)
-  const snapIds = attachedSnapIds(diagram)
-  const editLabel = `Edit ${diagram.name ?? 'Play Diagram'}${snapIds.length ? ` for Snaps ${snapIds.map((id) => snapLabels.get(id) ?? 'removed').join(', ')}` : ''}`
+  const editLabel = `Edit ${diagram.name ?? 'Play Diagram'}${diagram.attachedSnaps.length ? ` for Snaps ${diagram.attachedSnaps.map((snap) => snap.clipLabel).join(', ')}` : ''}`
   function run(action: () => Promise<unknown>, verb: string): void {
     if (pending) return
     setPending(true)
@@ -136,13 +141,14 @@ function DiagramCard({ diagram, base, snapLabels, availableSnaps, pickSnap }: {
     <div>
       <h2 className={diagram.name ? 'font-semibold' : 'font-semibold text-muted-foreground'}>{diagram.name ?? UNTITLED}</h2>
       <div className="flex flex-wrap items-center gap-2">
-        {snapIds.length ? snapIds.map((snapId) => <span key={snapId} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
-          {snapLabels.has(snapId)
-            ? <Link className="text-sm underline" to={`${base}/snap/${snapId}`}>Snap {snapLabels.get(snapId)}</Link>
-            : <Meta>Snap removed</Meta>}
-          <Button variant="ghost" size="sm" disabled={pending} aria-label={`Detach Snap ${snapLabels.get(snapId) ?? 'removed'}`}
-            onClick={() => run(() => detach({ diagramId: diagram._id, snapId }), 'detach')}>×</Button>
-        </span>) : <Meta>Unattached</Meta>}
+        {diagram.attachedSnaps.length ? diagram.attachedSnaps.map((snap) => {
+          const label = snap.sourceGameId === sourceGameId ? `Snap ${snap.clipLabel}` : `${snap.sourceGameLabel} · Snap ${snap.clipLabel}`
+          return <span key={snap.snapId} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
+            <Link className="text-sm underline" to={`/w/${workspaceId}/games/${snap.sourceGameId}/snap/${snap.snapId}`}>{label}</Link>
+            <Button variant="ghost" size="sm" disabled={pending} aria-label={`Detach ${label}`}
+              onClick={() => run(() => detach({ diagramId: diagram._id, snapId: snap.snapId }), 'detach')}>×</Button>
+          </span>
+        }) : <Meta>Unattached</Meta>}
       </div>
       {diagram.note && <p className="mt-1 truncate text-sm text-muted-foreground">{diagram.note.slice(0, 80)}</p>}
     </div>

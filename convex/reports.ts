@@ -91,8 +91,7 @@ function diagramSnapshot(diagram: Doc<'diagrams'>) {
 }
 async function liveDiagram(ctx: QueryCtx, id: Id<'diagrams'>, workspaceId: Id<'workspaces'>) {
   const diagram = await ctx.db.get(id)
-  const game = diagram ? await ctx.db.get(diagram.sourceGameId) : null
-  return diagram && diagram.deletedAt === undefined && game?.workspaceId === workspaceId && await isLiveSourceGame(ctx, game._id) ? diagram : null
+  return diagram && diagram.deletedAt === undefined && diagram.workspaceId === workspaceId ? diagram : null
 }
 
 export const blockSourceValidator = v.union(

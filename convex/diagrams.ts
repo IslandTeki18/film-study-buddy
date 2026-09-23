@@ -1,11 +1,12 @@
 import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
-import { internalMutation, mutation, query, type MutationCtx } from './_generated/server'
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import { softDeleteBatch } from './deletions'
 import { attachedSnapIds, normalizeDiagram } from './domain/diagram.ts'
 import schema from './schema'
 import { requireLiveSnap } from './snaps'
-import { isLiveSourceGame, requireLiveSourceGame } from './sourceGames'
+import { requireLiveSourceGame } from './sourceGames'
+import { requireLiveWorkspace } from './workspaces'
 
 const diagramValidator = v.object({
   ...schema.tables.diagrams.validator.fields,
@@ -15,31 +16,34 @@ const diagramValidator = v.object({
 async function requireLiveDiagram(ctx: MutationCtx, id: Id<'diagrams'>): Promise<Doc<'diagrams'>> {
   const diagram = await ctx.db.get(id)
   if (!diagram || diagram.deletedAt !== undefined) throw new Error('Play Diagram not found')
-  await requireLiveSourceGame(ctx, diagram.sourceGameId)
+  await requireLiveWorkspace(ctx, workspaceIdOf(diagram))
   return diagram
 }
 
-async function hasLiveDiagramForSnap(ctx: MutationCtx, sourceGameId: Id<'sourceGames'>, snapId: Id<'snaps'>, exceptId?: Id<'diagrams'>): Promise<boolean> {
-  const diagrams = await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', sourceGameId)).collect()
-  return diagrams.some((diagram) => diagram.deletedAt === undefined && diagram._id !== exceptId && attachedSnapIds(diagram).includes(snapId))
+function workspaceIdOf(diagram: Doc<'diagrams'>): Id<'workspaces'> {
+  if (!diagram.workspaceId) throw new Error('Play Diagram not found')
+  return diagram.workspaceId
 }
 
-export const listBySourceGame = query({
-  args: { sourceGameId: v.id('sourceGames') }, returns: v.array(diagramValidator),
-  handler: async (ctx, args) => {
-    if (!await isLiveSourceGame(ctx, args.sourceGameId)) return []
-    return (await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', args.sourceGameId)).collect())
-      .filter((diagram) => diagram.deletedAt === undefined)
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-  },
-})
+async function isLiveWorkspace(ctx: QueryCtx, id: Id<'workspaces'>): Promise<boolean> {
+  const workspace = await ctx.db.get(id)
+  if (!workspace || workspace.deletedAt !== undefined) return false
+  const season = await ctx.db.get(workspace.seasonId)
+  return !!season && season.deletedAt === undefined
+}
+
+// ponytail: scans the Workspace's diagrams per check; add a snapIds lookup table if Workspace diagram counts grow past V1 volume.
+async function hasLiveDiagramForSnap(ctx: MutationCtx, workspaceId: Id<'workspaces'>, snapId: Id<'snaps'>, exceptId?: Id<'diagrams'>): Promise<boolean> {
+  const diagrams = await ctx.db.query('diagrams').withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId)).collect()
+  return diagrams.some((diagram) => diagram.deletedAt === undefined && diagram._id !== exceptId && attachedSnapIds(diagram).includes(snapId))
+}
 
 export const get = query({
   args: { diagramId: v.string() }, returns: v.union(diagramValidator, v.null()),
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId('diagrams', args.diagramId)
     const diagram = id ? await ctx.db.get(id) : null
-    if (!diagram || diagram.deletedAt !== undefined || !await isLiveSourceGame(ctx, diagram.sourceGameId)) return null
+    if (!diagram || diagram.deletedAt !== undefined || !diagram.workspaceId || !await isLiveWorkspace(ctx, diagram.workspaceId)) return null
     return diagram
   },
 })
@@ -48,8 +52,10 @@ export const getBySnap = query({
   args: { snapId: v.id('snaps') }, returns: v.union(diagramValidator, v.null()),
   handler: async (ctx, args) => {
     const snap = await ctx.db.get(args.snapId)
-    if (!snap || snap.deletedAt !== undefined || !await isLiveSourceGame(ctx, snap.sourceGameId)) return null
-    return (await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', snap.sourceGameId)).collect())
+    if (!snap || snap.deletedAt !== undefined) return null
+    const game = await ctx.db.get(snap.sourceGameId)
+    if (!game || game.deletedAt !== undefined || !await isLiveWorkspace(ctx, game.workspaceId)) return null
+    return (await ctx.db.query('diagrams').withIndex('by_workspace', (q) => q.eq('workspaceId', game.workspaceId)).collect())
       .find((diagram) => diagram.deletedAt === undefined && attachedSnapIds(diagram).includes(args.snapId)) ?? null
   },
 })
@@ -60,8 +66,9 @@ export const create = mutation({
     const game = await requireLiveSourceGame(ctx, args.sourceGameId)
     if (args.snapId) {
       const snap = await requireLiveSnap(ctx, args.snapId)
-      if (snap.sourceGameId !== game._id) throw new Error('Snap belongs to a different Source Game')
-      if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id)) throw new Error('This Snap already has a Play Diagram')
+      const snapGame = await requireLiveSourceGame(ctx, snap.sourceGameId)
+      if (snapGame.workspaceId !== game.workspaceId) throw new Error('Snap belongs to a different Weekly Opponent Workspace')
+      if (await hasLiveDiagramForSnap(ctx, game.workspaceId, snap._id)) throw new Error('This Snap already has a Play Diagram')
     }
     return ctx.db.insert('diagrams', {
       sourceGameId: game._id, workspaceId: game.workspaceId, snapIds: args.snapId ? [args.snapId] : [],
@@ -117,8 +124,9 @@ export const attach = mutation({
   handler: async (ctx, args) => {
     const diagram = await requireLiveDiagram(ctx, args.diagramId)
     const snap = await requireLiveSnap(ctx, args.snapId)
-    if (snap.sourceGameId !== diagram.sourceGameId) throw new Error('Snap belongs to a different Source Game')
-    if (await hasLiveDiagramForSnap(ctx, snap.sourceGameId, snap._id, diagram._id)) throw new Error('This Snap already has a Play Diagram')
+    const game = await requireLiveSourceGame(ctx, snap.sourceGameId)
+    if (game.workspaceId !== workspaceIdOf(diagram)) throw new Error('Snap belongs to a different Weekly Opponent Workspace')
+    if (await hasLiveDiagramForSnap(ctx, game.workspaceId, snap._id, diagram._id)) throw new Error('This Snap already has a Play Diagram')
     await ctx.db.patch(diagram._id, {
       snapIds: [...new Set([...attachedSnapIds(diagram), snap._id])], snapId: undefined, updatedAt: Date.now(),
     })
@@ -147,18 +155,34 @@ export const remove = mutation({
 
 export const listByWorkspace = query({
   args: { workspaceId: v.string() },
-  returns: v.array(v.object({ ...diagramValidator.fields, sourceGameLabel: v.string() })),
+  returns: v.array(v.object({
+    ...diagramValidator.fields,
+    sourceGameLabel: v.string(),
+    attachedSnaps: v.array(v.object({
+      snapId: v.id('snaps'), sourceGameId: v.id('sourceGames'), sourceGameLabel: v.string(), clipLabel: v.string(),
+    })),
+  })),
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId('workspaces', args.workspaceId)
-    const workspace = id ? await ctx.db.get(id) : null
-    if (!workspace || workspace.deletedAt !== undefined) return []
-    const season = await ctx.db.get(workspace.seasonId)
-    if (!season || season.deletedAt !== undefined) return []
-    const games = (await ctx.db.query('sourceGames').withIndex('by_workspace', (q) => q.eq('workspaceId', workspace._id)).collect())
-      .filter((game) => game.deletedAt === undefined)
-    const diagrams = await Promise.all(games.map(async (game) =>
-      (await ctx.db.query('diagrams').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect())
-        .filter((diagram) => diagram.deletedAt === undefined).map((diagram) => ({ ...diagram, sourceGameLabel: game.label }))))
-    return diagrams.flat().sort((a, b) => b.updatedAt - a.updatedAt)
+    if (!id || !await isLiveWorkspace(ctx, id)) return []
+    const games = new Map<Id<'sourceGames'>, Doc<'sourceGames'> | null>()
+    const gameFor = async (gameId: Id<'sourceGames'>): Promise<Doc<'sourceGames'> | null> => {
+      if (!games.has(gameId)) games.set(gameId, await ctx.db.get(gameId))
+      return games.get(gameId) ?? null
+    }
+    const diagrams = (await ctx.db.query('diagrams').withIndex('by_workspace', (q) => q.eq('workspaceId', id)).collect())
+      .filter((diagram) => diagram.deletedAt === undefined).sort((a, b) => b.updatedAt - a.updatedAt)
+    return Promise.all(diagrams.map(async (diagram) => {
+      const origin = await gameFor(diagram.sourceGameId)
+      const attachedSnaps = []
+      for (const snapId of attachedSnapIds(diagram)) {
+        const snap = await ctx.db.get(snapId)
+        if (!snap || snap.deletedAt !== undefined) continue
+        const game = await gameFor(snap.sourceGameId)
+        if (!game || game.deletedAt !== undefined) continue
+        attachedSnaps.push({ snapId, sourceGameId: game._id, sourceGameLabel: game.label, clipLabel: String(snap.core.clipNumber ?? snap.order) })
+      }
+      return { ...diagram, sourceGameLabel: origin && origin.deletedAt === undefined ? origin.label : '', attachedSnaps }
+    }))
   },
 })

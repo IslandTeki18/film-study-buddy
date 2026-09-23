@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery } from 'convex/react'
+import type { FunctionReturnType } from 'convex/server'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
-import { attachedSnapIds, DIAGRAM_NAME_MAX_LENGTH, DIAGRAM_NOTE_MAX_LENGTH, FORMATION_NAME_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, YARD_PX, type DiagramDoc, type DiagramPlayer, type PlayerSide } from '@convex/domain/diagram'
+import { DIAGRAM_NAME_MAX_LENGTH, DIAGRAM_NOTE_MAX_LENGTH, FORMATION_NAME_MAX_LENGTH, PLAYER_LABEL_MAX_LENGTH, YARD_PX, type DiagramDoc, type DiagramPlayer, type PlayerSide } from '@convex/domain/diagram'
 import { DiagramSvg } from '@/components/diagram-svg'
 import { Button } from '@/components/ui/button'
 import { Eyebrow, Meta, Page, Panel } from '@/components/ui/panel'
@@ -38,24 +39,25 @@ export function PlayDesigner({ workspaceId, sourceGameId, diagramId }: {
   const workspace = useQuery(api.workspaces.get, { workspaceId })
   const game = useQuery(api.sourceGames.get, { sourceGameId })
   const diagram = useQuery(api.diagrams.get, { diagramId })
+  const diagrams = useQuery(api.diagrams.listByWorkspace, { workspaceId })
   const base = `/w/${workspaceId}/games/${sourceGameId}/diagrams`
-  if (game === undefined || diagram === undefined || workspace === undefined) return <div role="status" aria-label="Loading Play Designer" className="m-6 h-32 animate-pulse rounded bg-muted" />
-  if (!game || game.workspaceId !== workspaceId || !diagram || diagram.sourceGameId !== game._id) return <main className="space-y-3 p-6">
+  if (game === undefined || diagram === undefined || diagrams === undefined || workspace === undefined) return <div role="status" aria-label="Loading Play Designer" className="m-6 h-32 animate-pulse rounded bg-muted" />
+  const summary = diagrams.find((item) => item._id === diagram?._id)
+  if (!game || game.workspaceId !== workspaceId || !diagram || diagram.workspaceId !== game.workspaceId || !summary) return <main className="space-y-3 p-6">
     <p>Play Diagram not found</p><Link className="underline" to={base}>Back to Play Diagrams</Link>
   </main>
-  return <DesignerContent key={diagram._id} workspaceId={workspaceId} sourceGameId={game._id} opponentName={workspace?.opponentName ?? game.label} diagram={diagram} />
+  return <DesignerContent key={diagram._id} workspaceId={workspaceId} sourceGameId={game._id} opponentName={workspace?.opponentName ?? game.label} diagram={diagram} attachedSnaps={summary.attachedSnaps} />
 }
 
-function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
+function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, attachedSnaps }: {
   readonly workspaceId: string; readonly sourceGameId: Id<'sourceGames'>; readonly opponentName: string
   readonly diagram: Pick<Doc<'diagrams'>, '_id' | 'updatedAt' | 'players' | 'shapes' | 'name' | 'note' | 'snapId' | 'snapIds' | 'hiddenSide'>
+  readonly attachedSnaps: FunctionReturnType<typeof api.diagrams.listByWorkspace>[number]['attachedSnaps']
 }): ReactNode {
   const save = useMutation(api.diagrams.save)
   const saveFormation = useMutation(api.formations.save)
   const removeFormation = useMutation(api.formations.remove)
   const customs = useQuery(api.formations.list) ?? []
-  const snaps = useQuery(api.snaps.listBySourceGame, { sourceGameId })
-  const snapIds = attachedSnapIds(diagram)
   const { show } = useToast()
   const serverDoc = useMemo<DiagramDoc>(() => ({ players: diagram.players, shapes: diagram.shapes, ...(diagram.name ? { name: diagram.name } : {}), ...(diagram.note ? { note: diagram.note } : {}), ...(diagram.hiddenSide ? { hiddenSide: diagram.hiddenSide } : {}) }), [diagram.updatedAt])
   const { draft, setDraft, flush, status } = useAutosave(serverDoc, async (next) => {
@@ -313,9 +315,9 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram }: {
         <input aria-label="Play Diagram name" placeholder="name this Play Diagram, e.g. Trips Right Y-Cross" maxLength={DIAGRAM_NAME_MAX_LENGTH} value={draft.name ?? ''}
           onChange={(event) => setDraft({ ...draftRef.current, name: event.target.value })} onBlur={flush} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
           className="min-w-[16ch] rounded-[7px] border border-border-strong bg-muted px-2.5 py-2 font-mono text-[11.5px] font-semibold outline-none focus-visible:border-muted-foreground/60" />
-        <span className="text-[13px] font-semibold">{opponentName} — {snapIds.length ? <>Attached to Snap {snapIds.map((id, index) => {
-          const snap = snaps?.find((item) => item._id === id)
-          return <span key={id}>{index > 0 && ', '}<Link className="underline" to={`${base}/snap/${id}`}>{snap ? snap.core.clipNumber ?? snap.order : 'removed'}</Link></span>
+        <span className="text-[13px] font-semibold">{opponentName} — {attachedSnaps.length ? <>Attached to Snap {attachedSnaps.map((snap, index) => {
+          const label = snap.sourceGameId === sourceGameId ? snap.clipLabel : `${snap.sourceGameLabel} · ${snap.clipLabel}`
+          return <span key={snap.snapId}>{index > 0 && ', '}<Link className="underline" to={`/w/${workspaceId}/games/${snap.sourceGameId}/snap/${snap.snapId}`}>{label}</Link></span>
         })}</> : 'new play'}</span>
         <div role="radiogroup" aria-label="Side" className="ml-2 flex gap-1.5">
           {(['offense', 'defense'] as const).map((entry) => <button key={entry} type="button" role="radio" aria-checked={side === entry} className={chip(side === entry, entry)}

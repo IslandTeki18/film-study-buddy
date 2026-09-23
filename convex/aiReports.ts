@@ -7,7 +7,6 @@ import { NONE_GROUP, groupingFieldsFor, groupingValuesOf, templateGroupingKey } 
 import { DEFAULT_SELECTED_PLAY_CORE_KEYS, HEADING_MAX_LENGTH, TABLE_TITLE_MAX_LENGTH } from './domain/reportBlocks.ts'
 import { buildBlock, requireName, requireSize, type blockSourceValidator } from './reports'
 import { CORE_FIELDS } from './domain/coreFields.ts'
-import { attachedSnapIds } from './domain/diagram.ts'
 import { columnCatalog, coreColumnKey, fieldColumnKey } from './domain/templateFields.ts'
 import { computeResult, loadScope, type OpponentScope } from './opponentData'
 import schema from './schema'
@@ -47,7 +46,7 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>, pr
   ])
   const games = allGames.filter(isIncluded)
   const gameIds = new Set(games.map((game) => game._id))
-  const diagrams = allDiagrams.filter((diagram) => gameIds.has(diagram.sourceGameId))
+  const diagrams = allDiagrams.filter((diagram) => gameIds.has(diagram.sourceGameId) || diagram.attachedSnaps.some((snap) => gameIds.has(snap.sourceGameId)))
   const diagramIds = new Set(diagrams.map((diagram) => diagram._id))
   // ponytail: the brief recomputes every single-field aggregate per generation; cache per Workspace if generation latency becomes the complaint.
   const groupings = await Promise.all(groupingFields.slice(0, AI_BRIEF_MAX_GROUPINGS).map(async (field) => {
@@ -94,7 +93,7 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>, pr
       .map((tendency) => ({ id: tendency._id, title: tendency.title, category: tendency.category, note: tendency.note,
         groupBy: tendency.snapshot.groupBy, ...(tendency.snapshot.groupBy2 ? { groupBy2: tendency.snapshot.groupBy2 } : {}),
         rowCount: tendency.snapshot.rows.length, hasDiagram: !!tendency.diagramId && diagramIds.has(tendency.diagramId) })),
-    diagrams: diagrams.map((diagram) => ({ id: diagram._id, name: diagram.name ?? '', note: diagram.note ?? '', sourceGameLabel: diagram.sourceGameLabel, snapCount: attachedSnapIds(diagram).length })),
+    diagrams: diagrams.map((diagram) => ({ id: diagram._id, name: diagram.name ?? '', note: diagram.note ?? '', sourceGameLabel: diagram.sourceGameLabel, snapCount: diagram.attachedSnaps.length })),
     quickNotes: notes.map(({ _id, text, tags, sourceGameLabel }) => ({ id: _id, text, tags, sourceGameLabel })), players, snapColumns,
   }
 }

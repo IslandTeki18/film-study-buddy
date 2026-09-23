@@ -6,7 +6,6 @@ import { categoryVocabulary, normalizeCategoryName, resolveCategory, TENDENCY_NO
 import { computeResult } from './opponentData'
 import schema from './schema'
 import { requireLiveWorkspace } from './workspaces'
-import { isLiveSourceGame } from './sourceGames'
 import { softDeleteBatch } from './deletions'
 
 const tendencyValidator = v.object({ ...schema.tables.tendencies.validator.fields, _id: v.id('tendencies'), _creationTime: v.number() })
@@ -94,8 +93,7 @@ export const update = mutation({
     const tendency = await requireLiveTendency(ctx, args.tendencyId)
     if (args.diagramId) {
       const diagram = await ctx.db.get(args.diagramId)
-      const game = diagram ? await ctx.db.get(diagram.sourceGameId) : null
-      if (!diagram || diagram.deletedAt !== undefined || !game || game.workspaceId !== tendency.workspaceId || !await isLiveSourceGame(ctx, game._id)) throw new Error('Play Diagram not found')
+      if (!diagram || diagram.deletedAt !== undefined || diagram.workspaceId !== tendency.workspaceId) throw new Error('Play Diagram not found')
     }
     await ctx.db.patch(tendency._id, {
       ...(args.title !== undefined ? { title: requireTitle(args.title) } : {}),
