@@ -12,6 +12,7 @@ export const WORKSPACE_TABS = [
   { segment: '', label: 'Overview' },
   { segment: 'games', label: 'Source games' },
   { segment: 'data', label: 'Opponent data' },
+  { segment: 'tells', label: 'Tells' },
   { segment: 'tendencies', label: 'Tendencies / alerts' },
   { segment: 'reports', label: 'Reports' },
 ] as const

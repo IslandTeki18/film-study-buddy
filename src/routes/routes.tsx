@@ -31,6 +31,7 @@ import { SourceGamesPage } from './source-games-page'
 import { TemplateBuilderPage } from './template-builder-page'
 import { TemplatesPage } from './templates-page'
 import { TendenciesPage } from './tendencies-page'
+import { TellsPage } from './tells-page'
 import { WelcomePage } from './welcome-page'
 import { WorkspaceOverviewPage } from './workspace-overview-page'
 
@@ -124,6 +125,7 @@ export const router = createHashRouter([
             ],
           },
           { path: 'data', element: <OpponentDataPage /> },
+          { path: 'tells', element: <TellsPage /> },
           { path: 'tendencies', element: <TendenciesPage /> },
           {
             path: 'reports',
