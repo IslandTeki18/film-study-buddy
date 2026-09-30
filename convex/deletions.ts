@@ -28,6 +28,7 @@ const softDeleteTables = [
   'reports',
   'opponentPlayers',
   'playerNotes',
+  'practiceScripts',
 ] as const
 
 type SoftDeleteTable = (typeof softDeleteTables)[number]

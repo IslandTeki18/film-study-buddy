@@ -308,6 +308,24 @@ export default defineSchema({
     updatedAt: v.number(),
     ...softDelete,
   }).index('by_workspace', ['workspaceId']).index('by_deleteBatchId', ['deleteBatchId']),
+  practiceScripts: defineTable({
+    workspaceId: v.id('workspaces'),
+    name: v.string(),
+    periods: v.array(v.object({
+      id: v.string(),
+      name: v.string(),
+      reps: v.array(v.object({
+        id: v.string(),
+        diagramId: v.id('diagrams'),
+        down: v.optional(v.number()),
+        distance: v.optional(v.number()),
+        hash: v.optional(hashValidator),
+        note: v.optional(v.string()),
+      })),
+    })),
+    updatedAt: v.number(),
+    ...softDelete,
+  }).index('by_workspace', ['workspaceId']).index('by_deleteBatchId', ['deleteBatchId']),
 
   deletions: defineTable({
     batchId: v.string(),

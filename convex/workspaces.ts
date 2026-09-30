@@ -147,7 +147,7 @@ export async function collectWorkspaceCascade(
   for (const game of games) {
     if (game.deletedAt === undefined) records.push(...await collectSourceGameCascade(ctx, game._id))
   }
-  for (const table of ['tendencies', 'reports', 'opponentPlayers', 'playerNotes', 'diagrams'] as const) {
+  for (const table of ['tendencies', 'reports', 'opponentPlayers', 'playerNotes', 'diagrams', 'practiceScripts'] as const) {
     const rows = await ctx.db.query(table)
       .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId)).collect()
     for (const row of rows) {
