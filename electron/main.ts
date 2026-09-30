@@ -73,7 +73,7 @@ async function exportReportPdf(event: IpcMainInvokeEvent, payload: unknown): Pro
     if (!payload || typeof payload !== 'object' || Object.keys(payload).length !== 1 || !('fileName' in payload) || typeof payload.fileName !== 'string' || !payload.fileName.endsWith('.pdf') || payload.fileName.length > 124 || payload.fileName.length <= 4 || /[\\/:*?"<>|\u0000-\u001f\u007f]/.test(payload.fileName)) throw new Error('Invalid PDF file name')
     const url = new URL(event.senderFrame?.url ?? '')
     const expected = new URL(process.env['ELECTRON_RENDERER_URL'] ?? pathToFileURL(join(__dirname, '../renderer/index.html')).href)
-    if (event.senderFrame !== event.sender.mainFrame || url.protocol !== expected.protocol || url.host !== expected.host || url.pathname !== expected.pathname || !/^#\/w\/[^/]+\/reports\/[^/]+\/preview$/.test(url.hash)) throw new Error('Open a Report Preview to export PDF')
+    if (event.senderFrame !== event.sender.mainFrame || url.protocol !== expected.protocol || url.host !== expected.host || url.pathname !== expected.pathname || !/^#\/w\/[^/]+\/(reports\/[^/]+\/preview|practice\/[^/]+\/(print|cards))$/.test(url.hash)) throw new Error('Open a printable page to export PDF')
     const window = BrowserWindow.fromWebContents(event.sender)
     if (!window) throw new Error('Report window not found')
     const { canceled, filePath } = await dialog.showSaveDialog(window, {
