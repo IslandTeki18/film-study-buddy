@@ -60,7 +60,7 @@ Coach / Player PDF
 - Video playback
 - Video hosting
 - Hudl video integration
-- Automated AI-generated tendencies
+- Automated AI-generated tendencies (Tells, which are deterministic counts the coach confirms, are in scope; see `.claude/plans/tell-finder.md`)
 - Backup and restore
 - Advanced analytics
 - Custom Core Snap schemas
