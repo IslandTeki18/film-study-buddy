@@ -21,6 +21,7 @@ import { PlayDesignerPage } from './play-designer-page'
 import { PlayDetailPage } from './play-detail-page'
 import { PlayDiagramsPage } from './play-diagrams-page'
 import { PlayLogPage } from './play-log-page'
+import { PracticeEditorPage, PracticeListPage, PracticePrintPage, ScoutCardsPage } from './practice-pages'
 import { QuickNotesPage } from './quick-notes-page'
 import { ReportBuilderPage } from './report-builder-page'
 import { ReportListPage } from './report-list-page'
@@ -136,6 +137,20 @@ export const router = createHashRouter([
                 children: [
                   { index: true, element: <ReportBuilderPage /> },
                   { path: 'preview', element: <ReportPreviewPage /> },
+                ],
+              },
+            ],
+          },
+          {
+            path: 'practice',
+            children: [
+              { index: true, element: <PracticeListPage /> },
+              {
+                path: ':scriptId',
+                children: [
+                  { index: true, element: <PracticeEditorPage /> },
+                  { path: 'print', element: <PracticePrintPage /> },
+                  { path: 'cards', element: <ScoutCardsPage /> },
                 ],
               },
             ],

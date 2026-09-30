@@ -15,6 +15,7 @@ export const WORKSPACE_TABS = [
   { segment: 'tells', label: 'Tells' },
   { segment: 'tendencies', label: 'Tendencies / alerts' },
   { segment: 'reports', label: 'Reports' },
+  { segment: 'practice', label: 'Practice' },
 ] as const
 
 /** Workspace chrome: back to the season, opponent identity, actions, and the section tab strip. */
