@@ -210,6 +210,21 @@ _Avoid_: Live data, linked stats, cached result.
 
 ## Reporting
 
+**Practice Script**:
+A named, ordered list of Periods for one Weekly Opponent Workspace. Printed as a Script sheet for
+coaches and as Scout Cards for the scout team.
+
+**Period**:
+A named block of Reps inside a Practice Script (for example "Team D vs Scout O").
+
+**Rep**:
+One scripted play: a Scout Card plus optional down, distance, hash, and note.
+
+**Scout Card**:
+A full-page print of one Play Diagram used in a Practice Script. It is numbered by the diagram's
+first appearance in the Script and shows the opponent's most common formation, personnel, concept,
+situation, hash, and field zone for that play.
+
 **Report**:
 A multi-page document assembled from ordered Blocks inside a Weekly Opponent Workspace, exported
 as PDF.
