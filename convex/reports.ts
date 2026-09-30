@@ -20,7 +20,7 @@ export function requireName(value: string): string {
   if (!name) throw new Error('Name must be 1–80 characters')
   return name
 }
-async function liveWorkspace(ctx: QueryCtx, value: string): Promise<Id<'workspaces'> | null> {
+export async function liveWorkspace(ctx: QueryCtx, value: string): Promise<Id<'workspaces'> | null> {
   const id = ctx.db.normalizeId('workspaces', value)
   const workspace = id ? await ctx.db.get(id) : null
   const season = workspace && workspace.deletedAt === undefined ? await ctx.db.get(workspace.seasonId) : null
