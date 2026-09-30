@@ -10,12 +10,12 @@ import { softDeleteBatch } from './deletions'
 
 const tendencyValidator = v.object({ ...schema.tables.tendencies.validator.fields, _id: v.id('tendencies'), _creationTime: v.number() })
 
-function requireTitle(value: string): string {
+export function requireTitle(value: string): string {
   const title = normalizeName(value)
   if (!title) throw new Error('Title must be 1–80 characters')
   return title
 }
-function requireNote(value: string): string {
+export function requireNote(value: string): string {
   const note = value.trim()
   if (note.length > TENDENCY_NOTE_MAX_LENGTH) throw new Error(`Coach explanation must be at most ${TENDENCY_NOTE_MAX_LENGTH} characters`)
   return note
@@ -23,7 +23,7 @@ function requireNote(value: string): string {
 async function vocabulary(ctx: QueryCtx): Promise<string[]> {
   return categoryVocabulary((await ctx.db.query('tendencyCategories').collect()).map((row) => row.name))
 }
-async function requireCategory(ctx: QueryCtx, value: string): Promise<string> {
+export async function requireCategory(ctx: QueryCtx, value: string): Promise<string> {
   const category = resolveCategory(await vocabulary(ctx), value)
   if (!category) throw new Error('Unknown category')
   return category
