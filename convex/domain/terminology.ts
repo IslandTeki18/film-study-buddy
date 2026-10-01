@@ -25,3 +25,21 @@ export function builtInTerminology(list: TerminologyList): readonly string[] {
   const lists = { formations: FORMATIONS, motions: MOTIONS, playConcepts: PLAY_CONCEPTS, personnel: PERSONNEL }
   return lists[list]
 }
+
+export const TERMINOLOGY_LISTS = ['formations', 'motions', 'playConcepts', 'personnel'] as const satisfies readonly TerminologyList[]
+export interface TerminologyRow { readonly list: TerminologyList; readonly value: string; readonly hidden?: boolean | undefined }
+export interface TerminologyEntry { list: TerminologyList; value: string; builtIn: boolean }
+
+/** The pick lists the coach sees: built-ins plus coach rows, minus anything the coach removed (a hidden row). */
+export function effectiveTerminology(rows: readonly TerminologyRow[]): TerminologyEntry[] {
+  const keyOf = (entry: { list: string; value: string }): string => JSON.stringify([entry.list, entry.value])
+  const hidden = new Set(rows.filter((row) => row.hidden).map(keyOf))
+  const entries: TerminologyEntry[] = TERMINOLOGY_LISTS.flatMap((list) => builtInTerminology(list).map((value) => ({ list, value, builtIn: true })))
+  const seen = new Set(entries.map(keyOf))
+  for (const row of rows) {
+    if (row.hidden || seen.has(keyOf(row))) continue
+    seen.add(keyOf(row))
+    entries.push({ list: row.list, value: row.value, builtIn: false })
+  }
+  return entries.filter((entry) => !hidden.has(keyOf(entry)))
+}

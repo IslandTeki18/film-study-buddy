@@ -260,9 +260,11 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
 )
 }
 
-export function GroupInput({ column, value, disabled, onChange, onNext }: {
+export function GroupInput({ column, value, disabled, onChange, onNext, listId }: {
   readonly column: PlayLogColumn; readonly value: unknown; readonly disabled: boolean
   readonly onChange: (value: unknown) => void; readonly onNext: () => void
+  /** id of a <datalist> of suggestions: the coach can pick one or type any value. */
+  readonly listId?: string
 }): ReactNode {
   const [raw, setRaw] = useState(() => formatDraftValue(column, value))
   const emitted = useRef(value)
@@ -301,6 +303,6 @@ export function GroupInput({ column, value, disabled, onChange, onNext }: {
     </div> : column.kind === 'template' && column.field.type === 'longText'
       ? <Textarea {...props} value={raw} onChange={(event) => update(event.target.value)} />
       : <Input {...props} type={numeric ? 'number' : 'text'} step={column.kind === 'core' ? 1 : 'any'} {...bounds}
-        value={raw} onChange={(event) => update(event.target.value)} />}
+        {...(listId ? { list: listId, autoComplete: 'off' } : {})} value={raw} onChange={(event) => update(event.target.value)} />}
   </div>
 }

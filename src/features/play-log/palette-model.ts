@@ -2,7 +2,7 @@ import type { Doc } from '@convex/_generated/dataModel'
 import { CARRY_FORWARD_CORE_KEYS, normalizeCoreValue, type CoreValue } from '../../../convex/domain/coreFields.ts'
 import { isValidYardLine } from '../../../convex/domain/fieldZone.ts'
 import { hasAnalysisValue, normalizeAnalysisValue, type AnalysisValue, type ColumnKey } from '../../../convex/domain/templateFields.ts'
-import { builtInTerminology, type TerminologyList } from '../../../convex/domain/terminology.ts'
+import type { TerminologyList } from '../../../convex/domain/terminology.ts'
 import { sectionAppliesTo } from '../../../convex/domain/playSide.ts'
 import type { PlayLogColumn } from './columns'
 
@@ -18,8 +18,8 @@ export function groupKind(
     const { key, input } = column.field
     if (input.kind === 'select') return { kind: 'tags', tags: input.options, multi: false }
     if (input.kind === 'terminology') {
-      const tags = [...new Set([...builtInTerminology(input.list),
-        ...terminology.filter((term) => term.list === input.list).map((term) => term.value)])].sort()
+      // terminology.list already merges built-ins and drops coach-removed values.
+      const tags = [...new Set(terminology.filter((term) => term.list === input.list).map((term) => term.value))].sort()
       return { kind: 'tags', tags, multi: false }
     }
     if (key === 'down' || key === 'quarter') return { kind: 'tags', tags: ['1', '2', '3', '4'], multi: false }

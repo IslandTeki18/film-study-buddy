@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { useAutosave } from '@/lib/db/use-autosave'
@@ -84,9 +84,9 @@ function sameValue(left: unknown, right: unknown): boolean {
 
 export const PendingFieldEdits = createContext<Set<() => Promise<void>> | null>(null)
 
-function DeferredInput({ column, value, disabled, onSave }: {
+function DeferredInput({ column, value, disabled, onSave, listId }: {
   readonly column: PlayLogColumn; readonly value: unknown; readonly disabled: boolean
-  readonly onSave: (value: unknown) => Promise<void>
+  readonly onSave: (value: unknown) => Promise<void>; readonly listId?: string
 }): ReactNode {
   const [draft, setDraft] = useState(value)
   const latest = useRef(draft)
@@ -130,9 +130,14 @@ function DeferredInput({ column, value, disabled, onSave }: {
     setDraft(saved.current);
     (event.target as HTMLElement).blur()
   }}>
-    <GroupInput column={column} value={draft} disabled={disabled || pending.current !== null}
+    <GroupInput column={column} value={draft} disabled={disabled || pending.current !== null} {...(listId ? { listId } : {})}
       onChange={(next) => { latest.current = next; setDraft(next) }} onNext={save} />
   </div>
+}
+
+/** Formation and Play Concept accept a pick-list value or any typed value. */
+export function isTypeOrPick(column: PlayLogColumn): column is Extract<PlayLogColumn, { kind: 'core' }> {
+  return column.kind === 'core' && (column.field.key === 'formation' || column.field.key === 'playConcept')
 }
 
 /** One editable Snap field for Play Detail. */
@@ -142,7 +147,12 @@ export function FieldEditor({ column, value, terminology, onSave }: {
   readonly onSave: (value: unknown) => Promise<void>
 }): ReactNode {
   const [pending, setPending] = useState(false)
+  const listId = useId()
   const kind = column.kind === 'core' && column.field.key === 'quarter' ? { kind: 'input' as const } : groupKind(column, terminology)
+  if (isTypeOrPick(column) && kind.kind === 'tags') return <>
+    <DeferredInput column={column} value={value} disabled={pending} onSave={onSave} listId={listId} />
+    <datalist id={listId}>{kind.tags.map((tag) => <option key={tag} value={tag} />)}</datalist>
+  </>
   function commit(next: unknown): void {
     if (pending) return
     setPending(true)

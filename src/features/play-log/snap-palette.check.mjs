@@ -39,7 +39,14 @@ try {
   const fieldEditor = (column, value) => renderToStaticMarkup(createElement(FieldEditor, {
     column: { kind: 'core', key: `core:${column.key}`, label: column.label, field: column }, value, terminology: [], onSave: async () => {},
   }))
-  assert.match(fieldEditor(formation, '11'), /<option value="11" selected="">11<\/option>/)
+  const formationMarkup = renderToStaticMarkup(createElement(FieldEditor, {
+    column: { kind: 'core', key: 'core:formation', label: formation.label, field: formation }, value: 'Trips Rt',
+    terminology: [{ list: 'formations', value: 'Shotgun' }], onSave: async () => {},
+  }))
+  assert.match(formationMarkup, /<input[^>]*list="[^"]+"[^>]*value="Trips Rt"/)
+  assert.match(formationMarkup, /<datalist[^>]*><option value="Shotgun"><\/option><\/datalist>/)
+  const personnel = CORE_FIELDS.find((field) => field.key === 'personnel')
+  assert.match(fieldEditor(personnel, '11'), /<option value="11" selected="">11<\/option>/)
   assert.match(fieldEditor(quarter, 9), /type="number"[^>]*max="9"/)
   const legacyMulti = { kind: 'template', key: 'field:legacy', label: 'Legacy', field: { _id: 'legacy', type: 'multiSelect', options: ['A'] } }
   assert.match(renderToStaticMarkup(createElement(FieldEditor, { column: legacyMulti, value: ['Retired'], terminology: [], onSave: async () => {} })), /<option value="Retired" selected="">Retired<\/option>/)

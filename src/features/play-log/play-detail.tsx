@@ -19,7 +19,8 @@ import { useSetMustReview } from './use-set-must-review'
 import { buildColumns } from './columns'
 import { Cell } from './cell'
 import { displayValue } from './row-model'
-import { CellNoteEditor, FieldEditor, useSaveCellNote, useUpdateSnapField } from './cell-editors'
+import { CellNoteEditor, FieldEditor, isTypeOrPick, useSaveCellNote, useUpdateSnapField } from './cell-editors'
+import { TerminologyListDialog } from '@/features/terminology/terminology-list-dialog'
 
 export function PlayDetail({ workspaceId, sourceGameId, snapId, embedded = false }: {
   readonly workspaceId: string; readonly sourceGameId: string; readonly snapId: string; readonly embedded?: boolean
@@ -49,6 +50,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
   const diagram = useQuery(api.diagrams.getBySnap, { snapId: snap._id })
   const snapQuickNotes = quickNotes?.filter((note) => note.snapId === snap._id)
   const [noting, setNoting] = useState(false)
+  const [listEditing, setListEditing] = useState<{ list: TerminologyList; label: string } | null>(null)
   const Root = embedded ? 'div' : 'main'
   const markingRef = useRef(false)
   const columns = buildColumns(tree)
@@ -112,10 +114,12 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
       <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
         {columns.filter((column) => column.kind === 'core').map((column) => {
           const edited = provenanceOf(snap.imported, column.field.key, snap.core[column.field.key]) === 'Coach Edited'
+          const pickList = isTypeOrPick(column) && column.field.input.kind === 'terminology' ? column.field.input.list : null
           return <div key={column.key}><dt className="text-sm text-muted-foreground">{column.label}</dt>
             <dd><div hidden={editing.has('core')}>{displayValue(snap, column) === '' ? <Meta>—</Meta> : <Cell snap={snap} column={column} />}</div>
               <div hidden={!editing.has('core')} className="space-y-1">
               <FieldEditor column={column} value={snap.core[column.field.key]} terminology={terminology} onSave={(value) => update(column, value)} />
+              {pickList && <Button variant="ghost" size="sm" aria-label={`Edit ${column.label} list`} onClick={() => setListEditing({ list: pickList, label: column.label })}>Edit list</Button>}
               {edited && <div className="space-y-1 text-sm">
                 <p>Original Hudl value: {snap.imported?.[column.field.key]}</p>
                 <Button variant="outline" size="sm" disabled={restoring !== null} aria-label={`Restore original ${column.label}`}
@@ -175,6 +179,7 @@ function DetailContent({ snap, tree, notes, terminology, base, embedded }: {
         <div className="flex flex-wrap gap-2">{note.tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}</div>
       </li>)}</ul>}
       <div className="flex items-center gap-3"><Button variant="outline" onClick={() => setNoting(true)}>Add Quick Note</Button><Link className="underline" to={`${base}/notes`}>All Quick Notes</Link></div>
+      {listEditing && <TerminologyListDialog open list={listEditing.list} label={listEditing.label} onOpenChange={(open) => { if (!open) setListEditing(null) }} />}
       <QuickNoteDialog open={noting} onOpenChange={setNoting} sourceGameId={snap.sourceGameId} snap={snap} />
     </SectionPanel>
     <SectionPanel title="Play Diagram">

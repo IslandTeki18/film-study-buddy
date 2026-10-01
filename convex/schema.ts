@@ -62,6 +62,8 @@ export default defineSchema({
   terminology: defineTable({
     list: v.union(v.literal('formations'), v.literal('motions'), v.literal('playConcepts'), v.literal('personnel')),
     value: v.string(), createdAt: v.number(),
+    // A coach-removed value. Built-ins live in code, so removing one needs a row.
+    hidden: v.optional(v.boolean()),
   }).index('by_list', ['list', 'value']),
   settings: defineTable({
     coachingArea: v.string(),
