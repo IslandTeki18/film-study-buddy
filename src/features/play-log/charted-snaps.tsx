@@ -5,12 +5,15 @@ import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { fieldZoneOf, isValidYardLine } from '@convex/domain/fieldZone'
 import { Button } from '@/components/ui/button'
-import { Eyebrow, Meta } from '@/components/ui/panel'
+import { Chip, Eyebrow, Meta } from '@/components/ui/panel'
 import { cn } from '@/lib/utils'
+import type { PlayLogColumn } from './columns'
+import type { SectionTree } from './palette-model'
+import { chartingProgress } from './row-model'
 import { RowActions } from './row-actions'
 
 export const LOG_GRID = 'grid grid-cols-[52px_30px_100px_minmax(76px,1fr)_52px_minmax(100px,1fr)_minmax(108px,1.25fr)_88px_32px] items-center gap-2 px-3'
@@ -41,16 +44,20 @@ function importGroups(snaps: readonly Doc<'snaps'>[]): Array<{ key: number; snap
   })
 }
 
-export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated }: {
+export function ChartedSnaps({ snaps, freshId, base, sourceGameId, columns, tree, onDuplicated, onOpenSnap, onChartSnap }: {
   readonly snaps: readonly Doc<'snaps'>[]
   readonly freshId: Id<'snaps'> | null
   readonly base: string
   readonly workspaceId: string
   readonly sourceGameId: Id<'sourceGames'>
+  readonly columns: readonly PlayLogColumn[]
+  readonly tree: SectionTree
   readonly onDuplicated: (id: Id<'snaps'>) => void
+  readonly onOpenSnap: (id: Id<'snaps'>) => void
+  readonly onChartSnap: () => void
 }): ReactNode {
-  const navigate = useNavigate()
   const [onlyReview, setOnlyReview] = useState(false)
+  const [onlyUncharted, setOnlyUncharted] = useState(false)
   const [selected, setSelected] = useState<ReadonlySet<Id<'snaps'>>>(new Set())
   const anchor = useRef<Id<'snaps'> | null>(null)
   const allCheckbox = useRef<HTMLInputElement>(null)
@@ -69,7 +76,12 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
   const undo = useMutation(api.deletions.undo)
   const deleteSnaps = useUndoableMutation(({ snapIds, keepDiagrams }: { snapIds: Id<'snaps'>[]; keepDiagrams: boolean }) => remove({ sourceGameId, snapIds, keepDiagrams }),
     async (args) => { await undo(args) }, ({ snapIds }) => `Deleted ${snapIds.length} ${snapIds.length === 1 ? 'Snap' : 'Snaps'}`)
-  const shown = [...snaps].reverse().filter((snap) => !onlyReview || snap.mustReview)
+  const progress = new Map(snaps.map((snap) => [snap._id, chartingProgress(snap, columns, tree)]))
+  const needsCharting = (snap: Doc<'snaps'>): boolean => {
+    const { charted, total } = progress.get(snap._id)!
+    return charted < total
+  }
+  const shown = [...snaps].reverse().filter((snap) => (!onlyReview || snap.mustReview) && (!onlyUncharted || needsCharting(snap)))
   const imports = importGroups(snaps)
   const shownSelected = shown.filter((snap) => liveSelected.has(snap._id)).length
   useEffect(() => {
@@ -100,10 +112,14 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
       <Meta className="text-[10.5px]">newest first</Meta>
       {imports.length > 0 && <DropdownMenu label="Select import" triggerProps={{ variant: 'outline', size: 'sm' }} items={imports.map((group, index) => ({
         label: `Import ${index + 1} · ${group.snapIds.length} Snaps · ${new Date(group.createdAt).toLocaleString()} · Clips ${group.firstLabel}–${group.lastLabel}`,
-        onSelect: () => { setOnlyReview(false); setSelected(new Set(group.snapIds)); anchor.current = null },
+        onSelect: () => { setOnlyReview(false); setOnlyUncharted(false); setSelected(new Set(group.snapIds)); anchor.current = null },
       }))} />}
+      <Button variant="outline" size="sm" aria-pressed={onlyUncharted} onClick={() => setOnlyUncharted((current) => !current)}
+        className={cn('ml-auto h-7 bg-transparent text-[10.5px]', onlyUncharted && 'border-brand text-brand')}>
+        {onlyUncharted ? 'Showing needs charting' : 'Needs charting'}
+      </Button>
       <Button variant="outline" size="sm" aria-pressed={onlyReview} onClick={() => setOnlyReview((current) => !current)}
-        className={cn('ml-auto h-7 bg-transparent text-[10.5px]', onlyReview && 'border-warm text-warm')}>
+        className={cn('h-7 bg-transparent text-[10.5px]', onlyReview && 'border-warm text-warm')}>
         {onlyReview ? 'Showing must review only' : 'Show must review only'}
       </Button>
     </div>
@@ -114,16 +130,21 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
     </div>}
     {snaps.length === 0 ? <div className="rounded-[10px] border border-border px-4 py-6">
         <h2 className="font-semibold">No Snaps yet</h2>
-        <Link className="underline" to={`${base}/import`}>Import Hudl file</Link>
-      </div> : <ul aria-label="Charted snaps" className="grid max-h-[560px] gap-1.5 overflow-y-auto pr-0.5">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <Link className="underline" to={`${base}/import`}>Import Hudl file</Link>
+          <Button variant="outline" size="sm" onClick={onChartSnap}>Chart a snap</Button>
+        </div>
+      </div> : <ul aria-label="Charted snaps" className="grid max-h-[640px] gap-1.5 overflow-y-auto pr-0.5">
+          {shown.length === 0 && <li><Meta>No Snaps match these filters.</Meta></li>}
           {shown.map((snap) => {
             const { core } = snap
             const label = core.clipNumber ?? snap.order
             const zone = isValidYardLine(core.yardLine) ? fieldZoneOf(core.yardLine) : ''
+            const { charted, total } = progress.get(snap._id)!
             return <li key={snap._id} className={cn('cursor-pointer rounded-[9px] border px-[11px] py-[9px]', snap._id === freshId
               ? 'border-primary/50 bg-primary/[0.07]'
               : 'border-border bg-muted/60 hover:border-muted-foreground/60')}
-              onClick={(event) => { if (!(event.target as HTMLElement).closest('input, button, a')) navigate(`${base}/snap/${snap._id}`) }}>
+              onClick={(event) => { if (!(event.target as HTMLElement).closest('input, button, a')) onOpenSnap(snap._id) }}>
               <div className="flex items-center gap-2">
                 <input type="checkbox" aria-label={`Select Snap ${label}`} checked={liveSelected.has(snap._id)}
                 onChange={() => {}} onClick={(event) => {
@@ -137,13 +158,18 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, onDuplicated 
                 }} />
                 <Link to={`${base}/snap/${snap._id}`} aria-label={`Open Play Detail, clip ${label}`}
                   className="font-mono text-[10px] text-muted-foreground/80 underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">#{label}</Link>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">{core.playConcept ?? '—'}</span>
-                <span className="font-mono text-[11px] text-muted-foreground">{resultText(core)}</span>
+                <button type="button" onClick={() => onOpenSnap(snap._id)} aria-label={`Chart Snap ${label}: ${core.playType ?? 'no Play Type'}, ${core.formation ?? 'no Formation'}`}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <Chip className="shrink-0 px-1.5 py-0.5 text-[10.5px]">{core.playType ?? '—'}</Chip>
+                  <span className="min-w-0 truncate text-[14px] font-semibold text-foreground">{core.formation ?? '—'}</span>
+                </button>
+                {snap.imported !== undefined && <Meta className="text-[10px]">Imported</Meta>}
+                {total > 0 && <span className={cn('font-mono text-[10.5px]', charted < total ? 'text-brand' : 'text-muted-foreground')}>{charted}/{total} charted</span>}
                 {snap.mustReview && <span className="text-warm" aria-label="Must Review">★</span>}
                 <RowActions snap={snap} base={base} onDuplicated={onDuplicated} />
               </div>
               <div className="mt-1 truncate pl-6 font-mono text-[10.5px] text-muted-foreground">
-                {[downDistance(core), zone, core.personnel, core.formation].filter(Boolean).join(' · ')}
+                {[core.playConcept, downDistance(core), zone, core.personnel, resultText(core)].filter(Boolean).join(' · ') || '—'}
               </div>
             </li>
           })}

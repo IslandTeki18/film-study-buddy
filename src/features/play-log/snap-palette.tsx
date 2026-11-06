@@ -115,16 +115,20 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
       }} />
   }
   useEffect(() => {
+    // The palette may be hosted in its own dialog (the Play Log sheet); keys from any other dialog stay ignored.
+    const host = section.current?.closest('dialog') ?? section.current
+    const inScope = (target: EventTarget | null): boolean => target instanceof Node && Boolean(host?.contains(target))
     function onKey(event: KeyboardEvent): void {
-      if (!event.defaultPrevented && !inDialog(event.target) && isShortcut(event, 'createSnap')) {
+      const outsideOtherDialogs = !inDialog(event.target) || inScope(event.target)
+      if (!event.defaultPrevented && outsideOtherDialogs && isShortcut(event, 'createSnap')) {
         event.preventDefault(); save(); return
       }
-      if (!event.defaultPrevented && !inDialog(event.target) && isShortcut(event, 'openPlayDetail')) {
+      if (!event.defaultPrevented && outsideOtherDialogs && isShortcut(event, 'openPlayDetail')) {
         event.preventDefault(); onOpenPlayDetail(); return
       }
-      if (!event.defaultPrevented && !inDialog(event.target) && isShortcut(event, 'toggleMustReview')) {
+      if (!event.defaultPrevented && outsideOtherDialogs && isShortcut(event, 'toggleMustReview')) {
         const target = event.target
-        if (target instanceof HTMLElement && (target === document.body || section.current?.contains(target))) {
+        if (target instanceof HTMLElement && (target === document.body || inScope(target))) {
           event.preventDefault()
           if (!saving && !pending.current) onMustReviewChange(!mustReview)
         }
@@ -133,13 +137,12 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
       if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return
       const target = event.target
       if (!(target instanceof HTMLElement)) return
-      if (target.closest('input, textarea, select, [contenteditable="true"], dialog, [role="dialog"]')) return
-      if (target !== document.body && !section.current?.contains(target)) return
+      if (target.closest('input, textarea, select, [contenteditable="true"]')) return
+      if (target !== document.body && !inScope(target)) return
       if (target.isContentEditable) return
       const interactive = target.closest('button, a, [role="button"], [role="radio"]')
       if (interactive && (!interactive.matches('[role="tab"], [data-palette-tag]') || event.key === 'Enter' || event.key === ' ' || event.key === 'Tab')) return
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); save(); return }
-      if (event.key === 'Escape') { event.preventDefault(); clear(); return }
       if (event.key === 'Tab' && columns.length) {
         event.preventDefault(); setGroupIdx((current) => (current + (event.shiftKey ? -1 : 1) + columns.length) % columns.length); return
       }

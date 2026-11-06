@@ -9,12 +9,13 @@ export interface DialogProps extends Omit<DialogHTMLAttributes<HTMLDialogElement
 export function Dialog({ open, onOpenChange, onClose, className, children, ...props }: DialogProps): ReactNode {
   const ref = useRef<HTMLDialogElement>(null)
 
+  // Sync every render: a parent that keeps `open` true after a native close (forced Esc) reopens it.
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
     if (open && !dialog.open) dialog.showModal()
     if (!open && dialog.open) dialog.close()
-  }, [open])
+  })
 
   return (
     <dialog

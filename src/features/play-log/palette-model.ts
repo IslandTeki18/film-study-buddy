@@ -83,9 +83,9 @@ export function hasAnyValue(draft: Draft): boolean {
   return Object.values(draft).some((value) => hasAnalysisValue(value) || isValidYardLine(value))
 }
 
-export function applicableColumns(columns: readonly PlayLogColumn[], tree: {
-  readonly sections: readonly { readonly _id: string; readonly name: string }[]
-}, draft: Draft): PlayLogColumn[] {
+export type SectionTree = { readonly sections: readonly { readonly _id: string; readonly name: string }[] }
+
+export function applicableColumns(columns: readonly PlayLogColumn[], tree: SectionTree, draft: Draft): PlayLogColumn[] {
   const names = new Map(tree.sections.map((section) => [section._id, section.name]))
   return columns.filter((column) => column.kind === 'core' || sectionAppliesTo(names.get(column.field.sectionId) ?? '', draft['core:playType']))
 }
