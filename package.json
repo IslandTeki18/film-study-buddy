@@ -15,11 +15,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
+    "@clerk/electron": "0.1.4",
     "@fontsource/archivo": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.45.0",
+    "electron-store": "8.2.0",
     "lucide-react": "^0.468.0",
     "papaparse": "^5.7.0",
     "react": "^19.0.0",
@@ -46,6 +48,7 @@
     "productName": "Film Study Buddy",
     "directories": { "output": "dist" },
     "files": ["out/**/*", "package.json"],
-    "mac": { "target": ["dmg", "dir"], "identity": null, "category": "public.app-category.sports" }
+    "mac": { "target": ["dmg", "dir"], "identity": null, "category": "public.app-category.sports" },
+    "protocols": [{ "name": "Film Study Buddy", "schemes": ["film-study-buddy"] }]
   }
 }

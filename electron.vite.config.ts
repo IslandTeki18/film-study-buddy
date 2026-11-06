@@ -11,7 +11,8 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    // The preload is sandboxed and cannot require packages at runtime, so Clerk is bundled in.
+    plugins: [externalizeDepsPlugin({ exclude: ['@clerk/electron'] })],
     build: {
       lib: { entry: resolve(__dirname, 'electron/preload.ts') },
       rollupOptions: { output: { format: 'cjs', entryFileNames: '[name].cjs' } },
