@@ -63,6 +63,23 @@ Generated Reports are created directly and remain fully editable in the Report B
 | `npm run typecheck` | `tsc --noEmit` across renderer, main and Convex code |
 | `npm test` | Theme resolution and storage self-checks |
 | `npm run convex:dev` | Convex dev server and codegen only |
+| `npm run package` | `build`, then an unsigned arm64 `.app` and `.dmg` in `dist/` |
+
+## Installed app
+
+`npm run package` bakes `VITE_CONVEX_URL` from `.env.local` into the bundle, so the installed
+app talks to the same Convex deployment as `npm run dev` and sees the same data. It does not
+deploy Convex functions: push backend changes first (`npx convex dev --once`), or the app runs
+new renderer code against old functions.
+
+```bash
+npm run package
+rm -rf "/Applications/Film Study Buddy.app"
+ditto "dist/mac-arm64/Film Study Buddy.app" "/Applications/Film Study Buddy.app"
+```
+
+The app is unsigned (`mac.identity: null`). A copy built on this Mac opens normally; a copy
+moved to another Mac needs right-click → Open the first time.
 
 ## Structure
 
