@@ -5,7 +5,7 @@ import ts from 'typescript'
 
 const source = readFileSync(new URL('./play-designer.tsx', import.meta.url), 'utf8')
 const ast = ts.createSourceFile('play-designer.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
-const names = new Set(['setPlayers', 'patch', 'strip', 'setHideOther', 'stamp'])
+const names = new Set(['setPlayers', 'patch', 'strip', 'setHideOther', 'stamp', 'throwTo'])
 const functions = []
 function visit(node) {
   if (ts.isFunctionDeclaration(node) && names.has(node.name?.text)) functions.push(node.getText(ast))
@@ -14,13 +14,13 @@ function visit(node) {
 visit(ast)
 assert.equal(functions.length, names.size)
 const code = ts.transpileModule(functions.join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
-const stampMan = new Function('draftRef', 'selected', 'setDraft', 'setPicking', 'otherSide', 'toPx', `${code}\nreturn () => stamp('Man')`)
+const stampMan = new Function('draftRef', 'selected', 'setDraft', 'setPicking', 'setPassing', 'otherSide', 'toPx', `${code}\nreturn () => stamp('Man')`)
 for (const hiddenSide of [undefined, 'offense']) {
   const defender = { id: 'D', side: 'defense', x: 0.5, y: 0.4, job: 'Zone', zone: { x: 0.5, y: 0.2, rx: 0.1, ry: 0.1 }, route: [0.5, 0.3], coversId: 'O' }
   const draft = { players: [defender, { id: 'O', side: 'offense', x: 0.5, y: 0.6 }], shapes: [], note: 'Keep this', ...(hiddenSide ? { hiddenSide } : {}) }
   let saved
   let picking
-  stampMan({ current: draft }, defender, (next) => { saved = next }, (id) => { picking = id }, 'offense', (player) => player)()
+  stampMan({ current: draft }, defender, (next) => { saved = next }, (id) => { picking = id }, () => {}, 'offense', (player) => player)()
   assert.equal(saved.players[0].job, 'Man')
   for (const key of ['route', 'zone', 'coversId']) assert.equal(saved.players[0][key], undefined)
   assert.equal(saved.hiddenSide, undefined)
@@ -29,4 +29,16 @@ for (const hiddenSide of [undefined, 'offense']) {
   assert.equal(picking, 'D')
   assert.equal(defender.job, 'Zone')
 }
+{
+  const draft = { players: [{ id: 'QB', side: 'offense', x: 0.5, y: 0.7 }, { id: 'X', side: 'offense', x: 0.1, y: 0.6 }], shapes: [] }
+  let saved
+  let passing = 'QB'
+  const throwTo = new Function('draftRef', 'setDraft', 'setPassing', `${code}\nreturn throwTo`)({ current: draft }, (next) => { saved = next }, (id) => { passing = id })
+  throwTo('QB', 'X')
+  assert.equal(saved.players[0].passToId, 'X')
+  assert.deepEqual(saved.players[1], draft.players[1])
+  assert.equal(passing, undefined)
+  assert.equal(draft.players[0].passToId, undefined)
+}
+console.log('PASS: throwing to a receiver sets passToId on the passer only and ends picking')
 console.log('PASS: choosing Man clears prior assignments and reveals offense in the same draft update')

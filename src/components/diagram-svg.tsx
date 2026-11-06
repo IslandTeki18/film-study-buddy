@@ -1,5 +1,5 @@
 import { useId, type MouseEventHandler, type PointerEventHandler, type ReactNode, type Ref } from 'react'
-import { DIAGRAM_ASPECT, FIELD, type DiagramDoc, type DiagramPlayer, type DiagramShape, type PlayerSide } from '@convex/domain/diagram'
+import { catchPointOf, DIAGRAM_ASPECT, passArcControl, FIELD, type DiagramDoc, type DiagramPlayer, type DiagramShape, type PlayerSide } from '@convex/domain/diagram'
 import { cn } from '@/lib/utils'
 
 export const PLAYER_RADIUS = 12
@@ -193,6 +193,19 @@ export function DiagramSvg({ diagram, className, title = 'Play Diagram', selecte
         <Marker player={player} selected={player.id === selectedId} ink={ink} />
       </g>)}
       {children}
+      {/* Passes draw last so the ball flight sits above players and designer handles; pointer-events-none keeps them clickable. */}
+      {players.map((player) => {
+        const target = player.passToId ? byId.get(player.passToId) : undefined
+        if (!target) return null
+        const catchAt = catchPointOf(target)
+        const from = { x: x(player.x), y: y(player.y) }
+        const to = { x: x(catchAt.x), y: y(catchAt.y) }
+        const bend = passArcControl(from, to)
+        // Dotted ball flight on a throwing arch: near-zero dashes with round caps draw as dots.
+        return <path key={`pass-${player.id}`} className="pointer-events-none" d={`M ${from.x} ${from.y} Q ${bend.x} ${bend.y} ${to.x} ${to.y}`}
+          fill="none" stroke="var(--pass)" strokeOpacity={isActive('offense') ? 0.95 : 0.22}
+          strokeWidth="2.6" strokeLinecap="round" strokeDasharray="0.1 6" markerEnd={`url(#${arrowId})`} />
+      })}
     </svg>
   )
 }

@@ -27,6 +27,7 @@
   --warm: oklch(0.6 0.15 75);
   --positive: oklch(0.55 0.15 145);
   --defense: oklch(0.6 0.15 40);
+  --pass: oklch(0.57 0.22 27);
 }
 
 .dark {
@@ -46,6 +47,7 @@
   --warm: oklch(0.72 0.15 75);
   --positive: oklch(0.72 0.15 145);
   --defense: oklch(0.72 0.14 40);
+  --pass: oklch(0.68 0.21 25);
 }
 
 @theme inline {
@@ -117,6 +119,7 @@
   --warm: oklch(0.6 0.15 75);
   --positive: oklch(0.55 0.15 145);
   --defense: oklch(0.6 0.15 40);
+  --pass: oklch(0.57 0.22 27);
   color-scheme: light;
   background: white;
   color: var(--foreground);

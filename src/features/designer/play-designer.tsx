@@ -72,6 +72,8 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined)
   const [snapToGrid, setSnapToGrid] = useState(true)
   const [picking, setPicking] = useState<string | undefined>(undefined)
+  // id of the offensive man whose pass target the coach is about to click.
+  const [passing, setPassing] = useState<string | undefined>(undefined)
   const [formation, setFormation] = useState<string | undefined>(undefined)
   const [naming, setNaming] = useState<string | undefined>(undefined)
 
@@ -95,7 +97,11 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
     patch(defenderId, (defender) => ({ ...strip(defender, ['route', 'zone']), job: 'Man', coversId: targetId }))
     setPicking(undefined)
   }
-  function strip(player: DiagramPlayer, keys: readonly ('route' | 'zone' | 'coversId' | 'job')[]): DiagramPlayer {
+  function throwTo(passerId: string, targetId: string): void {
+    patch(passerId, (passer) => ({ ...passer, passToId: targetId }))
+    setPassing(undefined)
+  }
+  function strip(player: DiagramPlayer, keys: readonly ('route' | 'zone' | 'coversId' | 'job' | 'passToId')[]): DiagramPlayer {
     const next = { ...player }
     for (const key of keys) delete next[key]
     return next
@@ -117,6 +123,11 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
     if (target?.role === 'player') {
       const player = players.find((entry) => entry.id === target.id)
       if (!player) return
+      if (passing && player.side === 'offense' && player.id !== passing) {
+        throwTo(passing, player.id)
+        return
+      }
+      if (passing) setPassing(undefined)
       if (picking && player.side === 'offense') {
         cover(picking, player.id)
         return
@@ -133,7 +144,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
     } else if (target?.role === 'point' && selected) {
       drag.current = { kind: 'point', id: selected.id, index: target.index }
     } else {
-      if (picking) { setPicking(undefined); return }
+      if (picking || passing) { setPicking(undefined); setPassing(undefined); return }
       if (!selected) return
       patch(selected.id, (player) => ({
         ...player,
@@ -201,7 +212,8 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
 
   function removeSelected(): void {
     if (!selected) return
-    setPlayers(draftRef.current.players.filter((player) => player.id !== selected.id).map((player) => player.coversId === selected.id ? strip(player, ['coversId']) : player))
+    setPlayers(draftRef.current.players.filter((player) => player.id !== selected.id).map((player) => strip(player, [
+      ...(player.coversId === selected.id ? ['coversId' as const] : []), ...(player.passToId === selected.id ? ['passToId' as const] : [])])))
     setSelectedId(undefined)
   }
 
@@ -209,6 +221,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
     if (!selected) return
     const at = toPx(selected)
     setPicking(undefined)
+    setPassing(undefined)
     if (job === 'Zone') {
       const center = toNorm({ x: at.x, y: at.y + ZONE_DEFAULT.dy })
       const radii = toNorm({ x: ZONE_DEFAULT.rx, y: ZONE_DEFAULT.ry })
@@ -240,6 +253,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
     setFormation(name)
     setSide('offense')
     setPicking(undefined)
+    setPassing(undefined)
     setSelectedId(next.find((player) => player.side === 'offense' && player.kind !== 'OL' && player.kind !== 'QB')?.id)
   }
   function loadCustom(custom: Doc<'formations'>): void {
@@ -264,7 +278,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
     const target = event.target
     if (event.defaultPrevented || inDialog(target) || (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"]'))) return
     if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); removeSelected(); return }
-    if (event.key === 'Escape') { event.preventDefault(); drag.current = undefined; setPreview(undefined); if (picking) setPicking(undefined); else setSelectedId(undefined); return }
+    if (event.key === 'Escape') { event.preventDefault(); drag.current = undefined; setPreview(undefined); if (picking || passing) { setPicking(undefined); setPassing(undefined) } else setSelectedId(undefined); return }
     const delta = (event.shiftKey ? 5 : 1) * YARD_PX
     const directions: Record<string, readonly [number, number]> = { ArrowUp: [0, -delta], ArrowDown: [0, delta], ArrowLeft: [-delta, 0], ArrowRight: [delta, 0] }
     const direction = directions[event.key]
@@ -303,7 +317,11 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
   const roster = players.filter((player) => player.side === side)
   const coverTarget = selected?.coversId ? players.find((player) => player.id === selected.coversId) : undefined
   const pickingPlayer = picking ? players.find((player) => player.id === picking) : undefined
+  const passingPlayer = passing ? players.find((player) => player.id === passing) : undefined
+  const passTarget = selected?.passToId ? players.find((player) => player.id === selected.passToId) : undefined
   const describe = (player: DiagramPlayer): string => `${player.kind === 'OL' ? player.id : player.kind ?? player.side}${player.label ? ` ${player.label}` : ''}`
+  // Roster letter first so four WRs stay distinguishable: "H (WR)".
+  const name = (player: DiagramPlayer): string => player.kind === 'OL' ? player.id : `${player.id} (${describe(player)})`
   const statusText = status === 'idle' ? 'saved' : status === 'saving' ? 'saving…' : status === 'pending' ? 'unsaved' : 'save failed'
   const toneClass = isDefense ? 'text-defense' : 'text-primary'
 
@@ -321,7 +339,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
         })}</> : 'new play'}</span>
         <div role="radiogroup" aria-label="Side" className="ml-2 flex gap-1.5">
           {(['offense', 'defense'] as const).map((entry) => <button key={entry} type="button" role="radio" aria-checked={side === entry} className={chip(side === entry, entry)}
-            onClick={() => { setSide(entry); setPicking(undefined); setSelectedId(players.find((player) => player.side === entry)?.id) }}>{entry === 'offense' ? 'Offense' : 'Defense'}</button>)}
+            onClick={() => { setSide(entry); setPicking(undefined); setPassing(undefined); setSelectedId(players.find((player) => player.side === entry)?.id) }}>{entry === 'offense' ? 'Offense' : 'Defense'}</button>)}
         </div>
         <button type="button" className={chip(hideOther)} aria-pressed={hideOther} onClick={() => setHideOther(!hideOther)}>{hideOther ? 'show' : 'hide'} {otherSide}</button>
         <Meta>{otherSide} {hideOther ? 'off the field' : 'faded'} · editing the {side}</Meta>
@@ -374,10 +392,11 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
             <span className={toneClass}>{selected ? `${describe(selected)} · ${selected.job ?? 'no route'}` : 'nothing selected'}</span>
             <span>{path.length > 1 ? `${yards(path)} yd total` : 'no route'}</span>
             <button type="button" className={chip(false)} disabled={routePx.length === 0} onClick={() => selected && removePoint(selected.id, routePx.length - 1)}>↶ undo last point</button>
-            <button type="button" className={chip(false)} disabled={!roster.some((player) => player.route || player.zone || player.coversId)}
-              onClick={() => { setPicking(undefined); setPlayers(draftRef.current.players.map((player) => player.side === side ? strip(player, ['route', 'zone', 'coversId', 'job']) : player)) }}>clear all {side} routes</button>
+            <button type="button" className={chip(false)} disabled={!roster.some((player) => player.route || player.zone || player.coversId || player.passToId)}
+              onClick={() => { setPicking(undefined); setPlayers(draftRef.current.players.map((player) => player.side === side ? strip(player, ['route', 'zone', 'coversId', 'job', 'passToId']) : player)) }}>clear all {side} routes</button>
             <span className="ml-auto">drag man · click field to add point · arrows nudge · Alt+arrows move zone or motion · Alt+[ / ] resize zone</span>
           </div>
+          {passingPlayer && <div role="status" className="rounded-lg border border-primary bg-primary/10 px-3 py-2 font-mono text-[11px]">now click the offensive man the {name(passingPlayer)} throws to · Esc cancels</div>}
           {pickingPlayer && <div role="status" className="rounded-lg border border-defense bg-defense/10 px-3 py-2 font-mono text-[11px]">now click the offensive man the {describe(pickingPlayer)} should cover</div>}
           <label className="grid gap-1">
             <Eyebrow className="text-[9.5px]">Diagram note</Eyebrow>
@@ -437,6 +456,22 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
                 const { motion: _previous, ...rest } = player
                 return rest
               })}>{selected.motion ? 'remove motion' : '∿ set motion from here'}</button>
+          </div>}
+
+          {selected && selected.side === 'offense' && <div>
+            <div className="mb-2 flex items-baseline gap-2"><Eyebrow className="text-[9.5px]">Pass</Eyebrow><Meta className="text-[10px]">{passTarget ? `dotted line to where ${name(passTarget)} catches it` : 'dotted line to a teammate'}</Meta></div>
+            <div className="flex gap-1.5">
+              <button type="button" aria-pressed={passing === selected.id} className={cn(chip(passing === selected.id, 'neutral', !selected.passToId), 'flex-1 py-2')}
+                onClick={() => { setPicking(undefined); setPassing(passing === selected.id ? undefined : selected.id) }}>{passing === selected.id ? 'click the receiver…' : '⋯ throw to (click a man)'}</button>
+              {selected.passToId && <button type="button" className={cn(chip(false), 'py-2')} onClick={() => patch(selected.id, (player) => strip(player, ['passToId']))}>remove pass</button>}
+            </div>
+            <label className="mt-1.5 grid gap-1 text-[11px] text-muted-foreground">Throws to
+              <select aria-label="Throws to" value={selected.passToId ?? ''} className="rounded border border-border bg-muted p-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                onChange={(event) => { if (event.target.value) throwTo(selected.id, event.target.value); else patch(selected.id, (player) => strip(player, ['passToId'])) }}>
+                <option value="">No pass</option>
+                {players.filter((player) => player.side === 'offense' && player.id !== selected.id).map((player) => <option key={player.id} value={player.id}>{name(player)}</option>)}
+              </select>
+            </label>
           </div>}
 
           <div className="mt-auto flex gap-1.5">

@@ -34,6 +34,33 @@ export interface DiagramPlayer {
   coversId?: string
   /** Pre-snap start spot; x/y is the at-snap spot. */
   motion?: { x: number; y: number }
+  /** Offense only: id of the offensive teammate this man throws to. Drawn as a dotted line to the catch point. */
+  passToId?: string
+}
+
+/** Pass arch bow, in canvas px: a share of the throw length, clamped so short and long throws both read as arcs. */
+export const PASS_ARC = { ratio: 0.22, min: 10, max: 70 } as const
+
+/** Quadratic control point that bows a pass upfield (toward smaller y) like a thrown ball. Canvas px in and out. */
+export function passArcControl(from: { x: number; y: number }, to: { x: number; y: number }): { x: number; y: number } {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const length = Math.hypot(dx, dy)
+  if (length === 0) return { x: from.x, y: from.y }
+  const lift = Math.min(PASS_ARC.max, Math.max(PASS_ARC.min, length * PASS_ARC.ratio))
+  let nx = dy / length
+  let ny = -dx / length
+  // Pick the perpendicular that points upfield; a straight vertical throw bows to the right.
+  if (ny > 0 || (ny === 0 && nx < 0)) { nx = -nx; ny = -ny }
+  return { x: (from.x + to.x) / 2 + nx * lift, y: (from.y + to.y) / 2 + ny * lift }
+}
+
+/** Where a pass to this man is caught: the end of his route, or where he stands without one. */
+export function catchPointOf(player: Pick<DiagramPlayer, 'x' | 'y' | 'route'>): { x: number; y: number } {
+  const route = player.route ?? []
+  const x = route[route.length - 2]
+  const y = route[route.length - 1]
+  return x !== undefined && y !== undefined ? { x, y } : { x: player.x, y: player.y }
 }
 
 /** Legacy free-drawn shapes. The designer no longer creates them; existing ones still render. */
@@ -150,6 +177,7 @@ function normalizePlayer(player: DiagramPlayer, ids: Set<string>): DiagramPlayer
     ...(zone ? { zone } : {}),
     ...(motion ? { motion } : {}),
     ...(player.coversId ? { coversId: player.coversId } : {}),
+    ...(player.passToId ? { passToId: player.passToId } : {}),
   }
 }
 
@@ -164,6 +192,8 @@ export function normalizeDiagram(input: DiagramDoc): DiagramDoc {
   const offense = new Set(players.filter((player) => player.side === 'offense').map((player) => player.id))
   for (const player of players) {
     if (player.coversId !== undefined && (player.side !== 'defense' || !offense.has(player.coversId))) delete player.coversId
+    // A pass goes from an offensive man to a different live offensive man.
+    if (player.passToId !== undefined && (player.side !== 'offense' || player.passToId === player.id || !offense.has(player.passToId))) delete player.passToId
   }
   const shapes = input.shapes.map((shape) => normalizeShape(shape, ids))
   const note = input.note?.trim()
