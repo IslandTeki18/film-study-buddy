@@ -7,11 +7,10 @@ import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
-import type { TerminologyList } from '@convex/domain/terminology'
 import { normalizeCoreValue } from '@convex/domain/coreFields'
 import { normalizeAnalysisValue } from '@convex/domain/templateFields'
 import type { PlayLogColumn } from './columns'
-import { groupKind } from './palette-model'
+import { groupKind, tagDescription, type TerminologyTerm } from './palette-model'
 import { GroupInput } from './snap-palette'
 
 export function CellNoteEditor({ label, note, onSave, onEscape, onRemove }: {
@@ -143,16 +142,23 @@ export function isTypeOrPick(column: PlayLogColumn): column is Extract<PlayLogCo
 /** One editable Snap field for Play Detail. */
 export function FieldEditor({ column, value, terminology, onSave }: {
   readonly column: PlayLogColumn; readonly value: unknown
-  readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly terminology: readonly TerminologyTerm[]
   readonly onSave: (value: unknown) => Promise<void>
 }): ReactNode {
   const [pending, setPending] = useState(false)
   const listId = useId()
   const kind = column.kind === 'core' && column.field.key === 'quarter' ? { kind: 'input' as const } : groupKind(column, terminology)
-  if (isTypeOrPick(column) && kind.kind === 'tags') return <>
-    <DeferredInput column={column} value={value} disabled={pending} onSave={onSave} listId={listId} />
-    <datalist id={listId}>{kind.tags.map((tag) => <option key={tag} value={tag} />)}</datalist>
-  </>
+  if (isTypeOrPick(column) && kind.kind === 'tags') {
+    const meaning = typeof value === 'string' ? tagDescription(column, terminology, value) : undefined
+    return <>
+      <DeferredInput column={column} value={value} disabled={pending} onSave={onSave} listId={listId} />
+      <datalist id={listId}>{kind.tags.map((tag) => {
+        const description = tagDescription(column, terminology, tag)
+        return <option key={tag} value={tag} {...(description ? { label: description } : {})} />
+      })}</datalist>
+      {meaning && <p className="mt-1 text-xs text-muted-foreground">{meaning}</p>}
+    </>
+  }
   function commit(next: unknown): void {
     if (pending) return
     setPending(true)

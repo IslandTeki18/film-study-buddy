@@ -64,6 +64,8 @@ export default defineSchema({
     value: v.string(), createdAt: v.number(),
     // A coach-removed value. Built-ins live in code, so removing one needs a row.
     hidden: v.optional(v.boolean()),
+    // Coach-written meaning; overrides a built-in's default description.
+    description: v.optional(v.string()),
   }).index('by_list', ['list', 'value']),
   settings: defineTable({
     coachingArea: v.string(),

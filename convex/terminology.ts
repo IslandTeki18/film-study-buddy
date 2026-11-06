@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import type { Doc } from './_generated/dataModel'
 import { mutation, query, type MutationCtx } from './_generated/server'
 import schema from './schema'
-import { builtInTerminology, effectiveTerminology, type TerminologyList } from './domain/terminology.ts'
+import { builtInDescription, builtInTerminology, effectiveTerminology, TERMINOLOGY_DESCRIPTION_MAX_LENGTH, type TerminologyList } from './domain/terminology.ts'
 import { normalizeName } from './domain/names.ts'
 
 const listValidator = schema.tables.terminology.validator.fields.list
@@ -11,6 +11,17 @@ function requireValue(raw: string): string {
   const value = normalizeName(raw)
   if (value === null) throw new Error('Terminology must be 1–80 characters')
   return value
+}
+function cleanDescription(raw: string): string | undefined {
+  const description = raw.trim()
+  if (description.length > TERMINOLOGY_DESCRIPTION_MAX_LENGTH) throw new Error(`Description must be at most ${TERMINOLOGY_DESCRIPTION_MAX_LENGTH} characters`)
+  return description || undefined
+}
+/** Empty clears the coach's text; a built-in then falls back to its default description. */
+async function setDescription(ctx: MutationCtx, list: TerminologyList, value: string, description: string | undefined): Promise<void> {
+  const row = await rowFor(ctx, list, value)
+  if (row) await ctx.db.patch(row._id, { description })
+  else if (description) await ctx.db.insert('terminology', { list, value, createdAt: Date.now(), description })
 }
 async function rowFor(ctx: MutationCtx, list: TerminologyList, value: string): Promise<Doc<'terminology'> | null> {
   return ctx.db.query('terminology').withIndex('by_list', (q) => q.eq('list', list).eq('value', value)).first()
@@ -28,13 +39,27 @@ async function hide(ctx: MutationCtx, list: TerminologyList, value: string): Pro
 }
 
 export const list = query({
-  args: {}, returns: v.array(v.object({ list: listValidator, value: v.string(), builtIn: v.boolean() })),
+  args: {}, returns: v.array(v.object({ list: listValidator, value: v.string(), builtIn: v.boolean(), description: v.optional(v.string()) })),
   handler: async (ctx) => effectiveTerminology(await ctx.db.query('terminology').collect()),
 })
 
 export const add = mutation({
-  args: { list: listValidator, value: v.string() }, returns: v.null(),
-  handler: async (ctx, args) => { await show(ctx, args.list, requireValue(args.value)); return null },
+  args: { list: listValidator, value: v.string(), description: v.optional(v.string()) }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const value = requireValue(args.value)
+    const description = args.description === undefined ? undefined : cleanDescription(args.description)
+    await show(ctx, args.list, value)
+    if (description) await setDescription(ctx, args.list, value, description)
+    return null
+  },
+})
+
+export const describe = mutation({
+  args: { list: listValidator, value: v.string(), description: v.string() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    await setDescription(ctx, args.list, requireValue(args.value), cleanDescription(args.description))
+    return null
+  },
 })
 
 /** Removes a value from the pick list only. Snaps keep the value they already have. */
@@ -50,8 +75,12 @@ export const rename = mutation({
     const from = requireValue(args.from)
     const to = requireValue(args.to)
     if (from === to) return null
+    // The description follows the value unless the new name is a built-in with its own.
+    const carried = (await rowFor(ctx, args.list, from))?.description ?? builtInDescription(args.list, from)
     await hide(ctx, args.list, from)
     await show(ctx, args.list, to)
+    const target = await rowFor(ctx, args.list, to)
+    if (carried && !target?.description && !builtInDescription(args.list, to)) await setDescription(ctx, args.list, to, carried)
     return null
   },
 })

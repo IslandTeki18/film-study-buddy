@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { inDialog, isShortcut, SHORTCUTS } from '@/lib/shortcuts'
 import { Segmented } from '../preview/preview-shared'
 import type { PlayLogColumn } from './columns'
-import { groupKind, hasAnyValue, type Draft } from './palette-model'
+import { groupKind, hasAnyValue, tagDescription, type Draft, type TerminologyTerm } from './palette-model'
 
 function formatDraftValue(column: PlayLogColumn, value: unknown): string {
   if (!hasAnyValue({ [column.key]: value })) return ''
@@ -23,7 +23,7 @@ function formatDraftValue(column: PlayLogColumn, value: unknown): string {
 export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSnapNumber, mustReview,
   onMustReviewChange, saving, onSave, onOpenPlayDetail, onClear, onAddTerminology, onAddFieldOption }: {
   readonly columns: readonly PlayLogColumn[]
-  readonly terminology: readonly { list: TerminologyList; value: string }[]
+  readonly terminology: readonly TerminologyTerm[]
   readonly draft: Draft
   readonly onDraftChange: (next: Draft) => void
   readonly nextSnapNumber: number
@@ -188,7 +188,7 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
           <div className="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-2">
             {activeKind.tags.map((tag, index) => {
               const selected = isSelected(active, tag)
-              return <button key={tag} type="button" data-palette-tag disabled={saving || adding} aria-pressed={selected} onClick={() => pick(active, tag)}
+              return <button key={tag} type="button" data-palette-tag disabled={saving || adding} aria-pressed={selected} onClick={() => pick(active, tag)} title={tagDescription(active, terminology, tag)}
                 className={cn('flex min-h-[66px] flex-col items-start justify-between gap-2 rounded-[10px] border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                   selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong bg-muted hover:border-muted-foreground/60')}>
                 <span className="text-sm leading-tight font-semibold">{tag}</span>
@@ -217,7 +217,7 @@ export function SnapPalette({ columns, terminology, draft, onDraftChange, nextSn
             <div className="flex flex-wrap gap-1.5">
               {kind.tags.map((tag) => {
                 const selected = isSelected(column, tag)
-                return <button key={tag} type="button" data-palette-tag disabled={saving || adding} aria-pressed={selected} onClick={() => pick(column, tag)}
+                return <button key={tag} type="button" data-palette-tag disabled={saving || adding} aria-pressed={selected} onClick={() => pick(column, tag)} title={tagDescription(column, terminology, tag)}
                   className={cn('rounded-lg border px-2.5 py-1.5 font-mono text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     selected ? 'border-primary bg-primary font-bold text-primary-foreground' : 'border-border-strong bg-muted text-foreground/80 hover:border-muted-foreground/60')}>
                   {tag}

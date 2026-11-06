@@ -6,13 +6,23 @@ import type { TerminologyList } from '../../../convex/domain/terminology.ts'
 import { sectionAppliesTo } from '../../../convex/domain/playSide.ts'
 import type { PlayLogColumn } from './columns'
 
+/** One pick-list value as `terminology.list` returns it. */
+export interface TerminologyTerm { readonly list: TerminologyList; readonly value: string; readonly description?: string | undefined }
+
+/** The meaning of a terminology tag, shown as a hover hint or under the field. */
+export function tagDescription(column: PlayLogColumn, terminology: readonly TerminologyTerm[], tag: string): string | undefined {
+  if (column.kind !== 'core' || column.field.input.kind !== 'terminology') return undefined
+  const list = column.field.input.list
+  return terminology.find((term) => term.list === list && term.value === tag)?.description
+}
+
 export type Draft = Readonly<Partial<Record<ColumnKey, unknown>>>
 
 type GroupKind = { kind: 'tags'; tags: readonly string[]; multi: boolean } | { kind: 'input' }
 
 export function groupKind(
   column: PlayLogColumn,
-  terminology: readonly { list: TerminologyList; value: string }[],
+  terminology: readonly TerminologyTerm[],
 ): GroupKind {
   if (column.kind === 'core') {
     const { key, input } = column.field
