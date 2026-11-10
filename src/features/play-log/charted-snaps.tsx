@@ -44,7 +44,7 @@ function importGroups(snaps: readonly Doc<'snaps'>[]): Array<{ key: number; snap
   })
 }
 
-export function ChartedSnaps({ snaps, freshId, base, sourceGameId, columns, tree, onDuplicated, onOpenSnap, onChartSnap }: {
+export function ChartedSnaps({ snaps, freshId, base, workspaceId, sourceGameId, columns, tree, onDuplicated, onOpenSnap, onChartSnap }: {
   readonly snaps: readonly Doc<'snaps'>[]
   readonly freshId: Id<'snaps'> | null
   readonly base: string
@@ -65,6 +65,30 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, columns, tree
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const { show } = useToast()
+  const cellNotes = useQuery(api.notes.listCellNotesBySourceGame, { sourceGameId })
+  const quickNotes = useQuery(api.notes.listQuickNotes, { sourceGameId })
+  const diagrams = useQuery(api.diagrams.listByWorkspace, { workspaceId })
+  const cellNoteCounts = new Map<Id<'snaps'>, number>()
+  const quickNoteCounts = new Map<Id<'snaps'>, number>()
+  const snapsWithDiagrams = new Set<Id<'snaps'>>()
+  for (const { snapId } of cellNotes ?? []) {
+    cellNoteCounts.set(snapId, (cellNoteCounts.get(snapId) ?? 0) + 1)
+  }
+  for (const { snapId } of quickNotes ?? []) {
+    if (snapId) quickNoteCounts.set(snapId, (quickNoteCounts.get(snapId) ?? 0) + 1)
+  }
+  for (const diagram of diagrams ?? []) {
+    for (const { snapId } of diagram.attachedSnaps) snapsWithDiagrams.add(snapId)
+  }
+  function indicatorText(snapId: Id<'snaps'>): string {
+    const cells = cellNoteCounts.get(snapId)
+    const quick = quickNoteCounts.get(snapId)
+    const segments = []
+    if (cells) segments.push(`${cells} Cell Note${cells === 1 ? '' : 's'}`)
+    if (quick) segments.push(`${quick} Quick Note${quick === 1 ? '' : 's'}`)
+    if (snapsWithDiagrams.has(snapId)) segments.push('Play Diagram')
+    return segments.join(' · ')
+  }
   const liveSelected = new Set(snaps.filter((snap) => selected.has(snap._id)).map((snap) => snap._id))
   const orphaned = useQuery(api.diagrams.countOrphanedBy, confirming ? { snapIds: [...liveSelected] } : 'skip')
   const remove = useMutation(api.snaps.removeMany).withOptimisticUpdate((store, args) => {
@@ -139,6 +163,7 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, columns, tree
           {shown.map((snap) => {
             const { core } = snap
             const label = core.clipNumber ?? snap.order
+            const indicators = indicatorText(snap._id)
             const zone = isValidYardLine(core.yardLine) ? fieldZoneOf(core.yardLine) : ''
             const { charted, total } = progress.get(snap._id)!
             return <li key={snap._id} className={cn('cursor-pointer rounded-[9px] border px-[11px] py-[9px]', snap._id === freshId
@@ -163,6 +188,7 @@ export function ChartedSnaps({ snaps, freshId, base, sourceGameId, columns, tree
                   <Chip className="shrink-0 px-1.5 py-0.5 text-[10.5px]">{core.playType ?? '—'}</Chip>
                   <span className="min-w-0 truncate text-[14px] font-semibold text-foreground">{core.formation ?? '—'}</span>
                 </button>
+                {indicators && <Meta className="text-[10px]">{indicators}</Meta>}
                 {snap.imported !== undefined && <Meta className="text-[10px]">Imported</Meta>}
                 {total > 0 && <span className={cn('font-mono text-[10.5px]', charted < total ? 'text-brand' : 'text-muted-foreground')}>{charted}/{total} charted</span>}
                 {snap.mustReview && <span className="text-warm" aria-label="Must Review">★</span>}
