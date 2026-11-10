@@ -146,18 +146,16 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
         {(snaps?.length ?? 0) > 0 && <Link className={buttonVariants({ variant: 'outline', size: 'sm' })}
           to={`/w/${workspaceId}/games/${game._id}/import`}>Import Hudl file</Link>}
       </div>
-      {dataTab === 'charting' ? <div className="mt-3.5 flex flex-wrap items-stretch gap-px bg-border">
-        <section className="min-w-0 flex-[1_1_560px] bg-background px-5 pt-4 pb-6">
-          <ChartedSnaps snaps={snaps ?? []} freshId={createdId} base={`/w/${workspaceId}/games/${game._id}`}
-            workspaceId={workspaceId} sourceGameId={game._id} columns={columns} tree={tree} onDuplicated={setCreatedId}
-            onOpenSnap={(snapId) => setSheet({ kind: 'snap', snapId })} onChartSnap={() => setSheet({ kind: 'new' })} />
-          <ThisWeek workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} />
-        </section>
-        <aside aria-label="Player notes" className="grid min-w-0 flex-[1_1_300px] content-start gap-5 bg-card px-[18px] pt-[18px] pb-[26px]">
+      {dataTab === 'charting' ? <section className="mt-3.5 min-w-0 bg-background px-5 pt-4 pb-6">
+        <ChartedSnaps snaps={snaps ?? []} freshId={createdId} base={`/w/${workspaceId}/games/${game._id}`}
+          workspaceId={workspaceId} sourceGameId={game._id} columns={columns} tree={tree} onDuplicated={setCreatedId}
+          onOpenSnap={(snapId) => setSheet({ kind: 'snap', snapId })} onChartSnap={() => setSheet({ kind: 'new' })} />
+        <ThisWeek workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} />
+        <aside aria-label="Note a player" className="mt-[26px]">
           <ChartingAside mode={mode} onOpenPlayers={() => setDataTab('players')} workspaceId={game.workspaceId} sourceGameId={game._id}
             snaps={snaps ?? []} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />
         </aside>
-      </div> : <PlayerNotes workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />}
+      </section> : <PlayerNotes workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />}
     </div>
     <Sheet open={sheet !== null} aria-label={sheet?.kind === 'snap' ? 'Play Detail' : 'Chart a snap'}
       onOpenChange={(open) => { if (!open) void closeSheet() }} onCancel={(event) => { event.preventDefault(); void closeSheet() }}>
