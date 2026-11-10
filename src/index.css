@@ -91,7 +91,8 @@
   }
 }
 
-/* Electron: the app header doubles as the window drag region. */
+/* Electron: the app header doubles as the window drag region.
+   Dialogs overlapping the header must still receive pointer events. */
 .app-drag-region {
   -webkit-app-region: drag;
 }
@@ -99,6 +100,9 @@
 .app-drag-region a,
 .app-drag-region select,
 .app-drag-region input {
+  -webkit-app-region: no-drag;
+}
+dialog {
   -webkit-app-region: no-drag;
 }
 
