@@ -17,7 +17,25 @@ export function isTellOutcomeKey(key: string): boolean {
   return TELL_CORE_OUTCOME_KEYS.some((candidate) => candidate === key) || TELL_TEMPLATE_OUTCOME_PREFIXES.some((prefix) => key.startsWith(prefix))
 }
 
+/** A Coaching Template Section whose fields the coach sees before the snap ("Pre-Snap", "Pre Snap", "Presnap"). */
+export function isPreSnapSection(name: string): boolean {
+  return /\bpre[-\s]?snap\b/i.test(name)
+}
+
 export interface TellField { readonly key: string; readonly label: string }
+
+/**
+ * Splits grouping fields into Tell indicators and outcomes. Single-value template fields from a Pre-Snap
+ * Section (for example OL Stance) are indicators, never outcomes: what is visible before the snap cannot be
+ * the thing being predicted.
+ */
+export function tellFieldsFor<T extends TellField>(catalog: readonly T[], preSnapKeys: ReadonlySet<string>): { indicators: T[]; outcomes: T[] } {
+  const preSnap = (key: string): boolean => preSnapKeys.has(key) && TELL_TEMPLATE_OUTCOME_PREFIXES.some((prefix) => key.startsWith(prefix))
+  return {
+    indicators: catalog.filter((field) => isTellIndicatorKey(field.key) || preSnap(field.key)),
+    outcomes: catalog.filter((field) => isTellOutcomeKey(field.key) && !preSnapKeys.has(field.key)),
+  }
+}
 /** One Snap projected to a single value per field key. An absent key means no usable value. */
 export interface TellSnap { readonly id: string; readonly values: Readonly<Record<string, string>>; readonly yards?: number }
 export interface TellPart { key: string; label: string; value: string }

@@ -16,7 +16,9 @@ Built for one coach and one position. There is no position picker and no other-p
   blockers first: OL, TE, backs, QB, receivers.
 - **Play Designer** draws the offense plus your front: rush lanes, stunts (slant, loop) and
   pressures. It has no coverage tools.
-- **Tells, Tendencies, Reports, Practice Scripts and Scout Cards** default to DL vocabulary
+- **Tell Finder** also searches the Pre-Snap fields (any select, checkbox or rating field in a
+  section named "Pre-Snap"), so it can surface tells like "OL Stance: Heavy → Run".
+- **Tendencies, Reports, Practice Scripts and Scout Cards** default to DL vocabulary
   (Pre-Snap Tell, Pass Protection, OL Tell, Pullers, Double Team, and run-scheme play concepts).
 - **Generate with AI** always writes for the defensive line.
 

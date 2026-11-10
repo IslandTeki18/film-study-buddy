@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { findTells, isTellIndicatorKey, isTellOutcomeKey, TELL_MIN_SNAPS, wilsonLowerBound, type TellSnap } from './tells.ts'
+import { findTells, isPreSnapSection, isTellIndicatorKey, isTellOutcomeKey, tellFieldsFor, TELL_MIN_SNAPS, wilsonLowerBound, type TellSnap } from './tells.ts'
 
 const FORMATION = { key: 'core:formation', label: 'Formation' }
 const HASH = { key: 'core:hash', label: 'Hash' }
@@ -106,4 +106,36 @@ test('results are ranked by confidence floor over baseline and have unique keys'
   const scores = tells.map((tell) => tell.confidenceFloor - tell.baseline)
   assert.deepEqual(scores, [...scores].sort((a, b) => b - a))
   assert.equal(new Set(tells.map((tell) => tell.key)).size, tells.length)
+})
+
+test('recognizes Pre-Snap Section names', () => {
+  for (const name of ['Pre-Snap', 'Pre Snap', 'presnap', 'OL pre-snap tells']) assert.ok(isPreSnapSection(name), name)
+  for (const name of ['Run Game', 'Pass Game', 'Snap count', 'Prep']) assert.ok(!isPreSnapSection(name), name)
+})
+
+test('Pre-Snap template fields become indicators and stop being outcomes', () => {
+  const catalog = [
+    FORMATION, PLAY_TYPE,
+    { key: 'field:select:ol stance', label: 'OL Stance' },
+    { key: 'field:checkbox:double team', label: 'Double Team' },
+    { key: 'field:tags:pre-snap notes', label: 'Pre-Snap Notes' },
+  ]
+  const { indicators, outcomes } = tellFieldsFor(catalog, new Set(['field:select:ol stance', 'field:tags:pre-snap notes']))
+  assert.deepEqual(indicators.map((field) => field.label), ['Formation', 'OL Stance'])
+  assert.deepEqual(outcomes.map((field) => field.label), ['Play Type', 'Double Team'])
+  const { indicators: none } = tellFieldsFor(catalog, new Set())
+  assert.deepEqual(none.map((field) => field.label), ['Formation'])
+})
+
+test('finds a Tell from a Pre-Snap template field', () => {
+  const STANCE = { key: 'field:select:ol stance', label: 'OL Stance' }
+  const data = [
+    ...snaps(9, { [STANCE.key]: 'Heavy', 'core:playType': 'Run' }),
+    ...snaps(1, { [STANCE.key]: 'Heavy', 'core:playType': 'Pass' }),
+    ...snaps(10, { [STANCE.key]: 'Light', 'core:playType': 'Pass' }),
+  ]
+  const heavy = findTells(data, [STANCE], [PLAY_TYPE]).find((tell) => tell.indicators[0]?.value === 'Heavy')
+  assert.ok(heavy)
+  assert.equal(heavy.outcome.value, 'Run')
+  assert.equal(heavy.hits, 9)
 })

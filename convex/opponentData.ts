@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import { query, type QueryCtx } from './_generated/server'
 import { aggregate as aggregateSnaps, groupingFieldsFor, groupingValuesOf, templateGroupingKey, type TemplateFieldLike } from './domain/aggregate.ts'
+import { isPreSnapSection } from './domain/tells.ts'
 import { isIncluded } from './sourceGames'
 import { templateTree } from './templates'
 import schema from './schema'
@@ -13,16 +14,25 @@ export async function loadScope(ctx: QueryCtx, workspaceId: Id<'workspaces'>) {
   const games = (await ctx.db.query('sourceGames').withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId)).collect())
     .filter((game) => game.deletedAt === undefined && isIncluded(game)).sort((a, b) => b.createdAt - a.createdAt)
   const templateFields = new Map<Id<'sourceGames'>, TemplateFieldLike[]>()
+  // Grouping keys of template fields in a Pre-Snap Section; the Tell Finder treats them as indicators.
+  const preSnapKeys = new Set<string>()
   const snaps: Doc<'snaps'>[] = []
   // ponytail: V1 scans included games' Snaps; use denormalized counters if query latency grows.
   for (const game of games) {
     const template = await ctx.db.get(game.templateId)
-    templateFields.set(game._id, template && template.deletedAt === undefined
-      ? (await templateTree(ctx, template._id)).flatMap((section) => section.fields) : [])
+    const sections = template && template.deletedAt === undefined ? await templateTree(ctx, template._id) : []
+    templateFields.set(game._id, sections.flatMap((section) => section.fields))
+    for (const section of sections) {
+      if (!isPreSnapSection(section.name)) continue
+      for (const field of section.fields) {
+        const key = templateGroupingKey(field)
+        if (key) preSnapKeys.add(key)
+      }
+    }
     snaps.push(...(await ctx.db.query('snaps').withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect())
       .filter((snap) => snap.deletedAt === undefined))
   }
-  return { games, templateFields, snaps }
+  return { games, templateFields, preSnapKeys, snaps }
 }
 
 export type OpponentScope = NonNullable<Awaited<ReturnType<typeof loadScope>>>

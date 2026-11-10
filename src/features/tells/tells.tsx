@@ -26,7 +26,7 @@ export function Tells({ workspaceId }: { readonly workspaceId: string }): ReactN
         </Select>
       </label>
     </header>
-    <p className="text-sm">Pre-snap looks that predict what comes next. A Tell needs at least {TELL_MIN_SNAPS} snaps. These are counts only, so confirm on film before you coach it.</p>
+    <p className="text-sm">Pre-snap looks that predict what comes next: personnel, formation, motion, hash, situation, and the fields in the Pre-Snap section of your DL charting fields (OL splits, stance, TE and back alignment). A Tell needs at least {TELL_MIN_SNAPS} snaps. These are counts only, so confirm on film before you coach it.</p>
     {tells.length === 0
       ? <p>No Tells yet. Chart more snaps, or choose a different ODK.</p>
       : <ol className="grid gap-3">{tells.map((tell) => <li key={tell.key}><TellCard tell={tell} onSave={() => setSaving(tell)} /></li>)}</ol>}

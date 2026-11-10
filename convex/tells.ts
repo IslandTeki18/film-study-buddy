@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
 import { groupingFieldsFor, groupingValuesOf, NONE_GROUP, templateGroupingKey } from './domain/aggregate.ts'
-import { findTells, isTellIndicatorKey, isTellOutcomeKey, type Tell, type TellSnap } from './domain/tells.ts'
+import { findTells, tellFieldsFor, type Tell, type TellSnap } from './domain/tells.ts'
 import { loadScope, type OpponentScope } from './opponentData'
 import schema from './schema'
 import { requireCategory, requireNote, requireTitle } from './tendencies'
@@ -23,8 +23,7 @@ async function computeTells(ctx: QueryCtx, workspaceId: Id<'workspaces'>, odk: O
   const scope = await loadScope(ctx, workspaceId)
   if (!scope) return null
   const catalog = groupingFieldsFor([...scope.templateFields.values()])
-  const indicators = catalog.filter((field) => isTellIndicatorKey(field.key))
-  const outcomes = catalog.filter((field) => isTellOutcomeKey(field.key))
+  const { indicators, outcomes } = tellFieldsFor(catalog, scope.preSnapKeys)
   const fields = [...indicators, ...outcomes]
   const templateIds = new Map(scope.games.map((game) => [game._id, fields.map((field) =>
     scope.templateFields.get(game._id)?.find((candidate) => templateGroupingKey(candidate) === field.key)?._id)]))
