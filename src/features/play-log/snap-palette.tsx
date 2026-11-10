@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Eyebrow, Meta, Panel } from '@/components/ui/panel'
 import { cn } from '@/lib/utils'
 import { inDialog, isShortcut, SHORTCUTS } from '@/lib/shortcuts'
-import { Segmented } from '../preview/preview-shared'
+import { Segmented } from '@/components/ui/segmented'
 import type { PlayLogColumn } from './columns'
 import { groupKind, hasAnyValue, type Draft } from './palette-model'
 

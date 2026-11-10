@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import { SourceGameActions } from './source-game-actions'
 
-const GRID = 'grid grid-cols-[minmax(0,1.4fr)_minmax(140px,1fr)_104px_84px_auto] items-center gap-2.5 px-3.5'
+const GRID = 'grid grid-cols-[minmax(0,1fr)_104px_84px_auto] items-center gap-2.5 px-3.5'
 // ponytail: "last 2 weeks" is list position (newest first), not dates; compare gameDate if games gain one.
 const RECENT_COUNT = 2
 
@@ -64,9 +64,9 @@ export function SourceGameList({ workspaceId }: { readonly workspaceId: string }
         <Link className={buttonVariants({ variant: 'outline' })} to={`${path}/new?intent=manual`}>Create manually</Link>
       </div>
     </section> : <div className="overflow-x-auto rounded-[11px] border border-border">
-      <div className="min-w-[680px]">
+      <div className="min-w-[520px]">
         <div className={`${GRID} bg-muted py-2.5 font-mono text-[9.5px] tracking-[0.07em] uppercase text-muted-foreground`}>
-          <div>Game</div><div>Template</div><div>Charted</div><div className="text-right">Use</div><div className="text-right">Actions</div>
+          <div>Game</div><div>Charted</div><div className="text-right">Use</div><div className="text-right">Actions</div>
         </div>
         {games.map((game) => {
           const included = game.included !== false
@@ -75,7 +75,6 @@ export function SourceGameList({ workspaceId }: { readonly workspaceId: string }
             onKeyDown={(event) => { if (event.key === 'Enter' && event.target === event.currentTarget) navigate(`${path}/${game._id}`) }}
             className={`${GRID} cursor-pointer border-t border-border py-2.5 font-mono text-[11.5px] text-foreground/80 outline-none transition-colors hover:bg-accent focus-visible:bg-accent`}>
             <span className="truncate font-sans text-[13px] text-foreground">{game.label}</span>
-            <div className="truncate text-muted-foreground">{game.templateName}</div>
             <div className={game.snapCount ? 'text-brand' : 'text-muted-foreground'}>{game.snapCount ? `${game.snapCount} snaps` : 'none yet'}</div>
             <div className="text-right">
               <button type="button" aria-pressed={included} aria-label={`${game.label} counts toward the opponent picture`}

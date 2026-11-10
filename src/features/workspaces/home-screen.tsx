@@ -25,7 +25,7 @@ export function HomeScreen(): ReactNode {
     return <div role="status" aria-label="Loading Home" className="m-6 h-32 animate-pulse rounded bg-muted" />
   }
   return <>
-    <AppHeader meta={settings?.coachingArea} />
+    <AppHeader meta="Defensive line" />
     <Page width="max-w-[820px]">
       {!active ? <section className="grid gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Create your first season</h1>

@@ -1,5 +1,5 @@
 export const DEFAULT_QUICK_NOTE_TAGS = [
-  'Run', 'Pass', 'Formation', 'Personnel', 'Protection', 'Player', 'Situation', 'Review Later',
+  'Run Scheme', 'Protection', 'OL Tell', 'Pullers', 'Double Team', 'QB', 'Player', 'Situation', 'Review Later',
 ] as const
 
 export const QUICK_NOTE_TEXT_MAX_LENGTH = 2000

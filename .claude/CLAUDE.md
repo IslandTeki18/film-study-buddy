@@ -2,6 +2,14 @@
 
 Read blueprint.md before implementation and follow TASKS.md in dependency order. Build these applications: desktop (desktop).
 
+## Product Scope
+
+This is a personal film-study tool for **one defensive line coach** studying opponent offenses.
+SPEC.md and BLUEPRINT.md were written for a multi-position product; where they describe Coaching
+Areas, multiple starter templates, a first-launch position picker, scouting an opponent's defense,
+or coverage drawing, this scope overrides them. Do not reintroduce generic, other-position, or
+multi-coach features. Add only what helps a defensive line coach.
+
 ## TypeScript
 
 Enable strict mode throughout. Prefer unknown with narrowing over any. Validate external inputs at trust boundaries and keep shared domain types consistent with Convex validators.
@@ -27,7 +35,7 @@ Path component core-fields.js can only contain alphanumeric characters, undersco
 ```
 
 Inside `convex/`, use **camelCase** for files and directories: `coreFields.ts`, `fieldZone.ts`,
-`sourceGames.ts`, `opponentData.ts`, `starterTemplates.ts`, `csvMapping.ts`, `themeSettings/`.
+`sourceGames.ts`, `opponentData.ts`, `dlTemplate.ts`, `csvMapping.ts`, `themeSettings/`.
 camelCase over snake_case because the module path becomes the generated API surface, and
 `api.sourceGames.list` is the Convex convention while `api.source_games.list` is not.
 

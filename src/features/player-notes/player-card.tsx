@@ -5,7 +5,7 @@ import { PlayerNoteDialog, snapLinkLabel } from './player-note-dialog'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import {
-  groupsForSide, PLAYER_GRADES, PLAYER_NAME_MAX_LENGTH, PLAYER_DETAILS_MAX_LENGTH,
+  POSITION_GROUPS, PLAYER_GRADES, PLAYER_NAME_MAX_LENGTH, PLAYER_DETAILS_MAX_LENGTH,
   PLAYER_POSITION_MAX_LENGTH, PLAYER_PROFILE_TEXT_MAX_LENGTH, PLAYER_TRAIT_MAX_LENGTH, type PositionGroupKey,
 } from '@convex/domain/opponentPlayers'
 import { Button } from '@/components/ui/button'
@@ -19,12 +19,11 @@ import { useToast } from '@/components/ui/toast'
 import { TagPicker } from '@/features/notes/tag-picker'
 import { useAutosave } from '@/lib/db/use-autosave'
 import { useUndoableMutation } from '@/lib/db/use-undoable-mutation'
-import type { Mode } from '../preview/preview-data'
 import type { OpponentPlayer } from './player-notes'
 
-export function PlayerCard({ player, vocabulary, mode, sourceGameId, snaps }: {
+export function PlayerCard({ player, vocabulary, sourceGameId, snaps }: {
   readonly sourceGameId: Id<'sourceGames'>; readonly snaps: readonly Doc<'snaps'>[]
-  readonly player: OpponentPlayer; readonly vocabulary: readonly string[]; readonly mode: Mode
+  readonly player: OpponentPlayer; readonly vocabulary: readonly string[]
 }): ReactNode {
   const id = useId()
   const { show } = useToast()
@@ -69,7 +68,7 @@ export function PlayerCard({ player, vocabulary, mode, sourceGameId, snaps }: {
     {field('Details', details, PLAYER_DETAILS_MAX_LENGTH)}
     <label className="block space-y-1"><span className="text-xs text-muted-foreground">Group</span>
       <Select aria-label="Group" value={player.group} disabled={unsettled} onChange={(event) => commit({ group: event.target.value as PositionGroupKey })}>
-        {groupsForSide(mode === 'off' ? 'offense' : 'defense').map((group) => <option key={group.key} value={group.key}>{group.label}</option>)}
+        {POSITION_GROUPS.map((group) => <option key={group.key} value={group.key}>{group.label}</option>)}
       </Select>
     </label>
     <div className="flex items-center gap-2"><Meta>Grade</Meta>{PLAYER_GRADES.map((grade) => <Button key={grade} size="sm" variant={player.grade === grade ? 'default' : 'outline'}

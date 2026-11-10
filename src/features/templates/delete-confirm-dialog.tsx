@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 interface DeleteConfirmDialogProps {
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
-  readonly kind: 'template' | 'section' | 'field'
+  readonly kind: 'section' | 'field'
   readonly name: string
   readonly args: FunctionArgs<typeof api.templates.getUsage>
   readonly onConfirm: () => Promise<void>

@@ -2,22 +2,19 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
-import { groupsForSide } from '@convex/domain/opponentPlayers'
+import { POSITION_GROUPS } from '@convex/domain/opponentPlayers'
 import { Button } from '@/components/ui/button'
 import { PlayerNoteDialog } from '@/features/player-notes/player-note-dialog'
 import { Eyebrow, Panel } from '@/components/ui/panel'
-import type { Mode } from '../preview/preview-data'
 
-export function ChartingAside({ mode, onOpenPlayers, workspaceId, sourceGameId, snaps, latestSnapId }: {
-  readonly mode: Mode
+export function ChartingAside({ onOpenPlayers, workspaceId, sourceGameId, snaps, latestSnapId }: {
   readonly workspaceId: Id<'workspaces'>; readonly sourceGameId: Id<'sourceGames'>
   readonly snaps: readonly Doc<'snaps'>[]; readonly latestSnapId: Id<'snaps'> | null
   readonly onOpenPlayers: () => void
 }): ReactNode {
   const players = useQuery(api.opponentPlayers.listByWorkspace, { workspaceId })
   const [noting, setNoting] = useState<Id<'opponentPlayers'> | null>(null)
-  const groups = groupsForSide(mode === 'off' ? 'offense' : 'defense')
-  const shown = players?.filter((player) => groups.some((group) => group.key === player.group))
+  const shown = players?.filter((player) => POSITION_GROUPS.some((group) => group.key === player.group))
   const player = players?.find((player) => player._id === noting)
   return (
     <div>

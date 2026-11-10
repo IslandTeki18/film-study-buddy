@@ -16,7 +16,7 @@ import { requireLiveWorkspace } from './workspaces'
 
 const keyLabelValidator = v.object({ key: v.string(), label: v.string() })
 export const briefValidator = v.object({
-  opponentName: v.string(), week: v.number(), seasonName: v.string(), coachingArea: v.string(),
+  opponentName: v.string(), week: v.number(), seasonName: v.string(),
   sourceGames: v.array(v.object({ label: v.string(), snapCount: v.number() })), totalSnaps: v.number(),
   groupings: v.array(v.object({ key: v.string(), label: v.string(), totalSnaps: v.number(), rows: schema.tables.tendencies.validator.fields.snapshot.fields.rows })),
   formationBreakdowns: v.array(v.object({ value: v.string(), snaps: v.number(), breakdowns: v.array(v.object({ key: v.string(), label: v.string(), rows: schema.tables.tendencies.validator.fields.snapshot.fields.rows })) })),
@@ -36,8 +36,7 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>, pr
   const workspace = await requireLiveWorkspace(ctx, workspaceId)
   const season = await ctx.db.get(workspace.seasonId)
   const scope = preloadedScope ?? (await loadScope(ctx, workspaceId))!
-  const [settings, allGames, groupingFields, allTendencies, allDiagrams, allPlayers] = await Promise.all([
-    ctx.runQuery(api.settings.get, {}),
+  const [allGames, groupingFields, allTendencies, allDiagrams, allPlayers] = await Promise.all([
     ctx.runQuery(api.sourceGames.listByWorkspace, { workspaceId }),
     groupingFieldsFor([...scope.templateFields.values()]).map(({ key, label }) => ({ key, label })),
     ctx.runQuery(api.tendencies.listByWorkspace, { workspaceId }),
@@ -86,7 +85,7 @@ export async function loadBrief(ctx: QueryCtx, workspaceId: Id<'workspaces'>, pr
     return { sourceGameId: game._id, sourceGameLabel: game.label, columns: columnCatalog(fields.map((field) => field._id)).map((key) => ({ key, label: labels.get(key)! })) }
   }))
   return {
-    opponentName: workspace.opponentName, week: workspace.week, seasonName: season!.name, coachingArea: settings?.coachingArea ?? '',
+    opponentName: workspace.opponentName, week: workspace.week, seasonName: season!.name,
     sourceGames: games.map(({ label, snapCount }) => ({ label, snapCount })), totalSnaps, groupings, formationBreakdowns,
     tendencies: allTendencies.filter((tendency) => tendency.includeInReport && tendency.snapshot.gameIds.length > 0 && tendency.snapshot.gameIds.every((id) => gameIds.has(id))
       && (!tendency.diagramId || !allDiagrams.some((diagram) => diagram._id === tendency.diagramId) || diagramIds.has(tendency.diagramId)))

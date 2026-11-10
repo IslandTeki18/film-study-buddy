@@ -8,8 +8,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Eyebrow } from '@/components/ui/panel'
 import { PlayerNotes } from '@/features/player-notes/player-notes'
-import type { Mode } from '../preview/preview-data'
-import { MODE_OPTIONS, PreviewBadge, Segmented } from '../preview/preview-shared'
+import { Segmented } from '@/components/ui/segmented'
 import { buildColumns } from './columns'
 import { applicableColumns, carryForwardDraft, hasAnyValue, toCreateArgs, type Draft } from './palette-model'
 import { SnapPalette } from './snap-palette'
@@ -36,7 +35,6 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
   const visibleColumns = useMemo(() => tree ? applicableColumns(columns, tree, draft) : columns, [columns, tree, draft])
   const [mustReview, setMustReview] = useState(false)
   const [dataTab, setDataTab] = useState<'charting' | 'players'>('charting')
-  const [mode, setMode] = useState<Mode>('off')
   const creating = useRef(false)
   const [pending, setPending] = useState(false)
   const [createdId, setCreatedId] = useState<Id<'snaps'> | null>(null)
@@ -97,9 +95,7 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
       <div className="flex flex-wrap items-center gap-3 px-5 pt-3.5">
         <h1><Eyebrow className="text-xs">{game.label}</Eyebrow></h1>
         <Segmented label="Opponent data section" value={dataTab} options={[['charting', 'Charting'], ['players', 'Player notes']]} onChange={setDataTab} />
-        <Segmented label="Which side of the ball" value={mode} options={MODE_OPTIONS} onChange={setMode} accent />
-        {dataTab === 'charting' && <span className="ml-auto"><PreviewBadge /></span>}
-        <Button variant="outline" size="sm" disabled={incomplete === undefined || pending} onClick={() => {
+        <Button variant="outline" size="sm" className="ml-auto" disabled={incomplete === undefined || pending} onClick={() => {
           if (incomplete === 0) navigate(`/w/${workspaceId}/games`)
           else setFinishing(true)
         }}>Finish study session</Button>
@@ -129,15 +125,15 @@ function GamePlayLog({ workspaceId, sourceGameId }: PlayLogProps): ReactNode {
                 throw error
               }
             }} />
-          <ThisWeek workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} />
+          <ThisWeek workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} />
         </section>
         <aside aria-label="Charted snaps and player notes" className="grid min-w-0 flex-[1_1_300px] content-start gap-5 bg-card px-[18px] pt-[18px] pb-[26px]">
           <ChartedSnaps snaps={snaps ?? []} freshId={createdId} base={`/w/${workspaceId}/games/${game._id}`}
             workspaceId={workspaceId} sourceGameId={game._id} onDuplicated={setCreatedId} />
-          <ChartingAside mode={mode} onOpenPlayers={() => setDataTab('players')} workspaceId={game.workspaceId} sourceGameId={game._id}
+          <ChartingAside onOpenPlayers={() => setDataTab('players')} workspaceId={game.workspaceId} sourceGameId={game._id}
             snaps={snaps ?? []} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />
         </aside>
-      </div> : <PlayerNotes workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} mode={mode} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />}
+      </div> : <PlayerNotes workspaceId={game.workspaceId} sourceGameId={game._id} snaps={snaps ?? []} latestSnapId={createdId ?? snaps?.at(-1)?._id ?? null} />}
     </div>
     <Dialog open={finishing} onOpenChange={setFinishing} aria-label="Completeness Warning">
       <div className="space-y-4">

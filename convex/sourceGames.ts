@@ -5,6 +5,7 @@ import schema from './schema'
 import { normalizeName } from './domain/names.ts'
 import { collectSourceGameCascade, requireLiveWorkspace } from './workspaces'
 import { softDeleteBatch } from './deletions'
+import { requirePrimaryTemplate } from './templates'
 
 export async function isLiveSourceGame(ctx: QueryCtx, id: Id<'sourceGames'>): Promise<boolean> {
   const game = await ctx.db.get(id)
@@ -38,7 +39,7 @@ const sourceGameValidator = v.object({
 export const listByWorkspace = query({
   args: { workspaceId: v.string() },
   returns: v.array(v.object({
-    ...sourceGameValidator.fields, templateName: v.string(), snapCount: v.number(),
+    ...sourceGameValidator.fields, snapCount: v.number(),
   })),
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId('workspaces', args.workspaceId)
@@ -52,12 +53,10 @@ export const listByWorkspace = query({
       .filter((game) => game.deletedAt === undefined).sort((a, b) => b.createdAt - a.createdAt)
     // ponytail: per-game Snap scans fit V1 volume; use aggregate counters if query latency shows up.
     return Promise.all(games.map(async (game) => {
-      const template = await ctx.db.get(game.templateId)
       const snaps = await ctx.db.query('snaps')
         .withIndex('by_sourceGame', (q) => q.eq('sourceGameId', game._id)).collect()
       return {
         ...game,
-        templateName: template && template.deletedAt === undefined ? template.name : 'Coaching Template not found',
         snapCount: snaps.filter((snap) => snap.deletedAt === undefined).length,
       }
     }))
@@ -80,15 +79,14 @@ export const get = query({
 })
 
 export const create = mutation({
-  args: { workspaceId: v.id('workspaces'), label: v.string(), templateId: v.id('templates') },
+  args: { workspaceId: v.id('workspaces'), label: v.string() },
   returns: v.id('sourceGames'),
   handler: async (ctx, args) => {
     await requireLiveWorkspace(ctx, args.workspaceId)
-    const template = await ctx.db.get(args.templateId)
-    if (!template || template.deletedAt !== undefined) throw new Error('Coaching Template not found')
+    const label = requireLabel(args.label)
     return ctx.db.insert('sourceGames', {
-      workspaceId: args.workspaceId, label: requireLabel(args.label),
-      templateId: args.templateId, createdAt: Date.now(),
+      workspaceId: args.workspaceId, label,
+      templateId: await requirePrimaryTemplate(ctx), createdAt: Date.now(),
     })
   },
 })

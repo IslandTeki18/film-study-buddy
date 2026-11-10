@@ -1,13 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { AppHeader } from '@/components/app-header'
-import { buttonVariants } from '@/components/ui/button'
 import { ViewEditor } from './view-editor'
 import { FieldEditor } from './field-editor'
-import { InlineName } from './inline-name'
 import { SectionList } from './section-list'
 
 export function TemplateBuilder({ templateId }: { readonly templateId: string }): ReactNode {
@@ -18,18 +16,14 @@ export function TemplateBuilder({ templateId }: { readonly templateId: string })
   useEffect(() => {
     if (tree !== undefined && selectedFieldId && !selectedField) setSelectedFieldId(null)
   }, [tree, selectedFieldId, selectedField])
-  const rename = useMutation(api.templates.rename)
   if (tree === undefined) return <div role="status" aria-label="Loading Coaching Template" className="m-6 h-48 animate-pulse rounded-md bg-muted" />
   if (tree === null) return <main className="space-y-4 p-6">
-    <h1 className="text-2xl font-semibold">Coaching Template not found</h1>
-    <Link className="underline" to="/templates">Back to Coaching Templates</Link>
+    <h1 className="text-2xl font-semibold">Charting fields not found</h1>
+    <p className="text-sm text-muted-foreground">Add a Source Game and the Defensive Line template is reinstalled.</p>
+    <Link className="underline" to="/">Back to Home</Link>
   </main>
   return <>
-    <AppHeader title="Template builder">
-      <Link className={buttonVariants({ variant: 'outline', size: 'sm' })} to="/templates">All templates</Link>
-      <InlineName key={tree.template._id} label="Template name" value={tree.template.name}
-        save={async (name) => { await rename({ templateId: tree.template._id, name }) }} />
-    </AppHeader>
+    <AppHeader title="DL charting fields" meta="What you chart on every Snap, beyond down, distance and formation" />
     <main className="space-y-6 p-6">
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
       <div className="space-y-6">

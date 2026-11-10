@@ -1,7 +1,8 @@
 # Film Study Buddy — Ubiquitous Language
 
-A local-first desktop companion for high school football coaches. It converts Hudl film-study
-data and coaching observations into structured, reusable opponent notebooks. It is a notebook,
+A local-first desktop companion for one high school defensive line coach. It converts Hudl
+film-study data on the opponent's offense into structured, reusable opponent notebooks for the
+defensive line room. It is not built for other positions or for staff sharing. It is a notebook,
 not an analytics platform: it counts and organizes, the coach interprets.
 
 Source of truth for scope and terms: `.claude/SPEC.md` (V1 product spec). This file is the
@@ -91,14 +92,14 @@ _Avoid_: Snap detail, row detail, modal, inspector.
 ## Coaching Templates
 
 **Coaching Template**:
-A reusable, coach-customizable set of Sections and Fields defining the position-specific
-analysis captured for each Snap. A Source Game uses exactly one.
+The editable set of Sections and Fields defining the defensive line analysis captured for each
+Snap. Shown to the coach as "DL charting fields". There is one; every new Source Game uses it.
 _Avoid_: Form, schema, layout, profile. Say "Template" only where unambiguous.
 
-**Starter Coaching Template**:
-A Coaching Template shipped with the application for a coaching area (for example Defensive
-Line), installed at First Launch and fully editable afterwards.
-_Avoid_: Default template, preset, stock template.
+**Defensive Line Template**:
+The Coaching Template shipped with the application (Pre-Snap, Run Game, Pass Game), installed
+automatically at First Launch and fully editable afterwards.
+_Avoid_: Default template, preset, stock template, Starter Coaching Template.
 
 **Section**:
 A named group of Fields inside a Coaching Template (for example Run Game).
@@ -108,11 +109,6 @@ _Avoid_: Group, category (category belongs to Tendencies / Alerts), tab.
 One typed input in a Coaching Template — Short Text, Long Text, Number, Checkbox, Single Select,
 Multi-Select, Rating / Grade (fixed 1–5), or Tags. Optional unless explicitly marked Required.
 _Avoid_: Column, attribute, property.
-
-**Coaching Area**:
-The coach's primary position responsibility chosen at First Launch (for example Linebackers,
-Offensive Coordinator, Custom / General). Determines the Starter Coaching Template installed.
-_Avoid_: Role, position, specialty.
 
 **Completeness Warning**:
 An informational notice that Snaps have unfinished Required fields. It never blocks the coach.
@@ -169,8 +165,9 @@ Blocks), Formation (a Core Snap Data field and a Play Designer preset).
 ## Opponent Players
 
 **Opponent Player**:
-A player on the opponent's team, recorded in a Weekly Opponent Workspace with a jersey #,
-position, position group, and a coach-written profile. Shared by every Source Game of that
+A player on the opponent's offense, recorded in a Weekly Opponent Workspace with a jersey #,
+position, position group (Offensive line, Tight ends, Backs, Quarterback, Receivers), and a
+coach-written profile. Shared by every Source Game of that
 Workspace.
 _Avoid_: Player alone (ambiguous with Player Object), roster entry, athlete.
 
@@ -232,8 +229,8 @@ _Avoid_: Document, export, packet, printout.
 
 **Generated Report**:
 A Report whose Blocks were assembled by the application from the Workspace's included Source
-Games, Tendencies / Alerts, Play Diagrams, Quick Notes, and Player Notes, for a chosen
-Coaching Area. Its fixed structure is Game-Plan Summary, Page Break, then Tendency Report.
+Games, Tendencies / Alerts, Play Diagrams, Quick Notes, and Player Notes, written for the
+defensive line. Its fixed structure is Game-Plan Summary, Page Break, then Tendency Report.
 Identity, Priorities and Counters restate only coach-recorded content or remain labeled blank
 slots. Every data Block holds a real Report Snapshot, and the Report is editable afterwards.
 _Avoid_: AI report, auto report, generated document.
@@ -352,3 +349,5 @@ Words the product deliberately does not use, because the concept does not exist 
 | Success rate, efficiency, significance | Statistics are objective counts and averages only; the coach interprets. |
 | Team, roster, staff, share | Refers to the coach's own team; collaboration is post-V1. Opponent personnel are Opponent Players. |
 | Backup, restore, export database | Deferred past V1. PDF export is the only export. |
+| Coaching Area, position picker | This build serves only a defensive line coach; there is nothing to choose. |
+| Their defense, coverage | The opponent's offense is the only side charted. The Play Designer draws fronts, stunts and pressures, not coverage. |

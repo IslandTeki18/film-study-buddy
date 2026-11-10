@@ -4,9 +4,9 @@ import type { Id } from './_generated/dataModel'
 import schema from './schema'
 import { isCoreFieldKey } from './domain/coreFields.ts'
 import { softDeleteBatch } from './deletions'
-import { getStarterTemplate, isCoachingArea, type StarterSection } from './domain/starterTemplates.ts'
+import { DL_TEMPLATE, type StarterSection } from './domain/dlTemplate.ts'
 import {
-  NAME_MAX_LENGTH, normalizeName, normalizeOptions, hasOptions, hasAnalysisValue,
+  normalizeName, normalizeOptions, hasOptions, hasAnalysisValue,
 } from './domain/templateFields.ts'
 
 type ReadCtx = QueryCtx | MutationCtx
@@ -68,7 +68,6 @@ export async function templateTree(ctx: ReadCtx, templateId: Id<'templates'>) {
 
 async function insertTemplateTree(ctx: MutationCtx, args: {
   name: string
-  coachingArea: string
   isStarter: boolean
   sections: readonly (Omit<StarterSection, 'fields'> & {
     readonly fields: readonly (StarterSection['fields'][number] & {
@@ -79,8 +78,7 @@ async function insertTemplateTree(ctx: MutationCtx, args: {
   })[]
 }) {
   const templateId = await ctx.db.insert('templates', {
-    name: requireName(args.name), coachingArea: args.coachingArea,
-    isStarter: args.isStarter, createdAt: Date.now(),
+    name: requireName(args.name), isStarter: args.isStarter, createdAt: Date.now(),
   })
   const fieldIds = new Map<string, string>()
   for (const [order, section] of args.sections.entries()) {
@@ -115,18 +113,25 @@ const fullValidator = v.object({
   })),
 })
 
-/** Lists only live Coaching Templates. */
-export const list = query({
-  args: {},
-  returns: v.array(v.object({
-    _id: v.id('templates'), name: v.string(), coachingArea: v.string(),
-    isStarter: v.boolean(), createdAt: v.number(),
-  })),
-  handler: async (ctx) => (await ctx.db.query('templates').collect())
+/**
+ * The defensive line Coaching Template every new Source Game uses: the oldest live starter, else the
+ * oldest live template (data carried over from the multi-coach build).
+ */
+export async function findPrimaryTemplate(ctx: ReadCtx): Promise<Id<'templates'> | null> {
+  const live = (await ctx.db.query('templates').collect())
     .filter((template) => template.deletedAt === undefined)
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(({ _id, name, coachingArea, isStarter, createdAt }) =>
-      ({ _id, name, coachingArea, isStarter, createdAt })),
+    .sort((a, b) => Number(b.isStarter) - Number(a.isStarter) || a.createdAt - b.createdAt)
+  return live[0]?._id ?? null
+}
+
+/** Reinstalls the defensive line template when none is live, so charting can always start. */
+export async function requirePrimaryTemplate(ctx: MutationCtx): Promise<Id<'templates'>> {
+  return (await findPrimaryTemplate(ctx)) ?? installStarterTemplate(ctx)
+}
+
+export const primary = query({
+  args: {}, returns: v.union(v.id('templates'), v.null()),
+  handler: findPrimaryTemplate,
 })
 
 /** Invalid route parameters and deleted templates resolve to not found. */
@@ -142,53 +147,10 @@ export const getFull = query({
   },
 })
 
-/** Blank templates start in the general Coaching Area. */
-export const create = mutation({
-  args: { name: v.string() }, returns: v.id('templates'),
-  handler: async (ctx, args) => (await insertTemplateTree(ctx, {
-    name: args.name, coachingArea: 'Custom / General', isStarter: false, sections: [],
-  })).templateId,
-})
-
 /** Each installation is an independent editable tree. */
-export async function installStarterTemplate(
-  ctx: MutationCtx, coachingArea: string,
-): Promise<Id<'templates'>> {
-  if (!isCoachingArea(coachingArea)) throw new Error('Unknown Coaching Area')
-  return (await insertTemplateTree(ctx, {
-    ...getStarterTemplate(coachingArea), isStarter: true,
-  })).templateId
+export async function installStarterTemplate(ctx: MutationCtx): Promise<Id<'templates'>> {
+  return (await insertTemplateTree(ctx, { ...DL_TEMPLATE, isStarter: true })).templateId
 }
-
-export const installStarter = mutation({
-  args: { coachingArea: v.string() }, returns: v.id('templates'),
-  handler: (ctx, args) => installStarterTemplate(ctx, args.coachingArea),
-})
-
-/** Copies live fields and rewrites view references to their new identities. */
-export const duplicate = mutation({
-  args: { templateId: v.id('templates') }, returns: v.id('templates'),
-  handler: async (ctx, args) => {
-    const template = await requireLiveTemplate(ctx, args.templateId)
-    const { templateId, fieldIds } = await insertTemplateTree(ctx, {
-      name: `${template.name.slice(0, NAME_MAX_LENGTH - 7)} (copy)`,
-      coachingArea: template.coachingArea, isStarter: false,
-      sections: await templateTree(ctx, args.templateId),
-    })
-    const views = await ctx.db.query('templateViews')
-      .withIndex('by_template', (q) => q.eq('templateId', args.templateId)).collect()
-    const remap = (keys: string[]): string[] => keys.flatMap((key) => {
-      if (!key.startsWith('field:')) return [key]
-      const id = fieldIds.get(key.slice(6))
-      return id ? [`field:${id}`] : []
-    })
-    for (const view of views) await ctx.db.insert('templateViews', {
-      templateId, name: view.name, visibleColumns: remap(view.visibleColumns),
-      columnOrder: remap(view.columnOrder),
-    })
-    return templateId
-  },
-})
 
 /** Names are trimmed, bounded, and need not be unique. */
 export const rename = mutation({
@@ -197,27 +159,6 @@ export const rename = mutation({
     await requireLiveTemplate(ctx, args.templateId)
     await ctx.db.patch(args.templateId, { name: requireName(args.name) })
     return null
-  },
-})
-
-/** Deleting a template leaves Snap analysis values recoverable through Undo. */
-export const remove = mutation({
-  args: { templateId: v.id('templates') }, returns: v.string(),
-  handler: async (ctx, args) => {
-    const template = await requireLiveTemplate(ctx, args.templateId)
-    const sections = await templateTree(ctx, args.templateId)
-    const fields = await ctx.db.query('templateFields')
-      .withIndex('by_template', (q) => q.eq('templateId', args.templateId)).collect()
-    // ponytail: views survive Undo but become unreachable after purge; collect orphans if storage matters.
-    return softDeleteBatch(ctx, {
-      kind: 'template', label: template.name,
-      records: [
-        { table: 'templates', id: template._id },
-        ...sections.map(({ _id }) => ({ table: 'templateSections' as const, id: _id })),
-        ...fields.filter((field) => field.deletedAt === undefined)
-          .map(({ _id }) => ({ table: 'templateFields' as const, id: _id })),
-      ],
-    })
   },
 })
 

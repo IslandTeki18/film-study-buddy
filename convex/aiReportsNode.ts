@@ -7,13 +7,11 @@ import { action } from './_generated/server'
 import { AI_PLAN_SCHEMA, generationResultValidator, type GeneratedPlan, type GenerationResult } from './aiReports'
 import { AI_FOCUS_MAX_LENGTH, generatedReportBudget, SYSTEM_PROMPT } from './domain/aiReport.ts'
 import { normalizeName } from './domain/names.ts'
-import { isCoachingArea } from './domain/starterTemplates.ts'
 
 export const generate = action({
-  args: { workspaceId: v.id('workspaces'), name: v.string(), intent: v.union(v.literal('coach'), v.literal('player')), coachType: v.string(), focus: v.optional(v.string()) },
+  args: { workspaceId: v.id('workspaces'), name: v.string(), intent: v.union(v.literal('coach'), v.literal('player')), focus: v.optional(v.string()) },
   returns: generationResultValidator,
-  handler: async (ctx, { workspaceId, name, intent, coachType, focus }): Promise<GenerationResult> => {
-    if (!isCoachingArea(coachType)) throw new ConvexError('Choose a Coaching Area.')
+  handler: async (ctx, { workspaceId, name, intent, focus }): Promise<GenerationResult> => {
     if (focus && focus.length > AI_FOCUS_MAX_LENGTH) throw new ConvexError(`Focus must be at most ${AI_FOCUS_MAX_LENGTH} characters.`)
     if (!normalizeName(name)) throw new ConvexError('Report name must be 1–80 characters.')
     const key = process.env.ANTHROPIC_API_KEY
@@ -31,7 +29,7 @@ export const generate = action({
         thinking: { type: 'adaptive' },
         output_config: { effort: 'high' },
         system: `${SYSTEM_PROMPT}\nReturn only valid JSON matching this schema, without Markdown fences or other commentary:\n${JSON.stringify(AI_PLAN_SCHEMA)}`,
-        messages: [{ role: 'user', content: JSON.stringify({ coachType, intent, focus, budget, brief }) }],
+        messages: [{ role: 'user', content: JSON.stringify({ intent, focus, budget, brief }) }],
       })
     } catch (error) {
       if (error instanceof Anthropic.APIError) {

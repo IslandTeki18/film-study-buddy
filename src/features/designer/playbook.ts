@@ -46,11 +46,11 @@ const OFFENSE_TEMPLATES: Record<string, Template> = {
   Swing: (o) => [[o * 40, -4], [o * 86, -40]], 'Check-release': (o) => [[o * 40, -12], [o * 66, -30]],
   Stalk: () => [[0, -36]], Crack: (o) => [[-o * 62, -28]], Arc: (o) => [[o * 30, -42], [o * 50, -66]], Block: () => [[0, -14]],
 }
+/** Front and pressure only: this build draws plays for a defensive line room, not the secondary. */
 const DEFENSE_TEMPLATES: Record<string, Template> = {
   Rush: () => [[0, 22]], Contain: (o) => [[o * 26, 20]], Spike: (o) => [[-o * 20, 22]],
+  Slant: (o) => [[o * 18, 10], [o * 26, 24]], Loop: (o) => [[o * 30, 4], [o * 44, 26]],
   'Blitz A': (o) => [[-o * 40, 48]], 'Blitz B': (o) => [[-o * 12, 52]], 'Blitz C': (o) => [[o * 30, 50]],
-  Flat: (o) => [[o * 40, 26]], Hook: (o) => [[-o * 10, -20]], Curl: (o) => [[o * 30, -16]],
-  'Deep half': (o) => [[o * 20, -70]], 'Deep third': () => [[0, -78]], 'Deep quarter': (o) => [[-o * 10, -66]],
   Spy: () => [[0, 12]],
 }
 
@@ -63,16 +63,14 @@ export const JOB_GROUPS: Record<PlayerSide, readonly { name: string; jobs: reado
     { name: 'Blocking', jobs: ['Stalk', 'Crack', 'Arc', 'Block'] },
   ],
   defense: [
-    { name: 'Coverage', jobs: ['Man', 'Zone'] },
     { name: 'Rush', jobs: ['Rush', 'Contain', 'Spike'] },
-    { name: 'Blitz', jobs: ['Blitz A', 'Blitz B', 'Blitz C'] },
-    { name: 'Underneath', jobs: ['Flat', 'Hook', 'Curl', 'Spy'] },
-    { name: 'Deep', jobs: ['Deep half', 'Deep third', 'Deep quarter'] },
+    { name: 'Stunt', jobs: ['Slant', 'Loop'] },
+    { name: 'Pressure', jobs: ['Blitz A', 'Blitz B', 'Blitz C', 'Spy'] },
   ],
 }
 
 /** Jobs whose route ends in a block bar instead of an arrowhead. */
-export const BLOCK_JOBS: ReadonlySet<string> = new Set(['Block', 'Stalk', 'Crack', 'Rush', 'Contain', 'Spike', 'Blitz A', 'Blitz B', 'Blitz C'])
+export const BLOCK_JOBS: ReadonlySet<string> = new Set(['Block', 'Stalk', 'Crack', 'Rush', 'Contain', 'Spike', 'Slant', 'Loop', 'Blitz A', 'Blitz B', 'Blitz C'])
 
 export const ADD_KINDS: Record<PlayerSide, readonly string[]> = {
   offense: ['QB', 'RB', 'FB', 'TE', 'WR', 'OL'],
@@ -85,13 +83,12 @@ export function spawnPoint(kind: string, side: PlayerSide): Px {
   return kind === 'OL' ? { x: 410, y: 252 } : { x: CENTER_X, y: 330 }
 }
 
-const DEFENSE_BASE: readonly { id: string; kind: string; x: number; y: number; job: string }[] = [
+/** A four-man front with the box linebackers behind it. Add DBs by hand when a look needs them. */
+const DEFENSE_BASE: readonly { id: string; kind: string; x: number; y: number; job?: string }[] = [
   { id: 'dE', kind: 'DE', x: 212, y: 228, job: 'Contain' }, { id: 'dT', kind: 'DT', x: 262, y: 228, job: 'Rush' },
   { id: 'dN', kind: 'DN', x: 322, y: 228, job: 'Rush' }, { id: 'dE2', kind: 'DE', x: 396, y: 228, job: 'Contain' },
-  { id: 'dW', kind: 'LB', x: 240, y: 190, job: 'Hook' }, { id: 'dM', kind: 'LB', x: 306, y: 190, job: 'Hook' },
-  { id: 'dS', kind: 'LB', x: 380, y: 190, job: 'Curl' },
-  { id: 'dC', kind: 'CB', x: 96, y: 196, job: 'Deep third' }, { id: 'dC2', kind: 'CB', x: 516, y: 196, job: 'Deep third' },
-  { id: 'dFS', kind: 'FS', x: 306, y: 118, job: 'Deep third' }, { id: 'dSS', kind: 'SS', x: 400, y: 150, job: 'Flat' },
+  { id: 'dW', kind: 'LB', x: 240, y: 190 }, { id: 'dM', kind: 'LB', x: 306, y: 190 },
+  { id: 'dS', kind: 'LB', x: 380, y: 190 },
 ]
 
 /** Route waypoints for a named job, relative to the man's position. Undefined for Man, Zone, and unknown jobs. */

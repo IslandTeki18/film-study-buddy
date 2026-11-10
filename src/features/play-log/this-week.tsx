@@ -4,14 +4,12 @@ import { Link } from 'react-router'
 import { api } from '@convex/_generated/api'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import { Eyebrow, Meta, Panel } from '@/components/ui/panel'
-import { SPLIT_LABELS, TELLS, type Mode } from '../preview/preview-data'
-import { PreviewBadge } from '../preview/preview-shared'
+import { playSideOf } from '@convex/domain/playSide'
 
 type ThisWeekProps = {
   readonly workspaceId: Id<'workspaces'>
   readonly sourceGameId: Id<'sourceGames'>
   readonly snaps: readonly Doc<'snaps'>[]
-  readonly mode: Mode
 }
 
 type FrequencyRow = {
@@ -44,11 +42,14 @@ function frequencyRows(snaps: readonly Doc<'snaps'>[], by: 'form' | 'call'): Fre
   })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 7)
 }
 
-export function ThisWeek({ workspaceId, sourceGameId, snaps, mode }: ThisWeekProps): ReactNode {
+export function ThisWeek({ workspaceId, sourceGameId, snaps }: ThisWeekProps): ReactNode {
   const games = useQuery(api.sourceGames.listByWorkspace, { workspaceId })
   const [freqBy, setFreqBy] = useState<'form' | 'call'>('form')
   const reviewCount = snaps.filter((snap) => snap.mustReview).length
-  const aPct = 0
+  const tendencies = useQuery(api.tendencies.listByWorkspace, { workspaceId })
+  // Run rate over Snaps with a pure run or pass Play Type; RPO and untagged Snaps stay out of the denominator.
+  const sides = snaps.map((snap) => playSideOf(snap.core.playType)).filter((side) => side !== 'both')
+  const runPct = sides.length ? `${Math.round(sides.filter((side) => side === 'run').length / sides.length * 100)}%` : '—'
   const rows = frequencyRows(snaps, freqBy)
   const included = games?.filter((game) => game.included !== false) ?? [] // Matches sourceGames.isIncluded.
   const total = included.reduce((sum, game) => sum + game.snapCount, 0)
@@ -59,9 +60,8 @@ export function ThisWeek({ workspaceId, sourceGameId, snaps, mode }: ThisWeekPro
       <Meta>{snaps.length} snaps charted · {reviewCount} must review</Meta>
     </div>
     <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2">
-      {[[snaps.length, 'Charted snaps'], [reviewCount, 'Must review'], [`${aPct}%`, `${SPLIT_LABELS[mode][0]} rate`], [TELLS[mode].length, 'Alerts']].map(([value, label], index) =>
+      {[[snaps.length, 'Charted snaps'], [reviewCount, 'Must review'], [runPct, 'Run rate'], [tendencies?.length ?? '—', 'Tendencies / Alerts']].map(([value, label]) =>
         <Panel key={label} className="rounded-[9px] bg-muted/60 px-[13px] py-3">
-          {index >= 2 && <PreviewBadge />}
           <div className="font-mono text-2xl font-bold tracking-tight">{value}</div>
           <div className="mt-0.5 text-[9.5px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">{label}</div>
         </Panel>)}

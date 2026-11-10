@@ -5,5 +5,5 @@ import { DEFAULT_QUICK_NOTE_TAGS, normalizeQuickNoteTags, tagVocabulary } from '
 test('Quick Note tags trim, deduplicate, bound length, and keep defaults before sorted custom tags', () => {
   assert.deepEqual(normalizeQuickNoteTags([' Run ', 'run', '', '  ', 'Custom', 'CUSTOM']), ['Run', 'Custom'])
   assert.deepEqual(normalizeQuickNoteTags(['a'.repeat(41), 'a'.repeat(40)]), ['a'.repeat(40)])
-  assert.deepEqual(tagVocabulary(['zebra', 'run', 'Alpha', 'alpha']), [...DEFAULT_QUICK_NOTE_TAGS, 'Alpha', 'zebra'])
+  assert.deepEqual(tagVocabulary(['zebra', 'ol tell', 'Alpha', 'alpha']), [...DEFAULT_QUICK_NOTE_TAGS, 'Alpha', 'zebra'])
 })

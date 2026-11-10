@@ -1,10 +1,27 @@
 # film-study-buddy
 
-Electron desktop shell for Film Study Buddy, backed by Convex.
+A personal film-study notebook for a **defensive line coach**: an Electron desktop app, backed by
+Convex, for charting an opponent's offense from Hudl exports and turning it into tendencies,
+scout cards and reports for the defensive line room.
 
-This build implements the scope in `.claude/blueprint.md`: the
-`desktop-sidebar` application shell and the **theme-settings** feature. Film study workflows
-from `.claude/spec.md` are out of scope here.
+## Scope
+
+Built for one coach and one position. There is no position picker and no other-position templates.
+
+- **First launch** installs the Defensive Line charting template automatically.
+- **DL charting fields** (Home → DL charting fields): one editable template with Pre-Snap
+  (OL splits, stance, TE and back alignment), Run Game (blocking scheme, point of attack, pullers,
+  double teams) and Pass Game (protection, QB drop, chips, launch point, rush opportunity).
+- **Charting** covers the opponent's offense only. Player notes group their offense with the
+  blockers first: OL, TE, backs, QB, receivers.
+- **Play Designer** draws the offense plus your front: rush lanes, stunts (slant, loop) and
+  pressures. It has no coverage tools.
+- **Tells, Tendencies, Reports, Practice Scripts and Scout Cards** default to DL vocabulary
+  (Pre-Snap Tell, Pass Protection, OL Tell, Pullers, Double Team, and run-scheme play concepts).
+- **Generate with AI** always writes for the defensive line.
+
+Data from the older multi-position build still loads: a stored coaching area is ignored, and
+defensive-side opponent players stay saved but are no longer listed.
 
 ## Stack
 
@@ -33,9 +50,8 @@ Copy the deployment URL printed by `npx convex dev` into `.env` as `VITE_CONVEX_
 npm run dev             # Electron + Vite dev server with HMR
 ```
 
-With `VITE_CONVEX_URL` unset the app still runs and shows a banner saying so: theme settings
-are local-storage backed until Auth is selected, so no Convex round-trip is required to use
-this build. Uncaught render errors are caught by `src/components/error-boundary.tsx` and
+With `VITE_CONVEX_URL` unset the app still opens and shows a banner saying so, but only theme
+settings work: every film-study screen needs Convex. Uncaught render errors are caught by `src/components/error-boundary.tsx` and
 displayed, since a desktop window has no visible console.
 
 ## Environment Variables
@@ -77,12 +93,12 @@ film-study-buddy/
 │   ├── components/app-header.tsx     # Top bar for Home and top-level screens (Film Room design)
 │   ├── components/workspace-header.tsx # Opponent identity, actions and workspace tab strip
 │   ├── components/ui/                # ShadCN-style primitives plus panel.tsx (Panel, Eyebrow, Meta, Chip, Page)
-│   ├── features/preview/             # Static Charting / Player notes / Tendencies / Reports screens on sample data
 │   ├── features/theme-settings/      # theme.ts, theme-provider.tsx, theme-toggle.tsx, convex-theme-sync.tsx
-│   └── routes/                       # home-page.tsx, settings-page.tsx
+│   ├── features/templates/           # DL charting fields editor (sections, fields, Play Log views)
+│   └── routes/                       # One file per screen; charting-fields-page.tsx is the template editor
 └── convex/
-    ├── schema.ts                     # No tables: theme settings need none without Auth
-    └── theme_settings/preferences.ts # get/set, null for anonymous users
+    ├── schema.ts                     # All tables
+    └── domain/dlTemplate.ts          # The Defensive Line template installed at first launch
 ```
 
 ## Theme Settings

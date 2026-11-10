@@ -1,4 +1,4 @@
-import { POSITION_GROUPS, PLAYER_GRADES } from './domain/opponentPlayers.ts'
+import { LEGACY_POSITION_GROUP_KEYS, POSITION_GROUPS, PLAYER_GRADES } from './domain/opponentPlayers.ts'
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { TEMPLATE_FIELD_TYPES } from './domain/templateFields.ts'
@@ -10,6 +10,10 @@ const softDelete = {
 }
 
 export const positionGroupValidator = v.union(...POSITION_GROUPS.map(({ key }) => v.literal(key)))
+const storedPositionGroupValidator = v.union(
+  ...POSITION_GROUPS.map(({ key }) => v.literal(key)),
+  ...LEGACY_POSITION_GROUP_KEYS.map((key) => v.literal(key)),
+)
 export const gradeValidator = v.union(...PLAYER_GRADES.map((grade) => v.literal(grade)))
 
 const hashValidator = v.union(...HASHES.map((value) => v.literal(value)))
@@ -66,7 +70,8 @@ export default defineSchema({
     hidden: v.optional(v.boolean()),
   }).index('by_list', ['list', 'value']),
   settings: defineTable({
-    coachingArea: v.string(),
+    // Legacy: the multi-coach build stored the chosen Coaching Area. This build is defensive line only.
+    coachingArea: v.optional(v.string()),
     firstLaunchCompletedAt: v.optional(v.number()),
     activeSeasonId: v.optional(v.id('seasons')),
     themePreference: v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
@@ -115,7 +120,8 @@ export default defineSchema({
 
   templates: defineTable({
     name: v.string(),
-    coachingArea: v.string(),
+    // Legacy: see settings.coachingArea.
+    coachingArea: v.optional(v.string()),
     isStarter: v.boolean(),
     createdAt: v.number(),
     ...softDelete,
@@ -207,7 +213,7 @@ export default defineSchema({
   }).index('by_sourceGame', ['sourceGameId']).index('by_deleteBatchId', ['deleteBatchId']),
   opponentPlayers: defineTable({
     workspaceId: v.id('workspaces'),
-    jersey: v.string(), position: v.string(), group: positionGroupValidator,
+    jersey: v.string(), position: v.string(), group: storedPositionGroupValidator,
     name: v.string(), details: v.string(), grade: v.optional(gradeValidator),
     traits: v.array(v.string()), summary: v.string(), tendency: v.string(), assignment: v.string(),
     createdAt: v.number(), ...softDelete,

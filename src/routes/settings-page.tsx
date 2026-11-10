@@ -20,8 +20,8 @@ export function SettingsPage(): ReactNode {
           <ThemeToggle className="w-auto" compact />
         </SettingsRow>
       </Panel>
-      <Link to="/templates" className={buttonVariants({ variant: 'outline', className: 'h-11 justify-start px-3.5 text-[11.5px] text-foreground' })}>
-        Coaching templates →
+      <Link to="/charting-fields" className={buttonVariants({ variant: 'outline', className: 'h-11 justify-start px-3.5 text-[11.5px] text-foreground' })}>
+        DL charting fields →
       </Link>
     </Page>
   </>
@@ -32,7 +32,6 @@ function DeploymentSettings(): ReactNode {
   const seasons = useQuery(api.seasons.list, {})
   const season = seasons?.find((item) => item._id === settings?.activeSeasonId)
   const rows = [
-    { label: 'Coaching area', note: 'Set your starter template', value: settings?.coachingArea ?? '—' },
     { label: 'Current season', note: 'Default for new workspaces', value: season?.name ?? '—' },
   ]
   return rows.map((row) => <SettingsRow key={row.label} label={row.label} note={row.note}>

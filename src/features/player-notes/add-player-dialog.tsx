@@ -2,18 +2,17 @@ import { useState, type ReactNode } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
-import { groupsForSide, PLAYER_NAME_MAX_LENGTH, PLAYER_POSITION_MAX_LENGTH, type PositionGroupKey } from '@convex/domain/opponentPlayers'
+import { POSITION_GROUPS, PLAYER_NAME_MAX_LENGTH, PLAYER_POSITION_MAX_LENGTH, type PositionGroupKey } from '@convex/domain/opponentPlayers'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
-import type { Mode } from '../preview/preview-data'
 
-export function AddPlayerDialog({ workspaceId, mode, onOpenChange }: {
-  readonly workspaceId: Id<'workspaces'>; readonly mode: Mode; readonly onOpenChange: (open: boolean) => void
+export function AddPlayerDialog({ workspaceId, onOpenChange }: {
+  readonly workspaceId: Id<'workspaces'>; readonly onOpenChange: (open: boolean) => void
 }): ReactNode {
-  const groups = groupsForSide(mode === 'off' ? 'offense' : 'defense')
+  const groups = POSITION_GROUPS
   const [jersey, setJersey] = useState('')
   const [position, setPosition] = useState('')
   const [group, setGroup] = useState<PositionGroupKey>(groups[0]!.key)

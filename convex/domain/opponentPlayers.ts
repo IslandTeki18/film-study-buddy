@@ -1,14 +1,15 @@
+/** The opponent's offense, ordered the way a defensive line coach studies it: the men blocking him first. */
 export const POSITION_GROUPS = [
-  { key: 'QB', label: 'Quarterback', side: 'offense' },
-  { key: 'RB', label: 'Backs', side: 'offense' },
-  { key: 'WR', label: 'Receivers & tight ends', side: 'offense' },
-  { key: 'OL', label: 'Offensive line', side: 'offense' },
-  { key: 'DL', label: 'Defensive line', side: 'defense' },
-  { key: 'LB', label: 'Linebackers', side: 'defense' },
-  { key: 'DB', label: 'Secondary', side: 'defense' },
+  { key: 'OL', label: 'Offensive line' },
+  { key: 'TE', label: 'Tight ends' },
+  { key: 'RB', label: 'Backs' },
+  { key: 'QB', label: 'Quarterback' },
+  { key: 'WR', label: 'Receivers' },
 ] as const
 export type PositionGroup = (typeof POSITION_GROUPS)[number]
 export type PositionGroupKey = PositionGroup['key']
+/** Defensive groups from the multi-coach build. Still readable so old rows validate; never offered. */
+export const LEGACY_POSITION_GROUP_KEYS = ['DL', 'LB', 'DB'] as const
 export const PLAYER_GRADES = ['A', 'B', 'C'] as const
 export const PLAYER_JERSEY_PATTERN = /^\d{1,2}$/
 export const PLAYER_POSITION_MAX_LENGTH = 12
@@ -42,10 +43,6 @@ export function normalizeTraits(values: readonly string[]): string[] {
   }
   if (traits.size > PLAYER_TRAITS_MAX) throw new Error(`Choose at most ${PLAYER_TRAITS_MAX} traits`)
   return [...traits.values()]
-}
-
-export function groupsForSide(side: PositionGroup['side']): readonly PositionGroup[] {
-  return POSITION_GROUPS.filter((group) => group.side === side)
 }
 
 export function compareJersey(a: string, b: string): number {

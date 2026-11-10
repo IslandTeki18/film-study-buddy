@@ -2,8 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
 import schema from './schema'
-import { isCoachingArea } from './domain/starterTemplates.ts'
-import { installStarterTemplate } from './templates'
+import { requirePrimaryTemplate } from './templates'
 
 export const themePreferenceValidator = schema.tables.settings.validator.fields.themePreference
 const settingsValidator = v.object({
@@ -18,7 +17,7 @@ async function readSettings(ctx: QueryCtx | MutationCtx): Promise<Doc<'settings'
 async function requireSettings(ctx: MutationCtx): Promise<Doc<'settings'>> {
   const settings = await readSettings(ctx)
   if (settings) return settings
-  const id = await ctx.db.insert('settings', { coachingArea: '', themePreference: 'system' })
+  const id = await ctx.db.insert('settings', { themePreference: 'system' })
   const created = await ctx.db.get(id)
   if (!created) throw new Error('Settings could not be created')
   return created
@@ -51,17 +50,18 @@ export const setActiveSeason = mutation({
   },
 })
 
-/** Completion and starter installation share one transaction, including double submits. */
+/**
+ * Sets up the defensive line notebook on first open: installs the Defensive Line template unless one is
+ * already live. Idempotent, so a repeated call (StrictMode, a second window) is harmless.
+ */
 export const completeFirstLaunch = mutation({
-  args: { coachingArea: v.string() }, returns: v.id('templates'),
-  handler: async (ctx, args) => {
-    if (!isCoachingArea(args.coachingArea)) throw new Error('Unknown Coaching Area')
+  args: {}, returns: v.id('templates'),
+  handler: async (ctx) => {
     const settings = await requireSettings(ctx)
-    if (settings.firstLaunchCompletedAt !== undefined) throw new Error('First launch is already complete')
-    const templateId = await installStarterTemplate(ctx, args.coachingArea)
-    await ctx.db.patch(settings._id, {
-      coachingArea: args.coachingArea, firstLaunchCompletedAt: Date.now(),
-    })
+    const templateId = await requirePrimaryTemplate(ctx)
+    if (settings.firstLaunchCompletedAt === undefined) {
+      await ctx.db.patch(settings._id, { firstLaunchCompletedAt: Date.now() })
+    }
     return templateId
   },
 })

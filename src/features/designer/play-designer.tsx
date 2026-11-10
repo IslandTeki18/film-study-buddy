@@ -376,7 +376,7 @@ function DesignerContent({ workspaceId, sourceGameId, opponentName, diagram, att
             <button type="button" className={chip(false)} disabled={routePx.length === 0} onClick={() => selected && removePoint(selected.id, routePx.length - 1)}>↶ undo last point</button>
             <button type="button" className={chip(false)} disabled={!roster.some((player) => player.route || player.zone || player.coversId)}
               onClick={() => { setPicking(undefined); setPlayers(draftRef.current.players.map((player) => player.side === side ? strip(player, ['route', 'zone', 'coversId', 'job']) : player)) }}>clear all {side} routes</button>
-            <span className="ml-auto">drag man · click field to add point · arrows nudge · Alt+arrows move zone or motion · Alt+[ / ] resize zone</span>
+            <span className="ml-auto">drag man · click field to add point · arrows nudge · Alt+arrows move motion</span>
           </div>
           {pickingPlayer && <div role="status" className="rounded-lg border border-defense bg-defense/10 px-3 py-2 font-mono text-[11px]">now click the offensive man the {describe(pickingPlayer)} should cover</div>}
           <label className="grid gap-1">

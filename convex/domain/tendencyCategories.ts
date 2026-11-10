@@ -1,7 +1,7 @@
 import { normalizeName } from './names.ts'
 
 export const DEFAULT_TENDENCY_CATEGORIES = [
-  'Run Game', 'Pass Game', 'Personnel', 'Formation', 'Protection',
+  'Run Game', 'Pass Protection', 'Pre-Snap Tell', 'Personnel', 'Formation',
   'Situational', 'Player / Matchup', 'Trick / Constraint', 'Red Zone',
 ] as const
 export const TENDENCY_NOTE_MAX_LENGTH = 2000

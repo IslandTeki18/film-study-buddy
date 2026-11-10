@@ -10,9 +10,11 @@ export const MOTIONS = [
   'Return', 'Rocket', 'Short', 'Shuffle', 'Trade', 'Yo-Yo', 'Zip',
 ] as const
 
+/** Weighted toward what the defensive line has to defeat: run schemes first, then pass families. */
 export const PLAY_CONCEPTS = [
-  'Counter', 'Duo', 'Flood', 'Inside Zone', 'Mesh', 'Outside Zone',
-  'Power', 'Screen', 'Split Zone', 'Trap',
+  'Counter', 'Draw', 'Duo', 'Inside Zone', 'Iso', 'Outside Zone', 'Pin and Pull',
+  'Power', 'Split Zone', 'Sweep', 'Toss', 'Trap', 'Wham',
+  'Bootleg', 'Dropback', 'Play Action', 'Quick Game', 'RPO', 'Screen', 'Sprint Out',
 ] as const
 
 export const PERSONNEL = [

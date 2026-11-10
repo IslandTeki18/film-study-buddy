@@ -12,6 +12,7 @@ import { Tabs } from '@/components/ui/tabs'
 import { WorkspaceHeader } from '@/components/workspace-header'
 import { AddSourceGamePage } from './add-source-game-page'
 import { ArchivePage } from './archive-page'
+import { ChartingFieldsPage } from './charting-fields-page'
 import { CreateOpponentPage } from './create-opponent-page'
 import { HomePage } from './home-page'
 import { HudlImportPage } from './hudl-import-page'
@@ -29,11 +30,8 @@ import { ReportPreviewPage } from './report-preview-page'
 import { SeasonPage } from './season-page'
 import { SettingsPage } from './settings-page'
 import { SourceGamesPage } from './source-games-page'
-import { TemplateBuilderPage } from './template-builder-page'
-import { TemplatesPage } from './templates-page'
 import { TendenciesPage } from './tendencies-page'
 import { TellsPage } from './tells-page'
-import { WelcomePage } from './welcome-page'
 import { WorkspaceOverviewPage } from './workspace-overview-page'
 
 function WorkspaceLayout(): ReactNode {
@@ -79,7 +77,6 @@ function ImportPage(): ReactNode {
 }
 
 export const router = createHashRouter([
-  { path: '/welcome', element: <WelcomePage /> },
   {
     path: '/',
     element: <App />,
@@ -157,13 +154,7 @@ export const router = createHashRouter([
           },
         ],
       },
-      {
-        path: 'templates',
-        children: [
-          { index: true, element: <TemplatesPage /> },
-          { path: ':templateId', element: <TemplateBuilderPage /> },
-        ],
-      },
+      { path: 'charting-fields', element: <ChartingFieldsPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'archive', element: <ArchivePage /> },
     ],

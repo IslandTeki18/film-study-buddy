@@ -5,7 +5,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Meta } from '@/components/ui/panel'
 
 export const HOME_NAV = [
-  { path: '/templates', label: 'Coaching templates' },
+  { path: '/charting-fields', label: 'DL charting fields' },
   { path: '/settings', label: 'Settings' },
   { path: '/archive', label: 'Archived opponents' },
 ] as const
